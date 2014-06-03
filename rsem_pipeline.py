@@ -67,6 +67,8 @@ def originate_files():
     This function gets called twice, once before entering the queue, once after 
     """
     global samples, top_output_dir, input_csv, soft_files
+    logger.info('preparing originate_files '
+                'for {0} samples'.format(len(samples)))
     cache_file = os.path.join(top_output_dir, 'originate_files.pickle')
     if cache_usable(cache_file, input_csv, *soft_files):
         with open(cache_file) as inf:
@@ -77,8 +79,10 @@ def originate_files():
         logger.info('generating cache file: {0}'.format(cache_file))
         with open(cache_file, 'wb') as opf:
             pickle.dump(outputs, opf)
-    for job_parameters in outputs:
-        yield job_parameters
+    logger.info('{0} sets of parameters generated '
+                'in originate files'.format(len(outputs)))
+    for _ in outputs:
+        yield _
 
 
 def cache_usable(cache_file, *ref_files):
@@ -96,16 +100,20 @@ def cache_usable(cache_file, *ref_files):
         f_cache_usable = False
     return f_cache_usable
 
+
 def cache_up_to_date(cache_file, *ref_files):
     for _ in ref_files:
-        if os.path.getmtime(cache_file) < os.path.getmtime(_):
+        if (os.path.getmtime(cache_file) < os.path.getmtime(_) or
+            # ctime: e.g. when renaming test.bk to test changes information in
+            # inode
+            os.path.getctime(cache_file) < os.path.getctime(_)):
             return False
     return True
 
 
 def gen_originate_files(samples):
     """
-    Example of outputs:
+    Example of originate files as held by the variable outputs:
     [[None,
       ['test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602557/SRX029242/SRR070177/SRR070177.sra',
        'test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602557/download.COMPLETE'],
@@ -163,4 +171,3 @@ if __name__ == "__main__":
                   'test_data_downloaded_for_genesis/soft/GSE35213_family.soft.subset']
     samples = gen_samples(soft_files, input_csv)
     R.pipeline_run([download], multiprocess=4)
-
