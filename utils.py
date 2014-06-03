@@ -103,8 +103,9 @@ def gen_input_csv_data(input_csv, key):
     #     }
 
     json_file = get_cache(input_csv, key)
-    if (not os.path.exists(json_file) or
-        os.path.getmtime(json_file) < os.path.getmtime(input_csv)):
+    if (not os.path.exists(json_file)
+        or os.path.getmtime(json_file) < os.path.getmtime(input_csv)
+        or os.path.getctime(json_file) < os.path.getctime(input_csv)):
         if key == 'species':
             input_data = read_csv_species_as_key(input_csv)
         else:
