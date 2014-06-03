@@ -178,21 +178,21 @@ def gen_sra_msg_id(sra):
         series.name)
 
 
-def execute(cmd, msg_id, flag_file):
-    shell_cmd = ' '.join(cmd)
-    logger.info('executing CMD: {0}'.format(shell_cmd))
+def execute(cmd, msg_id='', flag_file=None):
+    logger.info('executing CMD: {0}'.format(cmd))
     try:
-        returncode = subprocess.call(cmd)
+        returncode = subprocess.call(cmd, shell=True, executable="/bin/bash")
         if returncode != 0:
             logger.error(
                 '{0}, started, but then failed with returncode: {1}. '
-                'CMD "{2}"'.format(msg_id, returncode, shell_cmd))
+                'CMD "{2}"'.format(msg_id, returncode, cmd))
         else:
-            touch(flag_file)
+            if flag_file is not None:
+                touch(flag_file)
     except OSError, err:
         logger.exception(
             '{0}, failed to start, raising OSError {1}. '
-            'CMD: "{2}"'.format(msg_id, err, shell_cmd))
+            'CMD: "{2}"'.format(msg_id, err, cmd))
 
 
 def gen_completion_stamp(key, stamp_dir):
@@ -201,36 +201,6 @@ def gen_completion_stamp(key, stamp_dir):
     @param stamp_dir: where this stamp is to be created
     """
     return os.path.join(stamp_dir, '{0}.COMPLETE'.format(key))
-
-
-def gen_download_cmd(sample_path, ftp_path):
-    """return a command as a list for downloading the sra file"""
-    cmd = (
-        "/home/kmnip/bin/ascp "
-        "-i /home/kmnip/.aspera/connect/etc/asperaweb_id_dsa.putty "
-        "--ignore-host-key "
-        "-QT "
-        "-L {0} "
-        "-k2 "
-        "-l 300m "
-        "anonftp@ftp-trace.ncbi.nlm.nih.gov:{1} {0}".format(
-            sample_path, ftp_path))
-    return cmd.split()
-
-
-def gen_sra2fastq_cmd(sra, outdir):
-    """
-    return a command as a list for converting sra to fastq
-
-    @params sra: sra with path, e.g.
-    """
-    cmd = (
-        'fastq-dump '
-        '--minReadLen 25 '
-        '--outdir {0} '
-        '--gzip '
-        '--split-3 {1}'.format(outdir, sra))
-    return cmd.split()
 
 
 def gen_rsem_cmd(sample):
