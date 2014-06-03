@@ -15,11 +15,10 @@ import urlparse
 import Queue
 import threading
 import csv
+import pickle
 import yaml
 with open('rsem_pipeline_config.yaml') as inf:
     CONFIG = yaml.load(inf.read())
-from ftplib import FTP
-import pickle
 
 import ruffus as R
 
@@ -28,6 +27,8 @@ import utils as U
 import settings as S
 logging.config.dictConfig(S.LOGGING_CONFIG)
 logger = logging.getLogger('rsem_pipeline')
+
+from utils_download import gen_originate_files
 
 def gen_samples(soft_files, input_csv):
     """
@@ -59,7 +60,7 @@ def gen_samples(soft_files, input_csv):
             os.makedirs(sample.outdir)
     return samples
 
-    
+
 def originate_files():
     """
     Generate a list of sras to download for each sample
@@ -70,7 +71,7 @@ def originate_files():
     logger.info('preparing originate_files '
                 'for {0} samples'.format(len(samples)))
     cache_file = os.path.join(top_output_dir, 'originate_files.pickle')
-    if cache_usable(cache_file, input_csv, *soft_files):
+    if U.cache_usable(cache_file, input_csv, *soft_files):
         with open(cache_file) as inf:
             outputs = pickle.load(inf)
     else:
@@ -83,77 +84,6 @@ def originate_files():
                 'in originate files'.format(len(outputs)))
     for _ in outputs:
         yield _
-
-
-def cache_usable(cache_file, *ref_files):
-    f_cache_usable = True
-    if os.path.exists(cache_file):
-        logger.info('{0} exists'.format(cache_file))
-        if cache_up_to_date(cache_file, *ref_files):
-            logger.info('{0} is up to date. '
-                        'reading outputs from cache'.format(cache_file))
-        else:
-            logger.info('{0} is outdated'.format(cache_file))
-            f_cache_usable = False
-    else:
-        logger.info('{0} doesn\'t exist'.format(cache_file))
-        f_cache_usable = False
-    return f_cache_usable
-
-
-def cache_up_to_date(cache_file, *ref_files):
-    for _ in ref_files:
-        if (os.path.getmtime(cache_file) < os.path.getmtime(_) or
-            # ctime: e.g. when renaming test.bk to test changes information in
-            # inode
-            os.path.getctime(cache_file) < os.path.getctime(_)):
-            return False
-    return True
-
-
-def gen_originate_files(samples):
-    """
-    Example of originate files as held by the variable outputs:
-    [[None,
-      ['test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602557/SRX029242/SRR070177/SRR070177.sra',
-       'test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602557/download.COMPLETE'],
-      <GSM602557 (1/20) of GSE24455>],
-     [None,
-      ['test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602558/SRX029243/SRR070178/SRR070178.sra',
-       'test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602558/download.COMPLETE'],
-      <GSM602558 (2/20) of GSE24455>],
-     [None,
-      ['test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863770/SRX116910/SRR401053/SRR401053.sra',
-       'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863770/SRX116910/SRR401054/SRR401054.sra',
-       'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863770/download.COMPLETE'],
-      <GSM863770 (1/8) of GSE35213>],
-     [None,
-      ['test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863771/SRX116911/SRR401055/SRR401055.sra',
-       'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863771/SRX116911/SRR401056/SRR401056.sra',
-       'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863771/download.COMPLETE'],
-      <GSM863771 (2/8) of GSE35213>]]
-    """
-    outputs = []
-    for sample in samples:
-        # e.g. of sample.url
-        # ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX029/SRX029242
-        url_obj = urlparse.urlparse(sample.url)
-        ftp_handler = FTP(url_obj.hostname)
-        ftp_handler.login()
-        # one level above SRX123456
-        before_srx_dir = os.path.dirname(url_obj.path)
-        ftp_handler.cwd(before_srx_dir)
-        srx = os.path.basename(url_obj.path)
-        srrs =  ftp_handler.nlst(srx)
-        # cool trick for flatten 2D list:
-        # http://stackoverflow.com/questions/2961983/convert-multi-dimensional-list-to-a-1d-list-in-python
-        sras = [_ for srr in srrs for _ in ftp_handler.nlst(srr)]
-        sras = [os.path.join(sample.outdir, _) for _ in sras]
-        ftp_handler.quit()
-    
-        flag_file = U.gen_completion_stamp('download', sample.outdir)
-        outputs.append([None, sras + [flag_file], sample])
-    return outputs
 
 @R.files(originate_files)
 def download(inputs, outputs, sample):

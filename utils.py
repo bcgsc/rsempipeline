@@ -103,18 +103,16 @@ def gen_input_csv_data(input_csv, key):
     #     }
 
     json_file = get_cache(input_csv, key)
-    if (not os.path.exists(json_file)
-        or os.path.getmtime(json_file) < os.path.getmtime(input_csv)
-        or os.path.getctime(json_file) < os.path.getctime(input_csv)):
+    if cache_usable(json_file, input_csv):
+        with open(json_file, 'rb') as inf:
+            input_data = json.load(inf)
+    else:
         if key == 'species':
             input_data = read_csv_species_as_key(input_csv)
         else:
             input_data = read_csv_gse_as_key(input_csv)
         with open(json_file, 'wb') as opf:
             json.dump(input_data, opf)
-    else:
-        with open(json_file, 'rb') as inf:
-            input_data = json.load(inf)
     return input_data
 
 
@@ -135,6 +133,32 @@ def gen_cache_file(dirname, basename, suffix):
             # which is not pretty
             basename.lstrip('.').replace('csv', suffix)))
     
+
+def cache_usable(cache_file, *ref_files):
+    f_cache_usable = True
+    if os.path.exists(cache_file):
+        logger.info('{0} exists'.format(cache_file))
+        if cache_up_to_date(cache_file, *ref_files):
+            logger.info('{0} is up to date. '
+                        'reading outputs from cache'.format(cache_file))
+        else:
+            logger.info('{0} is outdated'.format(cache_file))
+            f_cache_usable = False
+    else:
+        logger.info('{0} doesn\'t exist'.format(cache_file))
+        f_cache_usable = False
+    return f_cache_usable
+
+
+def cache_up_to_date(cache_file, *ref_files):
+    for _ in ref_files:
+        if (os.path.getmtime(cache_file) < os.path.getmtime(_) or
+            # ctime: e.g. when renaming test.bk to test changes information in
+            # inode
+            os.path.getctime(cache_file) < os.path.getctime(_)):
+            return False
+    return True
+
 
 def gen_sample_msg_id(sample):
     """
