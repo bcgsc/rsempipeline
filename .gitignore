@@ -1,0 +1,7 @@
+*.log
+*#
+*.pyc
+venv
+lele*
+soft
+sra

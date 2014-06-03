@@ -1,0 +1,31 @@
+# Configurations that change when in different hosts should be put here, those
+# that don't change (e.g. logging configuration) should be put in settings.py
+
+SPECIES_INFO:
+  Homo sapiens:
+    short_name: human
+    index: /extscratch/btl/zxue/rsem_pipeline/index/hg19/hg19_ensembl_72
+  Mus musculus:
+    short_name: mouse
+    index: /extscratch/btl/zxue/rsem_pipeline/index/mm10/mm10_ensembl_72
+  Rattus norvegicus:
+    short_name: rat
+    index: /extscratch/btl/zxue/rsem_pipeline/index/rn5/rn5_ensembl_72
+
+# SERIES = '^SERIES'
+# SERIES_SAMPLE_ID = '!Series_sample_id'
+# SAMPLE = '^SAMPLE'
+# SAMPLE_ORGANISM = '!Sample_organism_ch'
+# SAMPLE_LIBRARY_STRATEGY = '!Sample_library_strategy'
+# SAMPLE_SUPPLEMENTARY_FILE = '!Sample_supplementary_file_'
+# SAMPLE_INSTRUMENT_MODEL = '!Sample_instrument_model'
+# SAMPLE_LIBRARY_SOURCE = '!Sample_library_source'
+# SAMPLE_TYPE = '!Sample_type'
+
+# NCBI_SRA_FTP = 'ftp://ftp-trace.ncbi.nlm.nih.gov'
+# NCBI_SRA_FTP_SRA = 'ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/'
+# SRA = 'SRA'.lower()
+# RNA_SEQ = 'RNA-Seq'.lower()
+# MODEL_AB_SOLID = 'AB SOLiD'.lower()
+# MODEL_454_GS = '454 GS'.lower()
+# TRANSCRIPTOMIC = 'transcriptomic'
