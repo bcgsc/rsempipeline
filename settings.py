@@ -20,7 +20,7 @@ LOGGING_CONFIG = {
 
         'file': {
             'class': 'logging.FileHandler',
-            'filename': os.path.join(os.path.dirname(__file__), 'rsem_pipeline.log'),
+            'filename': os.path.join(os.getcwd, 'rsem_pipeline.log'),
             'encoding': 'utf-8',
             'formatter': 'standard',
             'level': 'DEBUG'
