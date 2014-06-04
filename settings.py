@@ -40,5 +40,9 @@ LOGGING_CONFIG = {
             'handlers': ['console', 'file'],
             'level': 'DEBUG',
             },
+        'soft_parser': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            },
     },
 }
