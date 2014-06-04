@@ -19,7 +19,7 @@ logging.basicConfig(
 
 from ftplib import FTP
 
-import utils as U
+from utils import gen_data_from_csv
 
 class SOFTDownloader(object):
     """
@@ -108,7 +108,7 @@ def main(input_csv):
     if not os.path.exists(soft_dir):
         os.mkdir(soft_dir)
 
-    input_data = U.gen_input_csv_data(input_csv, key='species')
+    input_data = gen_data_from_csv(input_csv)
     # merging all GSEs
     gses = set(list(itertools.chain(
         *[input_data[_].keys() for _ in input_data])))
