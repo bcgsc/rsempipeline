@@ -36,8 +36,7 @@ logger = logging.getLogger('rsem_pipeline')
 PATH_RE = r'(.*)/(?P<species>\S+)/(?P<GSE>GSE\d+)/(?P<GSM>GSM\d+)'
 
 
-def gen_samples_from_soft_and_data_file(
-        soft_files, data_file, top_outdir=None):
+def gen_samples_from_soft_and_data_file(soft_files, data_file):
     """
     :param input_csv: e.g. GSE_GSM_species.csv
     """
@@ -67,30 +66,7 @@ def gen_samples_from_soft_and_data_file(
     logger.info(
         'After intersection among GSMs found in the {0} and '
         '{1}, {2} samples remained'.format(soft_file, data_file, len(samples)))
-
-    outdir = get_outdir(data_file, top_outdir)
-    logger.info('initializing outdirs of samples...')
-    init_sample_outdirs(samples, outdir)
     return samples
-
-
-def get_outdir(data_file, top_outdir=None):
-    """
-    get the proper output directory based on top_outdir (higher priority) or
-    sample_data_file
-    """
-    if top_outdir is None:
-        top_outdir = os.path.dirname(data_file)
-    outdir =  os.path.join(top_outdir, 'rsem_output')
-    return outdir
-
-
-def init_sample_outdirs(samples, outdir):
-    for sample in samples:
-        sample.gen_outdir(outdir)
-        if not os.path.exists(sample.outdir):
-            logger.info('creating directory: {0}'.format(sample.outdir))
-            os.makedirs(sample.outdir)
 
 
 def originate_files():
@@ -99,12 +75,12 @@ def originate_files():
 
     This function gets called twice, once before entering the queue, once after 
     """
-    global samples, top_outdir, input_csv, soft_files
+    global samples, top_outdir, data_file, soft_files
 
     logger.info('preparing originate_files '
                 'for {0} samples'.format(len(samples)))
     cache_file = os.path.join(top_outdir, 'originate_files.pickle')
-    if U.cache_usable(cache_file, input_csv, *soft_files):
+    if U.cache_usable(cache_file, data_file, *soft_files):
         with open(cache_file) as inf:
             outputs = pickle.load(inf)
     else:
@@ -143,8 +119,8 @@ def download(inputs, outputs, sample):
         "-l 300m "
         "anonftp@ftp-trace.ncbi.nlm.nih.gov:{1} {0}".format(
             sra_outdir, sra_url_path))
-    print cmd
-    # U.execute(cmd, msg_id, flag_file)
+    global args
+    U.execute(cmd, msg_id, flag_file, args.debug)
 
 
 @R.subdivide(
@@ -158,8 +134,8 @@ def sra2fastq(inputs, outputs):
     outdir = os.path.dirname(os.path.dirname(os.path.dirname(sra)))
     cmd = ('fastq-dump --minReadLen 25 --gzip --split-files '
            '--outdir {0} {1}'.format(outdir, sra))
-    print cmd
-    # U.execute(cmd, flag_file=flag_file)
+    global args
+    U.execute(cmd, flag_file=flag_file, debug=args.debug)
 
 
 @R.collate(
@@ -199,10 +175,6 @@ def rsem(inputs, outputs):
     species = res.group('species')
     gsm = res.group('GSM')
 
-    for _ in outputs:
-        print _, os.path.exists(_)
-    print gsm
-
     # following rsem naming convention
     global config
     reference_name = config['REFERENCE_NAMES'][species]
@@ -222,8 +194,8 @@ def rsem(inputs, outputs):
         sample_name,
         '1>{0}/rsem.log'.format(outdir),
         '2>{0}/align.stats'.format(outdir)])
-    print cmd
-    # U.execute(cmd, flag_file=flag_file)
+    global args
+    U.execute(cmd, flag_file=flag_file, debug=args.debug)
 
 def parse_args():
     parser = argparse.ArgumentParser(
@@ -238,7 +210,7 @@ def parse_args():
               '(based on the xlsx/csv file provided by the collaborator) '
               'for intersection with GSMs available in the soft files'))
     parser.add_argument(
-        '--host-to-run', dest='host_to_run', required =True,
+        '--host-to-run', required =True,
         choices=['local', 'genesis'], 
         help=('choose a host to run, if it is not local, '
               'a corresponding template of submission script '
@@ -248,21 +220,36 @@ def parse_args():
         help=('top output directory, default to the dirname of '
               'the value of --data-file'))
     parser.add_argument(
-        '--tasks', nargs='+', dest='tasks', choices=['download', 'sra2fastq', 'rsem'],
+        '--tasks', nargs='+', choices=['download', 'sra2fastq', 'rsem'],
         help=('Specify the tasks to run, e.g. on genesis, you can only do '
               'sra2fastq and rsem; on apollo, you may want do download only '
               'and then transfer all sra files to genesis'))
     parser.add_argument(
-        '-n', '--num-threads', type=int, dest='num_threads', default=1,
+        '-n', '--ruffus-num-threads', type=int, default=1,
         help='number of threads used in Ruffus.pipeline_run')
     parser.add_argument(
         '--config-file', default='rsem_pipeline_config.yaml', 
         help='a YAML configuration file')
-
+    parser.add_argument(
+        '--debug', action='store_true',
+        help='if debug, commands won\'t be executed')
+    parser.add_argument(
+        '--ruffus-verbose', type=int, default=1,
+        help='verbosity of ruffus')
     args = parser.parse_args()
     return args
 
+
+def init_sample_outdirs(samples, outdir):
+    for sample in samples:
+        sample.gen_outdir(outdir)
+        if not os.path.exists(sample.outdir):
+            logger.info('creating directory: {0}'.format(sample.outdir))
+            os.makedirs(sample.outdir)
+
+
 if __name__ == "__main__":
+    # have to use global variables because of ruffus
     args = parse_args()
     try:
         with open(args.config_file) as inf:
@@ -270,9 +257,22 @@ if __name__ == "__main__":
     except:
         IOError('configuration file: {0} NOT found'.format(args.config_file))
 
-    samples = gen_samples_from_soft_and_data_file(
-        args.soft_files, args.data_file, args.top_outdir)
-    print samples
+    soft_files = args.soft_files
+    data_file = args.data_file
 
-    # R.pipeline_run([rsem], multiprocess=1)
-    # R.pipeline_run([download, sra2fastq, rsem], multiprocess=7)
+    if args.top_outdir:
+        top_outdir = args.top_outdir
+    else:
+        top_outdir = os.path.dirname(args.data_file)
+
+    samples = gen_samples_from_soft_and_data_file(soft_files, data_file)
+
+    outdir =  os.path.join(top_outdir, 'rsem_output')
+    logger.info('initializing outdirs of samples...')
+    init_sample_outdirs(samples, outdir)
+
+    tasks_to_run = [locals()[_] for _ in args.tasks]
+    R.pipeline_run(tasks_to_run,
+                   multiprocess=args.ruffus_num_threads,
+                   verbose=args.ruffus_verbose)
+
