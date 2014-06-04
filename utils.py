@@ -1,13 +1,8 @@
 import os
-import glob
 import logging
 import logging.config
-import re
 import subprocess
-import csv
-import json
 
-import settings as S
 logger = logging.getLogger('utils')
 
 def backup_file(f):
@@ -67,13 +62,13 @@ def gen_sample_msg_id(sample):
         sample.index, sample.series.num_passed_samples())
 
 
-def gen_sra_msg_id(sra):
-    sample = sra.sample
-    series = sample.series
-    return '{0} ({1}/{2}) of {3} ({4}/{5}) of {6}'.format(
-        sra.name, sra.index, sample.num_sras(), 
-        sample.name, sample.index, series.num_passed_samples(),
-        series.name)
+# def gen_sra_msg_id(sra):
+#     sample = sra.sample
+#     series = sample.series
+#     return '{0} ({1}/{2}) of {3} ({4}/{5}) of {6}'.format(
+#         sra.name, sra.index, sample.num_sras(), 
+#         sample.name, sample.index, series.num_passed_samples(),
+#         series.name)
 
 
 def execute(cmd, msg_id='', flag_file=None, debug=False):

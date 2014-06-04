@@ -1,5 +1,4 @@
 import os
-import settings as S
 from utils import gen_sample_msg_id
 
 class GEORecord(object):
@@ -58,7 +57,7 @@ class Sample(object):
         self.index = index    # index of all samples in the self.series.passed_samples
         self.organism = organism
         self.url = url
-        self.sras = []
+        # self.sras = []
 
     def is_info_complete(self):
         return self.name and self.organism and self.url
@@ -73,8 +72,8 @@ class Sample(object):
             self.series.name, self.name)
         return self.outdir
 
-    def num_sras(self):
-        return len(self.sras)
+    # def num_sras(self):
+    #     return len(self.sras)
 
     def __str__(self):
         return  '<{0}>'.format(gen_sample_msg_id(self))
@@ -82,13 +81,13 @@ class Sample(object):
     def __repr__(self):
         return self.__str__()
 
-class SRA(object):
-    def __init__(self, name, path, sample, index=0):
-        self.name, self.path = name, path
-        self.srr_id = os.path.splitext(self.name)[0]
-        self.location = os.path.join(path, name)
-        self.sample = sample
-        self.index = index
+# class SRA(object):
+#     def __init__(self, name, path, sample, index=0):
+#         self.name, self.path = name, path
+#         self.srr_id = os.path.splitext(self.name)[0]
+#         self.location = os.path.join(path, name)
+#         self.sample = sample
+#         self.index = index
 
-    def __repr__(self):
-        return self.location
+#     def __repr__(self):
+#         return self.location
