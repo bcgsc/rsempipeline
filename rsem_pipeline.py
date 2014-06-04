@@ -24,7 +24,8 @@ import utils as U
 import settings as S
 
 from soft_parser import parse
-from sample_data_parser import gen_sample_data_from_csv_file
+from sample_data_parser import \
+    gen_sample_data_from_csv_file, gen_sample_data_from_data_str
 from utils_download import gen_originate_files
 from utils_rsem import gen_fastq_gz_input
 
@@ -36,9 +37,10 @@ logger = logging.getLogger('rsem_pipeline')
 PATH_RE = r'(.*)/(?P<species>\S+)/(?P<GSE>GSE\d+)/(?P<GSM>GSM\d+)'
 
 
-def gen_samples_from_soft_and_data_file(soft_files, data_file):
+def gen_samples_from_soft_and_data(soft_files, data):
     """
-    :param input_csv: e.g. GSE_GSM_species.csv
+    :param data: e.g. mannually prepared sample data from data_file
+    (GSE_GSM_species.csv) or data_str
     """
     # Nomenclature:
     #     soft_files: soft_files downloaded with tools/download_soft.py
@@ -47,18 +49,14 @@ def gen_samples_from_soft_and_data_file(soft_files, data_file):
     #     data_file: the file with sample_data stored (e.g. GSE_GSM_species.csv)
     #     series: a series instance constructed from information in a soft file
 
-    if os.path.splitext(data_file)[-1] == '.csv':
-        sample_data = gen_sample_data_from_csv_file(data_file)
-    else:
-        raise ValueError(
-            "uncognized file type of {0} as samples_input_file".format(data_file))
-
     samples = []
     for soft_file in soft_files:
         global config
         series = parse(soft_file, config['INTERESTED_ORGANISMS'])
         # samples that are interested by the collaborator 
-        interested_samples = sample_data[series.name]
+        if not series.name in data:
+            continue
+        interested_samples = data[series.name]
         # intersection among GSMs found in the soft file and
         # sample_data_file
         samples.extend([_ for _ in series.passed_samples
@@ -79,13 +77,20 @@ def originate_files():
 
     logger.info('preparing originate_files '
                 'for {0} samples'.format(len(samples)))
-    cache_file = os.path.join(top_outdir, 'originate_files.pickle')
-    if U.cache_usable(cache_file, data_file, *soft_files):
+    use_cache = False
+    if data_file:
+        cache_file = os.path.join(top_outdir, 'originate_files.pickle')
+        if U.cache_usable(cache_file, data_file, *soft_files):
+            use_cache = True
+
+    if use_cache:
         with open(cache_file) as inf:
             outputs = pickle.load(inf)
     else:
         logger.info('generating originate files from FTP')
         outputs = gen_originate_files(samples)
+
+    if use_cache:
         logger.info('generating cache file: {0}'.format(cache_file))
         with open(cache_file, 'wb') as opf:
             pickle.dump(outputs, opf)
@@ -205,10 +210,15 @@ def parse_args():
         '-s', '--soft-files', nargs='+', required=True,
         help='a list of soft files')
     parser.add_argument(
-        '-f', '--data-file', required=True,
+        '-f', '--data-file',
         help=('e.g. GSE_GSM_species.csv '
               '(based on the xlsx/csv file provided by the collaborator) '
               'for intersection with GSMs available in the soft files'))
+    parser.add_argument(
+        '-d', '--data-str',
+        help=("Instead of specifying a data file, "
+              "should also serve a data string separated by ';'. e.g. "
+              "'GSE11111 GSM000001 GSM000002;GSE222222 GSM000001'"))
     parser.add_argument(
         '--host-to-run', required =True,
         choices=['local', 'genesis'], 
@@ -259,13 +269,29 @@ if __name__ == "__main__":
 
     soft_files = args.soft_files
     data_file = args.data_file
+    data_str = args.data_str
+
+    if data_file:
+        if os.path.splitext(data_file)[-1] == '.csv':
+            data = gen_sample_data_from_csv_file(data_file)
+        else:
+            raise ValueError(
+            "uncognized file type of {0} as samples_input_file".format(data_file))
+    elif data_str:
+        data = gen_sample_data_from_data_str(data_str)
+    else:
+        raise ValueError(
+            "At least one --data-file or a --data-str should be specified")
+
+    samples = gen_samples_from_soft_and_data(soft_files, data)
 
     if args.top_outdir:
         top_outdir = args.top_outdir
     else:
-        top_outdir = os.path.dirname(args.data_file)
-
-    samples = gen_samples_from_soft_and_data_file(soft_files, data_file)
+        if data_file:
+            top_outdir = os.path.dirname(args.data_file)
+        else:
+            top_outdir = os.path.dirname(__file__)
 
     outdir =  os.path.join(top_outdir, 'rsem_output')
     logger.info('initializing outdirs of samples...')
