@@ -295,7 +295,7 @@ if __name__ == "__main__":
     init_sample_outdirs(samples, outdir)
 
     if args.host_to_run == 'local':
-        tasks_to_run = [locals()[_] for _ in args.tasks] if args.task else []
+        tasks_to_run = [locals()[_] for _ in args.tasks] if args.tasks else []
         R.pipeline_run(tasks_to_run, multiprocess=args.ruffus_num_threads,
                        verbose=args.ruffus_verbose)
     elif args.host_to_run == 'genesis':
@@ -307,10 +307,10 @@ if __name__ == "__main__":
             with open(submission_script, 'wb') as opf:
                 opf.write(template.render(
                     sample=sample,
-                    rsem_pipeline_py=os.path.abspath(__file__),
+                    rsem_pipeline_py=os.path.relpath(__file__, sample.outdir),
                     soft_file=os.path.relpath(sample.series.soft_file, sample.outdir),
                     data_str='{0} {1}'.format(sample.series.name, sample.name),
-                    top_outdir=top_outdir,
+                    top_outdir=os.path.relpath(top_outdir, sample.outdir),
                     config_file=os.path.relpath(args.config_file, sample.outdir),
                     ruffus_num_threads=args.ruffus_num_threads))
             print submission_script
