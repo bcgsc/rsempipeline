@@ -8,13 +8,10 @@ on them, either on local system or on remote cluster.
 
 import os
 import sys
-import glob
 import re
 import argparse
 import logging.config
 import urlparse
-import csv
-import pickle
 import yaml
 
 import ruffus as R
@@ -212,7 +209,8 @@ def parse_args():
     parser.add_argument(
         '-o', '--top-outdir', 
         help=('top output directory, default to the dirname of '
-              'the value of --data-file'))
+              'the value of --data-file, if --data-file is not specified, '
+              'default to the current directory'))
     parser.add_argument(
         '--tasks', nargs='+', choices=['download', 'sra2fastq', 'rsem'],
         help=('Specify the tasks to run, e.g. on genesis, you can only do '

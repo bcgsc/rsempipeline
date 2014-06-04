@@ -20,30 +20,41 @@ def gen_orig_params(samples, use_pickle):
         pickle_file = os.path.join(sample.outdir, 'orig_params.pickle')
         if use_pickle and os.path.exists(pickle_file):
             with open(pickle_file) as inf:
-                orig_params = pickle.load(inf)
+                sras = pickle.load(inf)
         else:
             if ftp_handler is None:
                 ftp_handler = get_ftp_handler(samples[0])
             logger.info(
-                'generating originate params from FTP for {0}'.format(sample))
-            orig_params = gen_orig_params_per_sample(sample, ftp_handler)
-            if use_pickle:
-                with open(pickle_file, 'wb') as opf:
-                    pickle.dump(orig_params, opf)
+                'fetching list of sras from FTP for {0}'.format(sample))
+            sras = fetch_sras_list(sample, ftp_handler)
+            with open(pickle_file, 'wb') as opf:
+                pickle.dump(sras, opf)
+        orig_params = gen_orig_params_per(sample, sras)
         orig_params_sets.append(orig_params)
     if ftp_handler is not None:
         ftp_handler.quit()
     return orig_params_sets
 
 
-def gen_orig_params_per_sample(sample, ftp_handler=None):
+def gen_orig_params_per(sample, sras):
+    """construct orig_params based on current sample.outdir"""
+    sras = [os.path.join(sample.outdir, _) for _ in sras]
+    flag_files = [os.path.join(
+        sample.outdir, '{0}.download.COMPLETE'.format(os.path.basename(sra)))
+                  for sra in sras]
+    # originate params for one sample
+    orig_params = [None, sras + flag_files, sample]
+    return orig_params
+
+
+def fetch_sras_list(sample, ftp_handler=None):
     """
     Example of orig_params:
     [None,
-      ['test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863771/SRX116911/SRR401055/SRR401055.sra',
-       'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863771/SRX116911/SRR401056/SRR401056.sra',
-       'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863771/SRR401055.sra.download.COMPLETE',
-       'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863771/SRR401056.sra.download.COMPLETE'],
+      ['path/to/rsem_output/mouse/GSE35213/GSM863771/SRX116911/SRR401055/SRR401055.sra',
+       'path/to/rsem_output/mouse/GSE35213/GSM863771/SRX116911/SRR401056/SRR401056.sra',
+       'path/to/rsem_output/mouse/GSE35213/GSM863771/SRR401055.sra.download.COMPLETE',
+       'path/to/rsem_output/mouse/GSE35213/GSM863771/SRR401056.sra.download.COMPLETE'],
       <GSM863771 (2/8) of GSE35213>]
     """
 
@@ -58,14 +69,7 @@ def gen_orig_params_per_sample(sample, ftp_handler=None):
     # cool trick for flatten 2D list:
     # http://stackoverflow.com/questions/2961983/convert-multi-dimensional-list-to-a-1d-list-in-python
     sras = [_ for srr in srrs for _ in ftp_handler.nlst(srr)]
-    sras = [os.path.join(sample.outdir, _) for _ in sras]
-
-    flag_files = [os.path.join(
-        sample.outdir, '{0}.download.COMPLETE'.format(os.path.basename(sra)))
-                  for sra in sras]
-    # originate params for one sample
-    orig_params = [None, sras + flag_files, sample]
-    return orig_params
+    return sras
 
 
 def get_ftp_handler(sample):
