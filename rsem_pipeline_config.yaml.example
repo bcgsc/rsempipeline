@@ -1,0 +1,13 @@
+# Configurations that change when in different hosts should be put here, those
+# that don't change (e.g. logging configuration) should be put in settings.py
+
+# used when parsing soft files
+INTERESTED_ORGANISMS: 
+  - Homo sapiens
+  - Mus musculus
+  - Rattus norvegicus
+
+REFERENCE_NAMES:
+  homo_sapiens: /projects/btl2/batch.2013.05.22/rsem/hg19/hg19_ensembl_72
+  mus_musculus: /projects/btl2/batch.2013.05.22/rsem/mm10/mm10_ensembl_72
+  rattus_norvegicus: /projects/btl2/batch.2013.05.22/rsem/rn5/rn5_ensembl_72
