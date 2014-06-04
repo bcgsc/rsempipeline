@@ -13,6 +13,7 @@ import argparse
 import logging.config
 import urlparse
 import yaml
+import subprocess
 
 import ruffus as R
 
@@ -34,7 +35,7 @@ logger = logging.getLogger('rsem_pipeline')
 PATH_RE = r'(.*)/(?P<species>\S+)/(?P<GSE>GSE\d+)/(?P<GSM>GSM\d+)'
 
 
-def gen_samples_from_soft_and_data(soft_files, data):
+def gen_samples_from_soft_and_data(soft_files, data, config):
     """
     :param data: e.g. mannually prepared sample data from data_file
     (GSE_GSM_species.csv) or data_str
@@ -48,7 +49,6 @@ def gen_samples_from_soft_and_data(soft_files, data):
 
     samples = []
     for soft_file in soft_files:
-        global config
         series = parse(soft_file, config['INTERESTED_ORGANISMS'])
         # samples that are interested by the collaborator 
         if not series.name in data:
@@ -58,9 +58,8 @@ def gen_samples_from_soft_and_data(soft_files, data):
         # sample_data_file
         samples.extend([_ for _ in series.passed_samples
                         if _.name in interested_samples])
-    logger.info(
-        'After intersection among GSMs found in the {0} and '
-        '{1}, {2} samples remained'.format(soft_file, data_file, len(samples)))
+    logger.info('After intersection among soft and data, '
+                '{0} samples remained'.format(len(samples)))
     return samples
 
 
@@ -70,8 +69,6 @@ def originate_params():
 
     This function gets called twice, once before entering the queue, once after 
     """
-    global samples, args
-
     logger.info('preparing originate_params '
                 'for {0} samples'.format(len(samples)))
     orig_params_sets = gen_orig_params(samples, args.use_pickle)
@@ -105,7 +102,6 @@ def download(inputs, outputs, sample):
         "-l 300m "
         "anonftp@ftp-trace.ncbi.nlm.nih.gov:{1} {0}".format(
             sra_outdir, sra_url_path))
-    global args
     U.execute(cmd, msg_id, flag_file, args.debug)
 
 
@@ -120,7 +116,6 @@ def sra2fastq(inputs, outputs):
     outdir = os.path.dirname(os.path.dirname(os.path.dirname(sra)))
     cmd = ('fastq-dump --minReadLen 25 --gzip --split-files '
            '--outdir {0} {1}'.format(outdir, sra))
-    global args
     U.execute(cmd, flag_file=flag_file, debug=args.debug)
 
 
@@ -162,7 +157,6 @@ def rsem(inputs, outputs):
     gsm = res.group('GSM')
 
     # following rsem naming convention
-    global config
     reference_name = config['REFERENCE_NAMES'][species]
     sample_name = '{outdir}/{gsm}'.format(**locals())
 
@@ -180,7 +174,6 @@ def rsem(inputs, outputs):
         sample_name,
         '1>{0}/rsem.log'.format(outdir),
         '2>{0}/align.stats'.format(outdir)])
-    global args
     U.execute(cmd, flag_file=flag_file, debug=args.debug)
 
 def parse_args():
@@ -243,16 +236,37 @@ def init_sample_outdirs(samples, outdir):
             os.makedirs(sample.outdir)
 
 
-if __name__ == "__main__":
-    # have to use global variables because of ruffus
-    args = parse_args()
-    with open(args.config_file) as inf:
-        config = yaml.load(inf.read())
+def render(submission_script, template, sample, top_outdir, args):
+    with open(submission_script, 'wb') as opf:
+        content = template.render(
+            sample=sample,
+            rsem_pipeline_py=os.path.relpath(__file__, sample.outdir),
+            soft_file=os.path.relpath(sample.series.soft_file, sample.outdir),
+            data_str='{0} {1}'.format(sample.series.name, sample.name),
+            top_outdir=os.path.relpath(top_outdir, sample.outdir),
+            config_file=os.path.relpath(args.config_file, sample.outdir),
+            ruffus_num_threads=args.ruffus_num_threads)
+        opf.write(content)
 
-    soft_files = args.soft_files
-    data_file = args.data_file
-    data_str = args.data_str
 
+def qsub(submission_script):
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    os.chdir(os.path.dirname(submission_script))
+    subprocess.call(['qsub', os.path.basename(submission_script)])
+    os.chdir(current_dir)
+
+def get_top_outdir(args, data_file):
+    if args.top_outdir:
+        top_outdir = args.top_outdir
+    else:
+        if data_file:
+            top_outdir = os.path.dirname(args.data_file)
+        else:
+            top_outdir = os.path.dirname(__file__)
+    return top_outdir
+
+def get_data(data_file, data_str):
+    """get the mannually curated data"""
     if data_file:
         if os.path.splitext(data_file)[-1] == '.csv':
             data = gen_sample_data_from_csv_file(data_file)
@@ -264,17 +278,22 @@ if __name__ == "__main__":
     else:
         raise ValueError(
             "At least one --data-file or a --data-str should be specified")
+    return data
 
-    samples = gen_samples_from_soft_and_data(soft_files, data)
+def main():
+    global args, config, samples
+    args = parse_args()
+    with open(args.config_file) as inf:
+        config = yaml.load(inf.read())
 
-    if args.top_outdir:
-        top_outdir = args.top_outdir
-    else:
-        if data_file:
-            top_outdir = os.path.dirname(args.data_file)
-        else:
-            top_outdir = os.path.dirname(__file__)
+    (soft_files, data_file, data_str) = (
+        args.soft_files, args.data_file, args.data_str)
 
+    data = get_data(data_file, data_str)
+
+    samples = gen_samples_from_soft_and_data(soft_files, data, config)
+
+    top_outdir = get_top_outdir(args, data_file)
     outdir =  os.path.join(top_outdir, 'rsem_output')
     logger.info('initializing outdirs of samples...')
     init_sample_outdirs(samples, outdir)
@@ -289,13 +308,9 @@ if __name__ == "__main__":
         template = env.get_template('{}.jinja2'.format(args.host_to_run))
         for sample in samples:
             submission_script = os.path.join(sample.outdir, '0_submit.sh')
-            with open(submission_script, 'wb') as opf:
-                opf.write(template.render(
-                    sample=sample,
-                    rsem_pipeline_py=os.path.relpath(__file__, sample.outdir),
-                    soft_file=os.path.relpath(sample.series.soft_file, sample.outdir),
-                    data_str='{0} {1}'.format(sample.series.name, sample.name),
-                    top_outdir=os.path.relpath(top_outdir, sample.outdir),
-                    config_file=os.path.relpath(args.config_file, sample.outdir),
-                    ruffus_num_threads=args.ruffus_num_threads))
-            print submission_script
+            render(submission_script, template, sample, top_outdir, args)
+            logger.info('preparing submitting {0}'.format(submission_script))
+            qsub(submission_script)
+
+if __name__ == "__main__":
+    main()
