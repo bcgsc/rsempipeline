@@ -226,7 +226,7 @@ def parse_args():
               'a corresponding template of submission script '
               'is expected to be found in the templates folder'))
     parser.add_argument(
-        '-o', '--top_outdir', 
+        '-o', '--top-outdir', 
         help=('top output directory, default to the dirname of '
               'the value of --data-file'))
     parser.add_argument(
@@ -261,11 +261,8 @@ def init_sample_outdirs(samples, outdir):
 if __name__ == "__main__":
     # have to use global variables because of ruffus
     args = parse_args()
-    try:
-        with open(args.config_file) as inf:
-            config = yaml.load(inf.read())
-    except:
-        IOError('configuration file: {0} NOT found'.format(args.config_file))
+    with open(args.config_file) as inf:
+        config = yaml.load(inf.read())
 
     soft_files = args.soft_files
     data_file = args.data_file
@@ -297,8 +294,23 @@ if __name__ == "__main__":
     logger.info('initializing outdirs of samples...')
     init_sample_outdirs(samples, outdir)
 
-    tasks_to_run = [locals()[_] for _ in args.tasks]
-    R.pipeline_run(tasks_to_run,
-                   multiprocess=args.ruffus_num_threads,
-                   verbose=args.ruffus_verbose)
-
+    if args.host_to_run == 'local':
+        tasks_to_run = [locals()[_] for _ in args.tasks] if args.task else []
+        R.pipeline_run(tasks_to_run, multiprocess=args.ruffus_num_threads,
+                       verbose=args.ruffus_verbose)
+    elif args.host_to_run == 'genesis':
+        from jinja2 import Environment, PackageLoader
+        env = Environment(loader=PackageLoader('rsem_pipeline', 'templates'))
+        template = env.get_template('{}.jinja2'.format(args.host_to_run))
+        for sample in samples:
+            submission_script = os.path.join(sample.outdir, '0_submit.sh')
+            with open(submission_script, 'wb') as opf:
+                opf.write(template.render(
+                    sample=sample,
+                    rsem_pipeline_py=os.path.abspath(__file__),
+                    soft_file=os.path.relpath(sample.series.soft_file, sample.outdir),
+                    data_str='{0} {1}'.format(sample.series.name, sample.name),
+                    top_outdir=top_outdir,
+                    config_file=os.path.relpath(args.config_file, sample.outdir),
+                    ruffus_num_threads=args.ruffus_num_threads))
+            print submission_script

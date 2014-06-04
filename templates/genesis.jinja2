@@ -1,0 +1,20 @@
+#!/bin/bash
+#$ -S /bin/bash
+#$ -q all.q
+#$ -N {{sample.name}}
+#$ -pe ncpus 12
+#$ -l excl=true,mem_free=3.83G,mem_token=3.83G,h_vmem=3.83G
+#$ -j y
+#$ -V
+
+cd ${SGE_O_WORKDIR}
+
+python {{rsem_pipeline_py}} \
+    --soft-file {{soft_file}} \
+    --data-str {{data_str}} \
+    --ruffus-num-threads {ruffus_num_threads}}
+    --config-file {{config_file}} \
+    --top-outdir {top_outdir}} \
+    --tasks sra2fastq rsem \
+    --host-to-run local
+    
