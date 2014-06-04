@@ -36,5 +36,9 @@ LOGGING_CONFIG = {
             'handlers': ['console', 'file'],
             'level': 'DEBUG',
             },
+        'utils_download': {
+            'handlers': ['console', 'file'],
+            'level': 'DEBUG',
+            },
     },
 }

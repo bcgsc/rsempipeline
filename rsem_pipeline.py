@@ -73,25 +73,14 @@ def originate_params():
 
     This function gets called twice, once before entering the queue, once after 
     """
-    global samples, top_outdir, data_file, soft_files, config
+    global samples, args
 
     logger.info('preparing originate_params '
                 'for {0} samples'.format(len(samples)))
-    outputs = []
-    for sample in samples:
-        pickle_file = os.path.join(sample.outdir, 'orig_params.pickle')
-        if os.path.exists(pickle_file) and config.use_pickle:
-            with open(pickle_file) as inf:
-                outputs.append(pickle.load(inf))
-        else:
-            logger.info(
-                'generating originate params from FTP for {0}'.format(sample))
-            orig_params = gen_orig_params(sample)
-            print orig_params
-
-    logger.info('{0} sets of parameters generated '
-                'in originate params'.format(len(outputs)))
-    for _ in outputs:
+    orig_params_sets = gen_orig_params(samples, args.use_pickle)
+    logger.info(
+        '{0} sets of orig_params generated'.format(len(orig_params_sets)))
+    for _ in orig_params_sets:
         yield _
 
 
