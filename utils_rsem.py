@@ -16,13 +16,3 @@ def gen_fastq_gz_input(fastq_gzs):
     else:
         fastq_gz_input = None
     return fastq_gz_input
-
-
-def get_reference_name(species_long_or_short_name, species_info_config):
-    # e.g. fastqz: sample_data/rsem_output/human/GSE50599/align.stats
-    name = species_long_or_short_name
-    dd = species_info_config
-    for long_name in dd:
-        if (name == long_name or
-            name == dd[long_name]['short_name']):
-            return dd[long_name]['index']
