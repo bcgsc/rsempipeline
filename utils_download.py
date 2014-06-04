@@ -1,12 +1,13 @@
 import os
 import logging
 import urlparse
+import pickle
 
 from ftplib import FTP
 
 logger = logging.getLogger('utils_download')
 
-def gen_originate_files(samples):
+def gen_orig_params(samples):
     """
     Connect to the FTP server and fetch the list of files to download
 
@@ -32,27 +33,45 @@ def gen_originate_files(samples):
        'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863771/SRR401056.sra.download.COMPLETE'],
       <GSM863771 (2/8) of GSE35213>]]
     """
-    outputs = []
+    # e.g. of sample.url
+    # ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX029/SRX029242
+    ftp_handler = get_ftp_handler(samples[0])
+    orig_params_sets = []
     for sample in samples:
-        # e.g. of sample.url
-        # ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX029/SRX029242
-        url_obj = urlparse.urlparse(sample.url)
-        ftp_handler = FTP(url_obj.hostname)
-        ftp_handler.login()
-        # one level above SRX123456
-        before_srx_dir = os.path.dirname(url_obj.path)
-        ftp_handler.cwd(before_srx_dir)
-        srx = os.path.basename(url_obj.path)
-        srrs =  ftp_handler.nlst(srx)
-        # cool trick for flatten 2D list:
-        # http://stackoverflow.com/questions/2961983/convert-multi-dimensional-list-to-a-1d-list-in-python
-        sras = [_ for srr in srrs for _ in ftp_handler.nlst(srr)]
-        sras = [os.path.join(sample.outdir, _) for _ in sras]
-        ftp_handler.quit()
-    
-        for sra in sras:
-            flag_file = os.path.join(
-                sample.outdir, '{0}.download.COMPLETE'.format(
-                    os.path.basename(sra)))
-            outputs.append([None, [sra, flag_file], sample])
-    return outputs
+        orig_params = gen_orig_params_per_sample(sample)
+        pickle_file = os.path.join(sample.outdir, 'orig_params.pickle')
+        with open(pickle_file, 'wb') as opf:
+            pickle.dump(orig_params, opf)
+        orig_params_sets.append(orig_params)
+    ftp_handler.quit()
+    return orig_params_sets
+
+
+def gen_orig_params_per_sample(sample, ftp_handler=None):
+    if ftp_handler is None:
+        ftp_handler = get_ftp_handler(sample)
+    url_obj = urlparse.urlparse(sample.url)
+    # one level above SRX123456
+    before_srx_dir = os.path.dirname(url_obj.path)
+    ftp_handler.cwd(before_srx_dir)
+    srx = os.path.basename(url_obj.path)
+    srrs =  ftp_handler.nlst(srx)
+    # cool trick for flatten 2D list:
+    # http://stackoverflow.com/questions/2961983/convert-multi-dimensional-list-to-a-1d-list-in-python
+    sras = [_ for srr in srrs for _ in ftp_handler.nlst(srr)]
+    sras = [os.path.join(sample.outdir, _) for _ in sras]
+
+    for sra in sras:
+        flag_file = os.path.join(
+            sample.outdir, '{0}.download.COMPLETE'.format(
+                os.path.basename(sra)))
+    # originate params for one sample
+    orig_params = [None, [sra, flag_file], sample]
+    return orig_params
+
+
+def get_ftp_handler(sample):
+    hostname = urlparse.urlparse(sample.url).hostname
+    ftp_handler = FTP(hostname)
+    ftp_handler.login()
+    return ftp_handler

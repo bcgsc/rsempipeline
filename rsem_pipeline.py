@@ -26,7 +26,7 @@ import settings as S
 from soft_parser import parse
 from sample_data_parser import \
     gen_sample_data_from_csv_file, gen_sample_data_from_data_str
-from utils_download import gen_originate_files
+from utils_download import gen_orig_params
 from utils_rsem import gen_fastq_gz_input
 
 # to match path of GSM, e.g.
@@ -67,40 +67,35 @@ def gen_samples_from_soft_and_data(soft_files, data):
     return samples
 
 
-def originate_files():
+def originate_params():
     """
     Generate a list of sras to download for each sample
 
     This function gets called twice, once before entering the queue, once after 
     """
-    global samples, top_outdir, data_file, soft_files
+    global samples, top_outdir, data_file, soft_files, config
 
-    logger.info('preparing originate_files '
+    logger.info('preparing originate_params '
                 'for {0} samples'.format(len(samples)))
-    use_cache = False
-    if data_file:
-        cache_file = os.path.join(top_outdir, 'originate_files.pickle')
-        if U.cache_usable(cache_file, data_file, *soft_files):
-            use_cache = True
+    outputs = []
+    for sample in samples:
+        pickle_file = os.path.join(sample.outdir, 'orig_params.pickle')
+        if os.path.exists(pickle_file) and config.use_pickle:
+            with open(pickle_file) as inf:
+                outputs.append(pickle.load(inf))
+        else:
+            logger.info(
+                'generating originate params from FTP for {0}'.format(sample))
+            orig_params = gen_orig_params(sample)
+            print orig_params
 
-    if use_cache:
-        with open(cache_file) as inf:
-            outputs = pickle.load(inf)
-    else:
-        logger.info('generating originate files from FTP')
-        outputs = gen_originate_files(samples)
-
-    if use_cache:
-        logger.info('generating cache file: {0}'.format(cache_file))
-        with open(cache_file, 'wb') as opf:
-            pickle.dump(outputs, opf)
     logger.info('{0} sets of parameters generated '
-                'in originate files'.format(len(outputs)))
+                'in originate params'.format(len(outputs)))
     for _ in outputs:
         yield _
 
 
-@R.files(originate_files)
+@R.files(originate_params)
 def download(inputs, outputs, sample):
     """inputs is None""" 
     msg_id = U.gen_sample_msg_id(sample)
@@ -243,6 +238,9 @@ def parse_args():
     parser.add_argument(
         '--debug', action='store_true',
         help='if debug, commands won\'t be executed')
+    parser.add_argument(
+        '--use-pickle', action='store_true',
+        help='if true, pickle file per sample will be used to generate originate files')
     parser.add_argument(
         '--ruffus-verbose', type=int, default=1,
         help='verbosity of ruffus')
