@@ -76,8 +76,10 @@ def gen_sra_msg_id(sra):
         series.name)
 
 
-def execute(cmd, msg_id='', flag_file=None):
+def execute(cmd, msg_id='', flag_file=None, debug=False):
     logger.info('executing CMD: {0}'.format(cmd))
+    if debug:
+        return
     try:
         returncode = subprocess.call(cmd, shell=True, executable="/bin/bash")
         if returncode != 0:
