@@ -17,7 +17,7 @@ def gen_orig_params(samples, use_pickle):
     ftp_handler = None
     orig_params_sets = []
     for sample in samples:
-        pickle_file = os.path.join(sample.outdir, 'orig_params.pickle')
+        pickle_file = os.path.join(sample.outdir, 'orig_sras.pickle')
         if use_pickle and os.path.exists(pickle_file):
             with open(pickle_file) as inf:
                 sras = pickle.load(inf)
