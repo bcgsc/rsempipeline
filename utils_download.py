@@ -13,21 +13,23 @@ def gen_originate_files(samples):
     Example of originate files as held by the variable outputs:
     [[None,
       ['test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602557/SRX029242/SRR070177/SRR070177.sra',
-       'test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602557/download.COMPLETE'],
+       'test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602557/SRR070177.sra.download.COMPLETE'],
       <GSM602557 (1/20) of GSE24455>],
      [None,
       ['test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602558/SRX029243/SRR070178/SRR070178.sra',
-       'test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602558/download.COMPLETE'],
+       'test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602558/SRR070178.sra.download.COMPLETE'],
       <GSM602558 (2/20) of GSE24455>],
      [None,
       ['test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863770/SRX116910/SRR401053/SRR401053.sra',
        'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863770/SRX116910/SRR401054/SRR401054.sra',
-       'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863770/download.COMPLETE'],
+       'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863770/SRR401053.sra.download.COMPLETE',
+       'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863770/SRR401054.sra.download.COMPLETE'],
       <GSM863770 (1/8) of GSE35213>],
      [None,
       ['test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863771/SRX116911/SRR401055/SRR401055.sra',
        'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863771/SRX116911/SRR401056/SRR401056.sra',
-       'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863771/download.COMPLETE'],
+       'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863771/SRR401055.sra.download.COMPLETE',
+       'test_data_downloaded_for_genesis/rsem_output/mouse/GSE35213/GSM863771/SRR401056.sra.download.COMPLETE'],
       <GSM863771 (2/8) of GSE35213>]]
     """
     outputs = []
