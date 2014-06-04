@@ -19,51 +19,78 @@ import yaml
 
 import ruffus as R
 
-from soft_parser import parse
+
 import utils as U
 import settings as S
 
+from soft_parser import parse
+from sample_data_parser import gen_sample_data_from_csv_file
 from utils_download import gen_originate_files
-from utils_rsem import get_reference_name, gen_fastq_gz_input
+from utils_rsem import gen_fastq_gz_input
 
 # to match path of GSM, e.g.
 # /projects/btl2/batch7/rsem_pipeline2/sample_data/rsem_output/mouse/GSE35213/GSM863770
 logging.config.dictConfig(S.LOGGING_CONFIG)
-LOGGER = logging.getLogger('rsem_pipeline')
+logger = logging.getLogger('rsem_pipeline')
 
-with open('rsem_pipeline_config.yaml') as inf:
-    CONFIG = yaml.load(inf.read())
 PATH_RE = r'(.*)/(?P<species>\S+)/(?P<GSE>GSE\d+)/(?P<GSM>GSM\d+)'
 
-def gen_samples(soft_files, input_csv):
-    """
-    @param input_csv: e.g. GSE_GSM_species.csv
-    """
-    # output_dir is decided by convention over configuration!
-    input_csv_dir = os.path.dirname(input_csv)
-    output_dir = os.path.join(input_csv_dir, 'rsem_output')
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
 
-    input_csv_data = U.gen_input_csv_data(input_csv, key='gse')
+def gen_samples_from_soft_and_data_file(
+        soft_files, data_file, top_outdir=None):
+    """
+    :param input_csv: e.g. GSE_GSM_species.csv
+    """
+    # Nomenclature:
+    #     soft_files: soft_files downloaded with tools/download_soft.py
+    #     samples: a list of Sample instances
+    #     sample_data: data from the sample_data_file stored in a dict
+    #     data_file: the file with sample_data stored (e.g. GSE_GSM_species.csv)
+    #     series: a series instance constructed from information in a soft file
+
+    if os.path.splitext(data_file)[-1] == '.csv':
+        sample_data = gen_sample_data_from_csv_file(data_file)
+    else:
+        raise ValueError(
+            "uncognized file type of {0} as samples_input_file".format(data_file))
+
     samples = []
     for soft_file in soft_files:
-        series = parse(soft_file, CONFIG['SPECIES_INFO'].keys())
+        global config
+        series = parse(soft_file, config['INTERESTED_ORGANISMS'])
         # samples that are interested by the collaborator 
-        used_samples = input_csv_data[series.name]
-        # intersection among GSMs found in the soft file and input_csv
+        interested_samples = sample_data[series.name]
+        # intersection among GSMs found in the soft file and
+        # sample_data_file
         samples.extend([_ for _ in series.passed_samples
-                        if _.name in used_samples])
-    LOGGER.info(
+                        if _.name in interested_samples])
+    logger.info(
         'After intersection among GSMs found in the {0} and '
-        '{1}, {2} samples remained'.format(
-            soft_file, input_csv, len(samples)))
+        '{1}, {2} samples remained'.format(soft_file, data_file, len(samples)))
 
-    for sample in samples:
-        sample.gen_outdir(output_dir, CONFIG['SPECIES_INFO'])
-        if not os.path.exists(sample.outdir):
-            os.makedirs(sample.outdir)
+    outdir = get_outdir(data_file, top_outdir)
+    logger.info('initializing outdirs of samples...')
+    init_sample_outdirs(samples, outdir)
     return samples
+
+
+def get_outdir(data_file, top_outdir=None):
+    """
+    get the proper output directory based on top_outdir (higher priority) or
+    sample_data_file
+    """
+    if top_outdir is None:
+        top_outdir = os.path.dirname(data_file)
+    outdir =  os.path.join(top_outdir, 'rsem_output')
+    return outdir
+
+
+def init_sample_outdirs(samples, outdir):
+    for sample in samples:
+        sample.gen_outdir(outdir)
+        if not os.path.exists(sample.outdir):
+            logger.info('creating directory: {0}'.format(sample.outdir))
+            os.makedirs(sample.outdir)
 
 
 def originate_files():
@@ -72,23 +99,25 @@ def originate_files():
 
     This function gets called twice, once before entering the queue, once after 
     """
-    global samples, top_output_dir, input_csv, soft_files
-    LOGGER.info('preparing originate_files '
+    global samples, top_outdir, input_csv, soft_files
+
+    logger.info('preparing originate_files '
                 'for {0} samples'.format(len(samples)))
-    cache_file = os.path.join(top_output_dir, 'originate_files.pickle')
+    cache_file = os.path.join(top_outdir, 'originate_files.pickle')
     if U.cache_usable(cache_file, input_csv, *soft_files):
         with open(cache_file) as inf:
             outputs = pickle.load(inf)
     else:
-        LOGGER.info('generating originate files from FTP')
+        logger.info('generating originate files from FTP')
         outputs = gen_originate_files(samples)
-        LOGGER.info('generating cache file: {0}'.format(cache_file))
+        logger.info('generating cache file: {0}'.format(cache_file))
         with open(cache_file, 'wb') as opf:
             pickle.dump(outputs, opf)
-    LOGGER.info('{0} sets of parameters generated '
+    logger.info('{0} sets of parameters generated '
                 'in originate files'.format(len(outputs)))
     for _ in outputs:
         yield _
+
 
 @R.files(originate_files)
 def download(inputs, outputs, sample):
@@ -114,7 +143,8 @@ def download(inputs, outputs, sample):
         "-l 300m "
         "anonftp@ftp-trace.ncbi.nlm.nih.gov:{1} {0}".format(
             sra_outdir, sra_url_path))
-    U.execute(cmd, msg_id, flag_file)
+    print cmd
+    # U.execute(cmd, msg_id, flag_file)
 
 
 @R.subdivide(
@@ -128,7 +158,8 @@ def sra2fastq(inputs, outputs):
     outdir = os.path.dirname(os.path.dirname(os.path.dirname(sra)))
     cmd = ('fastq-dump --minReadLen 25 --gzip --split-files '
            '--outdir {0} {1}'.format(outdir, sra))
-    U.execute(cmd, flag_file=flag_file)
+    print cmd
+    # U.execute(cmd, flag_file=flag_file)
 
 
 @R.collate(
@@ -157,8 +188,8 @@ def sra2fastq(inputs, outputs):
 def rsem(inputs, outputs):
     """
     :params inputs: a tuple of 1 or 2 fastq.gz files, e.g.
-    ('/path/to/rsem_output/human/GSE50599/GSM1224499/SRR968078_1.fastq.gz',
-     '/path/to/rsem_output/human/GSE50599/GSM1224499/SRR968078_2.fastq.gz')
+    ('/path/to/rsem_output/homo_sapiens/GSE50599/GSM1224499/SRR968078_1.fastq.gz',
+     '/path/to/rsem_output/homo_sapiens/GSE50599/GSM1224499/SRR968078_2.fastq.gz')
     """
     # this is equivalent to the sample.outdir or GSM dir 
     outdir = os.path.dirname(inputs[0])
@@ -168,8 +199,13 @@ def rsem(inputs, outputs):
     species = res.group('species')
     gsm = res.group('GSM')
 
+    for _ in outputs:
+        print _, os.path.exists(_)
+    print gsm
+
     # following rsem naming convention
-    reference_name = get_reference_name(species, CONFIG['SPECIES_INFO'])
+    global config
+    reference_name = config['REFERENCE_NAMES'][species]
     sample_name = '{outdir}/{gsm}'.format(**locals())
 
     flag_file = outputs[-1]
@@ -189,15 +225,54 @@ def rsem(inputs, outputs):
     print cmd
     # U.execute(cmd, flag_file=flag_file)
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description='Run rsem pepline on a local system',
+        usage='python2.7.x {0} -s soft_file [-o some_outdir]')
+    parser.add_argument(
+        '-s', '--soft-files', nargs='+', required=True,
+        help='a list of soft files')
+    parser.add_argument(
+        '-f', '--data-file', required=True,
+        help=('e.g. GSE_GSM_species.csv '
+              '(based on the xlsx/csv file provided by the collaborator) '
+              'for intersection with GSMs available in the soft files'))
+    parser.add_argument(
+        '--host-to-run', dest='host_to_run', required =True,
+        choices=['local', 'genesis'], 
+        help=('choose a host to run, if it is not local, '
+              'a corresponding template of submission script '
+              'is expected to be found in the templates folder'))
+    parser.add_argument(
+        '-o', '--top_outdir', 
+        help=('top output directory, default to the dirname of '
+              'the value of --data-file'))
+    parser.add_argument(
+        '--tasks', nargs='+', dest='tasks', choices=['download', 'sra2fastq', 'rsem'],
+        help=('Specify the tasks to run, e.g. on genesis, you can only do '
+              'sra2fastq and rsem; on apollo, you may want do download only '
+              'and then transfer all sra files to genesis'))
+    parser.add_argument(
+        '-n', '--num-threads', type=int, dest='num_threads', default=1,
+        help='number of threads used in Ruffus.pipeline_run')
+    parser.add_argument(
+        '--config-file', default='rsem_pipeline_config.yaml', 
+        help='a YAML configuration file')
 
-
+    args = parser.parse_args()
+    return args
 
 if __name__ == "__main__":
-    input_csv = 'sample_data/sample_GSE_GSM_species.csv'
-    top_output_dir = os.path.dirname(input_csv)
-    soft_files = ['sample_data/soft/GSE24455_family.soft.subset',
-                  'sample_data/soft/GSE35213_family.soft.subset',
-                  'sample_data/soft/GSE50599_family.soft.subset']
-    samples = gen_samples(soft_files, input_csv)
-    R.pipeline_run([rsem], multiprocess=1)
+    args = parse_args()
+    try:
+        with open(args.config_file) as inf:
+            config = yaml.load(inf.read())
+    except:
+        IOError('configuration file: {0} NOT found'.format(args.config_file))
+
+    samples = gen_samples_from_soft_and_data_file(
+        args.soft_files, args.data_file, args.top_outdir)
+    print samples
+
+    # R.pipeline_run([rsem], multiprocess=1)
     # R.pipeline_run([download, sra2fastq, rsem], multiprocess=7)
