@@ -11,10 +11,15 @@ cd ${SGE_O_WORKDIR}
 
 python {{rsem_pipeline_py}} \
     --soft-file {{soft_file}} \
-    --data-str {{data_str}} \
-    --ruffus-num-threads {ruffus_num_threads}}
+    --data-str "{{data_str}}" \
+    --ruffus-num-threads {{ruffus_num_threads}} \
     --config-file {{config_file}} \
-    --top-outdir {top_outdir}} \
+    --top-outdir {{top_outdir}} \
     --tasks sra2fastq rsem \
-    --host-to-run local
-    
+    --host-to-run local \
+    --use-pickle
+
+if [ $? -eq 0 ]; then
+    find . -name '*.sra' -exec rm -v '{}' ';'
+    find . -name '*.fastq.gz' -exec rm -v '{}' ';'
+fi
