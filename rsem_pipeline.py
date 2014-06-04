@@ -299,7 +299,7 @@ def main():
     init_sample_outdirs(samples, outdir)
 
     if args.host_to_run == 'local':
-        tasks_to_run = [locals()[_] for _ in args.tasks] if args.tasks else []
+        tasks_to_run = [globals()[_] for _ in args.tasks] if args.tasks else []
         R.pipeline_run(tasks_to_run, multiprocess=args.ruffus_num_threads,
                        verbose=args.ruffus_verbose)
     elif args.host_to_run == 'genesis':
