@@ -63,13 +63,13 @@ class Sample(object):
     def is_info_complete(self):
         return self.name and self.organism and self.url
     
-    def gen_outdir(self, outdir, config):
+    def gen_outdir(self, outdir):
         """
         Generate the output directory where all downloads and analysis
         results of this particular sample are to going to be
         """
         self.outdir = os.path.join(
-            outdir, config[self.organism]['short_name'], 
+            outdir, self.organism.lower().replace(' ', '_'), 
             self.series.name, self.name)
         return self.outdir
 
