@@ -103,9 +103,14 @@ def download(inputs, outputs, sample):
         "-l 300m "
         "anonftp@ftp-trace.ncbi.nlm.nih.gov:{1} {0}".format(
             sra_outdir, sra_url_path))
-    U.execute(cmd, msg_id, flag_file, args.debug)
+    returncode = U.execute(cmd, msg_id, flag_file, args.debug)
+    if returncode != 0 or returncode is None:
+        # try wget
+        cmd = "wget ftp://ftp-trace.ncbi.nlm.nih.gov{0} -P {1} -N".format(
+            sra_url_path, sra_outdir)
+        U.execute(cmd, msg_id, flag_file, args.debug)
 
-
+               
 @R.subdivide(
     download,
     R.formatter(r'{0}/(?P<SRX>SRX\d+)/(?P<SRR>SRR\d+)/(.*)\.sra'.format(PATH_RE)),
