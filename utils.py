@@ -73,7 +73,7 @@ def gen_sample_msg_id(sample):
 
 def execute(cmd, msg_id='', flag_file=None, debug=False):
     logger.info('executing CMD: {0}'.format(cmd))
-    if debug:
+    if debug:                   # only print out cmd
         return
     try:
         returncode = subprocess.call(cmd, shell=True, executable="/bin/bash")
@@ -82,6 +82,8 @@ def execute(cmd, msg_id='', flag_file=None, debug=False):
                 '{0}, started, but then failed with returncode: {1}. '
                 'CMD "{2}"'.format(msg_id, returncode, cmd))
         else:
+            logger.info('{0}, execution succeeded with returncode: {1}. '
+                        'CMD "{2}"'.format(msg_id, returncode, cmd))
             if flag_file is not None:
                 touch(flag_file)
     except OSError, err:
