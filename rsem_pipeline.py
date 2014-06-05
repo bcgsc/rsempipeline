@@ -14,6 +14,7 @@ import logging.config
 import urlparse
 import yaml
 import subprocess
+import pickle
 
 import ruffus as R
 
@@ -236,7 +237,10 @@ def init_sample_outdirs(samples, outdir):
             os.makedirs(sample.outdir)
 
 
-def render(submission_script, template, sample, top_outdir, args):
+def render(submission_script, template, sample, top_outdir):
+    pickle_file = os.path.join(sample.outdir, 'orig_sras.pickle')
+    with open(pickle_file) as inf: # a list of sras
+        num_threads = len(pickle.load(inf))
     with open(submission_script, 'wb') as opf:
         content = template.render(
             sample=sample,
@@ -245,7 +249,7 @@ def render(submission_script, template, sample, top_outdir, args):
             data_str='{0} {1}'.format(sample.series.name, sample.name),
             top_outdir=os.path.relpath(top_outdir, sample.outdir),
             config_file=os.path.relpath(args.config_file, sample.outdir),
-            ruffus_num_threads=args.ruffus_num_threads)
+            ruffus_num_threads=num_threads)
         opf.write(content)
 
 
@@ -308,7 +312,7 @@ def main():
         template = env.get_template('{}.jinja2'.format(args.host_to_run))
         for sample in samples:
             submission_script = os.path.join(sample.outdir, '0_submit.sh')
-            render(submission_script, template, sample, top_outdir, args)
+            render(submission_script, template, sample, top_outdir)
             logger.info('preparing submitting {0}'.format(submission_script))
             qsub(submission_script)
 
