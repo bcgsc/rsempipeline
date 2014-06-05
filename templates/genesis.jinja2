@@ -2,8 +2,8 @@
 #$ -S /bin/bash
 #$ -q all.q
 #$ -N {{sample.name}}
-#$ -pe ncpus 12
-#$ -l excl=true,mem_free=3.83G,mem_token=3.83G,h_vmem=3.83G
+#$ -pe ncpus {{ruffus_num_threads}} {% set mem = 45 / ruffus_num_threads %}
+#$ -l excl=true,mem_free={{mem|int}}G,mem_token={{mem|int}}G,h_vmem={{mem|int}}G
 #$ -j y
 #$ -V
 
@@ -19,7 +19,8 @@ python {{rsem_pipeline_py}} \
     --host-to-run local \
     --use-pickle
 
-if [ $? -eq 0 ]; then
-    find . -name '*.sra' -exec rm -v '{}' ';'
-    find . -name '*.fastq.gz' -exec rm -v '{}' ';'
-fi
+echo returncode: $?
+# if [ $? -eq 0 ]; then
+#     find . -name '*.sra' -exec rm -v '{}' ';'
+#     find . -name '*.fastq.gz' -exec rm -v '{}' ';'
+# fi
