@@ -102,7 +102,16 @@ def sra2fastq(inputs, outputs):
 
 @R.collate(
     sra2fastq,
-    R.formatter(r'{0}\/(?P<SRR>SRR\d+)\_[12]\.fastq.gz'.format(PATH_RE)),
+    # the commented R.formatter line is for reference only, use the next one
+    # because thus ruffus can guarantee that all the required
+    # sra2fastq.COMPLETE files do exist before starting rsem, this is
+    # inconvenient when it comes to multiple samples because a single missing
+    # sra2fastq.COMPLETE will make the analysis for all samples crash, but
+    # generally you run one sample at a time when it comes to sra2fastq and
+    # rsem, so it should be fine most of the time
+
+    # R.formatter(r'{0}\/(?P<SRR>SRR\d+)\_[12]\.fastq.gz'.format(PATH_RE)),
+    R.formatter(PATH_RE),
     ['{subpath[0][0]}/{GSM[0]}.genes.results',
      '{subpath[0][0]}/{GSM[0]}.isoforms.results',
      '{subpath[0][0]}/{GSM[0]}.stat/{GSM[0]}.cnt',
@@ -129,6 +138,7 @@ def rsem(inputs, outputs):
     ('/path/to/rsem_output/homo_sapiens/GSE50599/GSM1224499/SRR968078_1.fastq.gz',
      '/path/to/rsem_output/homo_sapiens/GSE50599/GSM1224499/SRR968078_2.fastq.gz')
     """
+    inputs = [_ for _ in inputs if not _.endswith('.sra2fastq.COMPLETE')]
     # this is equivalent to the sample.outdir or GSM dir 
     outdir = os.path.dirname(inputs[0])
     fastq_gz_input = gen_fastq_gz_input(inputs)
