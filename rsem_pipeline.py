@@ -8,6 +8,8 @@ on them, either on local system or on remote cluster.
 
 import os
 import re
+import logging.config
+
 import urlparse
 import yaml
 
@@ -26,6 +28,7 @@ PATH_RE = r'(.*)/(?P<species>\S+)/(?P<GSE>GSE\d+)/(?P<GSM>GSM\d+)'
 options = UM.parse_args()
 with open(options.config_file) as inf:
     config = yaml.load(inf.read())
+logging.config.fileConfig(options.logging_config)
 
 samples = UM.gen_samples_from_soft_and_isamples(
     options.soft_files, UM.get_isamples(options.isamples), config)

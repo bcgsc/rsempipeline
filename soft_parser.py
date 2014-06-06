@@ -2,8 +2,6 @@ import os
 import re
 
 import logging
-import logging.config
-logging.config.fileConfig('logging.config')
 logger = logging.getLogger('soft_parser')
 
 from objs import Series, Sample

@@ -1,13 +1,10 @@
 import os
-import logging
 import urlparse
 import pickle
 
 from ftplib import FTP
 
 import logging
-import logging.config
-logging.config.fileConfig('logging.config')
 logger = logging.getLogger('utils_download')
 
 def gen_orig_params(samples, use_pickle):

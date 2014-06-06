@@ -5,8 +5,6 @@ import json
 from utils import cache_usable
 
 import logging
-import logging.config
-logging.config.fileConfig('logging.config')
 logger = logging.getLogger('isamples_parser')
 
 
