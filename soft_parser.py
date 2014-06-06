@@ -56,10 +56,17 @@ def update(current_sample, label, value, interested_organisms):
 
 def parse(soft_file, interested_organisms):
     def append_passed_sample(current_sample, series, index):
-        if current_sample and current_sample.is_info_complete():
-            current_sample.index = index
-            series.passed_samples.append(current_sample)
-            index += 1
+        if current_sample:
+            if current_sample.is_info_complete():
+                current_sample.index = index
+                series.passed_samples.append(current_sample)
+                index += 1
+            else:
+                logger.warn(
+                    'info incomplete for current sample, '
+                    'name: {0}; organism: {1}; url: {2}'.format(
+                        current_sample.name, current_sample.organism, 
+                        current_sample.url))
         return index
 
     logger.info("Parsing file: {0} ...".format(soft_file))
