@@ -4,6 +4,12 @@ import json
 
 from utils import cache_usable
 
+import logging
+import logging.config
+logging.config.fileConfig('logging.config')
+logger = logging.getLogger('isamples_parser')
+
+
 def read_csv_gse_as_key(infile):
     """
     "param infile: input file, usually named GSE_GSM_species.csv
@@ -34,7 +40,7 @@ def read_csv_gse_as_key(infile):
                 sample_data[gse] = [gsm]
     return sample_data
 
-def gen_sample_data_from_csv_file(input_csv):
+def gen_isamples_from_csv(input_csv):
     """
     Generate input data with the specified data structure as shown below
     """
@@ -43,6 +49,7 @@ def gen_sample_data_from_csv_file(input_csv):
     cache_file = os.path.join(
         dirname, '.{0}.json'.format(os.path.splitext(basename)[0]))
     if cache_usable(cache_file, input_csv):
+        logger.info('reading from cache: {0}'.format(cache_file))
         with open(cache_file, 'rb') as inf:
             sample_data = json.load(inf)
     else:
@@ -51,7 +58,7 @@ def gen_sample_data_from_csv_file(input_csv):
             json.dump(sample_data, opf)
     return sample_data
 
-def gen_sample_data_from_data_str(data_str):
+def gen_isamples_from_str(data_str):
     sample_data = {}
     for _ in data_str.split(';'):
         stuffs = _.strip().split()

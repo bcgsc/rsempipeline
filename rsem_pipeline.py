@@ -7,62 +7,37 @@ on them, either on local system or on remote cluster.
 """
 
 import os
-import sys
 import re
-import argparse
-import logging.config
 import urlparse
 import yaml
-import subprocess
-import pickle
 
 import ruffus as R
 
-
 import utils as U
-import settings as S
 
-from soft_parser import parse
-from sample_data_parser import \
-    gen_sample_data_from_csv_file, gen_sample_data_from_data_str
+import utils_main as UM
 from utils_download import gen_orig_params
 from utils_rsem import gen_fastq_gz_input
 
-# to match path of GSM, e.g.
-# /projects/btl2/batch7/rsem_pipeline2/sample_data/rsem_output/mouse/GSE35213/GSM863770
-logging.config.dictConfig(S.LOGGING_CONFIG)
-logger = logging.getLogger('rsem_pipeline')
-
 PATH_RE = r'(.*)/(?P<species>\S+)/(?P<GSE>GSE\d+)/(?P<GSM>GSM\d+)'
 
+# because of ruffus, have to use some global variables
+# global variables: options, config, samples, logger, logger_mutex
+options = UM.parse_args()
+with open(options.config_file) as inf:
+    config = yaml.load(inf.read())
 
-def gen_samples_from_soft_and_data(soft_files, data, config):
-    """
-    :param data: e.g. mannually prepared sample data from data_file
-    (GSE_GSM_species.csv) or data_str
-    """
-    # Nomenclature:
-    #     soft_files: soft_files downloaded with tools/download_soft.py
-    #     samples: a list of Sample instances
-    #     sample_data: data from the sample_data_file stored in a dict
-    #     data_file: the file with sample_data stored (e.g. GSE_GSM_species.csv)
-    #     series: a series instance constructed from information in a soft file
+samples = UM.gen_samples_from_soft_and_isamples(
+    options.soft_files, UM.get_isamples(options.isamples), config)
 
-    samples = []
-    for soft_file in soft_files:
-        series = parse(soft_file, config['INTERESTED_ORGANISMS'])
-        # samples that are interested by the collaborator 
-        if not series.name in data:
-            continue
-        interested_samples = data[series.name]
-        # intersection among GSMs found in the soft file and
-        # sample_data_file
-        samples.extend([_ for _ in series.passed_samples
-                        if _.name in interested_samples])
-    logger.info('After intersection among soft and data, '
-                '{0} samples remained'.format(len(samples)))
-    return samples
+logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
+    R.proxy_logger.setup_std_shared_logger,
+    "rsem_pipeline_logger",
+    {"config_file": "logging.config"})
 
+UM.init_sample_outdirs(samples, UM.get_rsem_outdir(options))
+
+##################################end of main##################################
 
 def originate_params():
     """
@@ -72,7 +47,7 @@ def originate_params():
     """
     logger.info('preparing originate_params '
                 'for {0} samples'.format(len(samples)))
-    orig_params_sets = gen_orig_params(samples, args.use_pickle)
+    orig_params_sets = gen_orig_params(samples, options.use_pickle)
     logger.info(
         '{0} sets of orig_params generated'.format(len(orig_params_sets)))
     for _ in orig_params_sets:
@@ -103,12 +78,12 @@ def download(inputs, outputs, sample):
         "-l 300m "
         "anonftp@ftp-trace.ncbi.nlm.nih.gov:{1} {0}".format(
             sra_outdir, sra_url_path))
-    returncode = U.execute(cmd, msg_id, flag_file, args.debug)
+    returncode = U.execute(cmd, msg_id, flag_file, options.debug)
     if returncode != 0 or returncode is None:
         # try wget
         cmd = "wget ftp://ftp-trace.ncbi.nlm.nih.gov{0} -P {1} -N".format(
             sra_url_path, sra_outdir)
-        U.execute(cmd, msg_id, flag_file, args.debug)
+        U.execute(cmd, msg_id, flag_file, options.debug)
 
                
 @R.subdivide(
@@ -122,7 +97,7 @@ def sra2fastq(inputs, outputs):
     outdir = os.path.dirname(os.path.dirname(os.path.dirname(sra)))
     cmd = ('fastq-dump --minReadLen 25 --gzip --split-files '
            '--outdir {0} {1}'.format(outdir, sra))
-    U.execute(cmd, flag_file=flag_file, debug=args.debug)
+    U.execute(cmd, flag_file=flag_file, debug=options.debug)
 
 
 @R.collate(
@@ -180,146 +155,7 @@ def rsem(inputs, outputs):
         sample_name,
         '1>{0}/rsem.log'.format(outdir),
         '2>{0}/align.stats'.format(outdir)])
-    U.execute(cmd, flag_file=flag_file, debug=args.debug)
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Run rsem pepline on a local system',
-        usage='python2.7.x {0} -s soft_file [-o some_outdir]')
-    parser.add_argument(
-        '-s', '--soft-files', nargs='+', required=True,
-        help='a list of soft files')
-    parser.add_argument(
-        '-f', '--data-file',
-        help=('e.g. GSE_GSM_species.csv '
-              '(based on the xlsx/csv file provided by the collaborator) '
-              'for intersection with GSMs available in the soft files'))
-    parser.add_argument(
-        '-d', '--data-str',
-        help=("Instead of specifying a data file, "
-              "should also serve a data string separated by ';'. e.g. "
-              "'GSE11111 GSM000001 GSM000002;GSE222222 GSM000001'"))
-    parser.add_argument(
-        '--host-to-run', required =True,
-        choices=['local', 'genesis'], 
-        help=('choose a host to run, if it is not local, '
-              'a corresponding template of submission script '
-              'is expected to be found in the templates folder'))
-    parser.add_argument(
-        '-o', '--top-outdir', 
-        help=('top output directory, default to the dirname of '
-              'the value of --data-file, if --data-file is not specified, '
-              'default to the current directory'))
-    parser.add_argument(
-        '--tasks', nargs='+', choices=['download', 'sra2fastq', 'rsem'],
-        help=('Specify the tasks to run, e.g. on genesis, you can only do '
-              'sra2fastq and rsem; on apollo, you may want do download only '
-              'and then transfer all sra files to genesis'))
-    parser.add_argument(
-        '-n', '--ruffus-num-threads', type=int, default=1,
-        help='number of threads used in Ruffus.pipeline_run')
-    parser.add_argument(
-        '--config-file', default='rsem_pipeline_config.yaml', 
-        help='a YAML configuration file')
-    parser.add_argument(
-        '--debug', action='store_true',
-        help='if debug, commands won\'t be executed')
-    parser.add_argument(
-        '--use-pickle', action='store_true',
-        help='if true, pickle file per sample will be used to generate originate files')
-    parser.add_argument(
-        '--ruffus-verbose', type=int, default=1,
-        help='verbosity of ruffus')
-    args = parser.parse_args()
-    return args
-
-
-def init_sample_outdirs(samples, outdir):
-    for sample in samples:
-        sample.gen_outdir(outdir)
-        if not os.path.exists(sample.outdir):
-            logger.info('creating directory: {0}'.format(sample.outdir))
-            os.makedirs(sample.outdir)
-
-
-def render(submission_script, template, sample, top_outdir):
-    pickle_file = os.path.join(sample.outdir, 'orig_sras.pickle')
-    with open(pickle_file) as inf: # a list of sras
-        num_threads = len(pickle.load(inf))
-    with open(submission_script, 'wb') as opf:
-        content = template.render(
-            sample=sample,
-            rsem_pipeline_py=os.path.relpath(__file__, sample.outdir),
-            soft_file=os.path.relpath(sample.series.soft_file, sample.outdir),
-            data_str='{0} {1}'.format(sample.series.name, sample.name),
-            top_outdir=os.path.relpath(top_outdir, sample.outdir),
-            config_file=os.path.relpath(args.config_file, sample.outdir),
-            ruffus_num_threads=num_threads)
-        opf.write(content)
-
-
-def qsub(submission_script):
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    os.chdir(os.path.dirname(submission_script))
-    subprocess.call(['qsub', os.path.basename(submission_script)])
-    os.chdir(current_dir)
-
-def get_top_outdir(args, data_file):
-    if args.top_outdir:
-        top_outdir = args.top_outdir
-    else:
-        if data_file:
-            top_outdir = os.path.dirname(args.data_file)
-        else:
-            top_outdir = os.path.dirname(__file__)
-    return top_outdir
-
-def get_data(data_file, data_str):
-    """get the mannually curated data"""
-    if data_file:
-        if os.path.splitext(data_file)[-1] == '.csv':
-            data = gen_sample_data_from_csv_file(data_file)
-        else:
-            raise ValueError(
-            "uncognized file type of {0} as samples_input_file".format(data_file))
-    elif data_str:
-        data = gen_sample_data_from_data_str(data_str)
-    else:
-        raise ValueError(
-            "At least one --data-file or a --data-str should be specified")
-    return data
-
-def main():
-    global args, config, samples
-    args = parse_args()
-    with open(args.config_file) as inf:
-        config = yaml.load(inf.read())
-
-    (soft_files, data_file, data_str) = (
-        args.soft_files, args.data_file, args.data_str)
-
-    data = get_data(data_file, data_str)
-
-    samples = gen_samples_from_soft_and_data(soft_files, data, config)
-
-    top_outdir = get_top_outdir(args, data_file)
-    outdir =  os.path.join(top_outdir, 'rsem_output')
-    logger.info('initializing outdirs of samples...')
-    init_sample_outdirs(samples, outdir)
-
-    if args.host_to_run == 'local':
-        tasks_to_run = [globals()[_] for _ in args.tasks] if args.tasks else []
-        R.pipeline_run(tasks_to_run, multiprocess=args.ruffus_num_threads,
-                       verbose=args.ruffus_verbose)
-    elif args.host_to_run == 'genesis':
-        from jinja2 import Environment, PackageLoader
-        env = Environment(loader=PackageLoader('rsem_pipeline', 'templates'))
-        template = env.get_template('{}.jinja2'.format(args.host_to_run))
-        for sample in samples:
-            submission_script = os.path.join(sample.outdir, '0_submit.sh')
-            render(submission_script, template, sample, top_outdir)
-            logger.info('preparing submitting {0}'.format(submission_script))
-            qsub(submission_script)
+    U.execute(cmd, flag_file=flag_file, debug=options.debug)
 
 if __name__ == "__main__":
-    main()
+    UM.act(options, samples)
