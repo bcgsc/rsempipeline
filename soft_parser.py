@@ -18,37 +18,38 @@ def update(current_sample, label, value, interested_organisms):
         if value in interested_organisms:
             sample.organism = value
         else:
-            logger.info('discarding sample {0} for '
-                        '!Sample_organism: {1}'.format(
-                            sample.name, value))
+            logger.info('discarding sample {0} of {1} for '
+                        '!Sample_organism: {2}'.format(
+                            sample.name, sample.series.name, value))
             return None
     elif label.startswith('!Sample_supplementary_file_'):
         if value.startswith(
             'ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/'):
             sample.url = value
+            # cannot discard specific to how soft file is formatted
     elif label == '!Sample_type':
         if value != 'SRA':
-            logger.info('discarding sample {0} for '
-                        '!Sample_type: {1}'.format(
-                            sample.name, value))
+            logger.info('discarding sample {0} of {1} for '
+                        '!Sample_type: {2}'.format(
+                            sample.name, sample.series.name, value))
             return None
     elif label == '!Sample_library_strategy':
         if value != 'RNA-Seq':
-            logger.info('discarding sample {0} for '
-                        '!Sample_library_stragegy: {1}'.format(
-                            sample.name, value))
+            logger.info('discarding sample {0} of {1} for '
+                        '!Sample_library_stragegy: {2}'.format(
+                            sample.name, sample.series.name, value))
             return None
     elif label == '!Sample_instrument_model':
         if '454 GS' in value or 'AB SOLiD' in value:
-            logger.info('discarding sample {0} for '
-                        '!Sample_instrument_model: {1}'.format(
-                            sample.name, value))
+            logger.info('discarding sample {0} of {1} for '
+                        '!Sample_instrument_model: {2}'.format(
+                            sample.name, sample.series.name, value))
             return None
     elif label == '!Sample_library_source':
         if value != 'TRANSCRIPTOMIC':
-            logger.info('discarding sample {0} for '
-                        '!Sample_library_source: {1}'.format(
-                            sample.name, value))
+            logger.info('discarding sample {0} of {1} for '
+                        '!Sample_library_source: {2}'.format(
+                            sample.name, sample.series.name, value))
             return None
     return current_sample
 
