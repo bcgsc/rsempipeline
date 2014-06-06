@@ -6,10 +6,9 @@ import ruffus as R
 
 from soft_parser import parse
 from isamples_parser import gen_isamples_from_csv, gen_isamples_from_str
+from utils import decide_num_jobs
 
 import logging
-import logging.config
-logging.config.fileConfig('logging.config')
 logger = logging.getLogger('utils_main')
 
 def parse_args():
@@ -45,6 +44,9 @@ def parse_args():
     parser.add_argument(
         '--config_file', default='rsem_pipeline_config.yaml', 
         help='a YAML configuration file')
+    parser.add_argument(
+        '--logging_config', default='logging.config', 
+        help='logging configuration file')
     parser.add_argument(
         '--debug', action='store_true',
         help='if debug, commands won\'t be executed, just print out per task')
@@ -137,25 +139,29 @@ def act(options, samples):
         template = env.get_template('{}.jinja2'.format(options.host_to_run))
         for sample in samples:
             submission_script = os.path.join(sample.outdir, '0_submit.sh')
-            top_outdir = get_top_outdir(options)
-            render(submission_script, template, sample, top_outdir)
+            render(submission_script, template, sample, options)
             logger.info('preparing submitting {0}'.format(submission_script))
-            qsub(submission_script)
+            # qsub(submission_script)
 
 
-def render(submission_script, template, sample, top_outdir, config_file):
-    pickle_file = os.path.join(sample.outdir, 'orig_sras.pickle')
-    with open(pickle_file) as inf: # a list of sras
-        num_threads = len(pickle.load(inf))
+def render(submission_script, template, sample, options):
+    """
+    :param submission_script: target submission_script with path
+    """
+    num_jobs = decide_num_jobs(sample.outdir)
+    top_outdir = get_top_outdir(options)
     with open(submission_script, 'wb') as opf:
         content = template.render(
             sample=sample,
-            rsem_pipeline_py=os.path.relpath(__file__, sample.outdir),
+            rsem_pipeline_py=os.path.relpath(
+                os.path.join(os.path.dirname(__file__), 'rsem_pipeline.py'),
+                sample.outdir),
             soft_file=os.path.relpath(sample.series.soft_file, sample.outdir),
-            data_str='{0} {1}'.format(sample.series.name, sample.name),
+            isamples_str='{0} {1}'.format(sample.series.name, sample.name),
             top_outdir=os.path.relpath(top_outdir, sample.outdir),
-            config_file=os.path.relpath(config_file, sample.outdir),
-            ruffus_num_threads=num_threads)
+            config_file=os.path.relpath(options.config_file, sample.outdir),
+            logging_config=os.path.relpath(options.logging_config, sample.outdir),
+            num_jobs=num_jobs)
         opf.write(content)
 
 

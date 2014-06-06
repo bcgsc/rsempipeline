@@ -35,8 +35,8 @@ samples = UM.gen_samples_from_soft_and_isamples(
 
 logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
     R.proxy_logger.setup_std_shared_logger,
-    "rsem_pipeline_logger",
-    {"config_file": "logging.config"})
+    "rsem_pipeline",
+    {"config_file": options.logging_config})
 
 UM.init_sample_outdirs(samples, UM.get_rsem_outdir(options))
 
@@ -155,9 +155,13 @@ def rsem(inputs, outputs):
     sample_name = '{outdir}/{gsm}'.format(**locals())
 
     flag_file = outputs[-1]
+
+    num_jobs = U.decide_num_jobs(outdir)
     cmd = ' '.join([
         'rsem-calculate-expression', # 1.2.5
-        '-p 2',
+        '-p {0}'.format(num_jobs),   # not the best way to determine num jobs,
+                                     # but consistent with the number of sra
+                                     # files
         '--time',
         '--no-bam-output',
         '--bowtie-chunkmbs 256',

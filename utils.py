@@ -2,6 +2,7 @@ import os
 import logging
 import logging.config
 import subprocess
+import pickle
 
 import logging
 logger = logging.getLogger('utils')
@@ -101,3 +102,13 @@ def gen_completion_stamp(key, stamp_dir):
     """
     return os.path.join(stamp_dir, '{0}.COMPLETE'.format(key))
 
+
+def decide_num_jobs(sample_outdir):
+    """decide num jobs based on num of sra files"""
+    pickle_file = os.path.join(sample_outdir, 'orig_sras.pickle')
+    if os.path.exists(pickle_file):
+        with open(pickle_file) as inf: # a list of sras
+            num_jobs = len(pickle.load(inf))
+    else:                       # default to 1
+        num_jobs = 1
+    return num_jobs

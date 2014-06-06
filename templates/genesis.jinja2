@@ -2,7 +2,7 @@
 #$ -S /bin/bash
 #$ -q all.q
 #$ -N {{sample.name}}
-#$ -pe ncpus {{ruffus_num_threads}} {% set mem = 45 / ruffus_num_threads %}
+#$ -pe ncpus {{num_jobs}} {% set mem = 45 / num_jobs %}
 #$ -l excl=true,mem_free={{mem|int}}G,mem_token={{mem|int}}G,h_vmem={{mem|int}}G
 #$ -j y
 #$ -V
@@ -10,17 +10,23 @@
 cd ${SGE_O_WORKDIR}
 
 python {{rsem_pipeline_py}} \
-    --soft-file {{soft_file}} \
-    --data-str "{{data_str}}" \
-    --ruffus-num-threads {{ruffus_num_threads}} \
-    --config-file {{config_file}} \
-    --top-outdir {{top_outdir}} \
-    --tasks sra2fastq rsem \
-    --host-to-run local \
-    --use-pickle
+    --soft_file {{soft_file}} \
+    --isamples "{{isamples_str}}" \
+    --host_to_run local \
+    --config_file {{config_file}} \
+    --logging_config {{logging_config}} \
+    --use_pickle \
+    --top_outdir {{top_outdir}} \
+    --jobs {{num_jobs}} \
+    --use_threads \
+    --recreate_database \
+    -T sra2fastq -T rsem
+
 
 echo returncode: $?
-# if [ $? -eq 0 ]; then
-#     find . -name '*.sra' -exec rm -v '{}' ';'
-#     find . -name '*.fastq.gz' -exec rm -v '{}' ';'
-# fi
+
+if [ -f lele ]; then
+    echo 'alfred'
+    find . -name '*.sra' -exec rm -v '{}' ';'
+    find . -name '*.fastq.gz' -exec rm -v '{}' ';'
+fi
