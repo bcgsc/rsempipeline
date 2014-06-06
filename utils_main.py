@@ -19,7 +19,7 @@ def parse_args():
         version='0.1')
 
     parser.add_argument(
-        '-s', '--soft-files', nargs='+', required=True,
+        '-s', '--soft_files', nargs='+', required=True,
         help='a list of soft files')
     parser.add_argument(
         '-i', '--isamples',
@@ -32,24 +32,24 @@ def parse_args():
               'The pipeline will check data is a file and exists, or '
               'it assumes it\'s a data string'))
     parser.add_argument(
-        '--host-to-run', required =True,
+        '--host_to_run', required =True,
         choices=['local', 'genesis'], 
         help=('choose a host to run, if it is not local, '
               'a corresponding template of submission script '
               'is expected to be found in the templates folder'))
     parser.add_argument(
-        '-o', '--top-outdir', 
+        '-o', '--top_outdir', 
         help=('top output directory, which defaults to the dirname of '
               'the value of --data if it\'s a file. Otherwise it '
               'defaults to the current directory'))
     parser.add_argument(
-        '--config-file', default='rsem_pipeline_config.yaml', 
+        '--config_file', default='rsem_pipeline_config.yaml', 
         help='a YAML configuration file')
     parser.add_argument(
         '--debug', action='store_true',
         help='if debug, commands won\'t be executed, just print out per task')
     parser.add_argument(
-        '--use-pickle', action='store_true',
+        '--use_pickle', action='store_true',
         help=('if true, will create a pickle file per sample to store '
               'a list of sra files as cache, this not only speed up rerun, '
               'but also is useful when there is no Internet connection. '
