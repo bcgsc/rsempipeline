@@ -3,6 +3,9 @@ import logging
 import logging.config
 import subprocess
 
+import logging
+import logging.config
+logging.config.fileConfig('logging.config')
 logger = logging.getLogger('utils')
 
 def backup_file(f):
