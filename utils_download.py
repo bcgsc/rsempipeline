@@ -30,34 +30,39 @@ def gen_orig_params(samples, use_pickle):
             with open(pickle_file, 'wb') as opf:
                 pickle.dump(sras, opf)
         orig_params = gen_orig_params_per(sample, sras)
-        orig_params_sets.append(orig_params)
+        orig_params_sets.extend(orig_params)
     if ftp_handler is not None:
         ftp_handler.quit()
     return orig_params_sets
 
 
 def gen_orig_params_per(sample, sras):
-    """construct orig_params based on current sample.outdir"""
+    """
+    construct orig_params based on current sample.outdir
+
+    Example of orig_params:
+    [[None,
+      ['path/to/rsem_output/mouse/GSE35213/GSM863771/SRX116911/SRR401055/SRR401055.sra',
+       'path/to/rsem_output/mouse/GSE35213/GSM863771/SRR401056.sra.download.COMPLETE'],
+      <GSM863771 (2/8) of GSE35213>],
+     [None,
+      ['path/to/rsem_output/mouse/GSE35213/GSM863771/SRX116911/SRR401056/SRR401056.sra',
+       'path/to/rsem_output/mouse/GSE35213/GSM863771/SRR401055.sra.download.COMPLETE'],
+      <GSM863771 (2/8) of GSE35213>],
+     ]
+    """
     sras = [os.path.join(sample.outdir, _) for _ in sras]
     flag_files = [os.path.join(
         sample.outdir, '{0}.download.COMPLETE'.format(os.path.basename(sra)))
                   for sra in sras]
     # originate params for one sample
-    orig_params = [None, sras + flag_files, sample]
+    orig_params = []
+    for s, f in zip(sras, flag_files):
+        orig_params.append([None, [s, f], sample])
     return orig_params
 
 
 def fetch_sras_list(sample, ftp_handler=None):
-    """
-    Example of orig_params:
-    [None,
-      ['path/to/rsem_output/mouse/GSE35213/GSM863771/SRX116911/SRR401055/SRR401055.sra',
-       'path/to/rsem_output/mouse/GSE35213/GSM863771/SRX116911/SRR401056/SRR401056.sra',
-       'path/to/rsem_output/mouse/GSE35213/GSM863771/SRR401055.sra.download.COMPLETE',
-       'path/to/rsem_output/mouse/GSE35213/GSM863771/SRR401056.sra.download.COMPLETE'],
-      <GSM863771 (2/8) of GSE35213>]
-    """
-
     if ftp_handler is None:
         ftp_handler = get_ftp_handler(sample)
     url_obj = urlparse.urlparse(sample.url)
