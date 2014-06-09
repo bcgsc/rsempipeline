@@ -25,8 +25,7 @@ python {{rsem_pipeline_py}} \
 
 echo returncode: $?
 
-if [ -f lele ]; then
-    echo 'alfred'
+if [ -f rsem.COMPLETE ]; then
     find . -name '*.sra' -exec rm -v '{}' ';'
     find . -name '*.fastq.gz' -exec rm -v '{}' ';'
 fi

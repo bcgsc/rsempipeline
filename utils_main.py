@@ -141,7 +141,7 @@ def act(options, samples):
             submission_script = os.path.join(sample.outdir, '0_submit.sh')
             render(submission_script, template, sample, options)
             logger.info('preparing submitting {0}'.format(submission_script))
-            # qsub(submission_script)
+            qsub(submission_script)
 
 
 def render(submission_script, template, sample, options):
