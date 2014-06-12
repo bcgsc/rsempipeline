@@ -26,6 +26,9 @@ python {{rsem_pipeline_py}} \
 echo returncode: $?
 
 if [ -f rsem.COMPLETE ]; then
+    find . -name '*.sra' -exec du -h '{}' ';'
+    find . -name '*.fastq.gz' -exec du -h '{}' ';'
+
     find . -name '*.sra' -exec rm -v '{}' ';'
     find . -name '*.fastq.gz' -exec rm -v '{}' ';'
 fi
