@@ -61,5 +61,8 @@ def gen_isamples_from_str(data_str):
     for _ in data_str.split(';'):
         stuffs = _.strip().split()
         gse, gsms = stuffs[0], stuffs[1:]
-        sample_data[gse] = gsms
+        if gse not in sample_data:
+            sample_data[gse] = gsms
+        else:
+            sample_data[gse].extend(gsms)
     return sample_data
