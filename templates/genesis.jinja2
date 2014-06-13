@@ -22,9 +22,6 @@ python {{rsem_pipeline_py}} \
     --recreate_database \
     -T sra2fastq -T rsem
 
-
-echo returncode: $?
-
 if [ -f rsem.COMPLETE ]; then
     find . -name '*.sra' -exec du -h '{}' ';'
     find . -name '*.fastq.gz' -exec du -h '{}' ';'
