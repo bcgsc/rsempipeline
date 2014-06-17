@@ -1,3 +1,5 @@
+Jinja2==2.7.3
+MarkupSafe==0.23
 PyYAML==3.11
 pyflakes==0.8.1
 ruffus==2.4.1

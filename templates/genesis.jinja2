@@ -1,9 +1,9 @@
 #!/bin/bash
 #$ -S /bin/bash
 #$ -q all.q
-#$ -N {{sample.name}}
-#$ -pe ncpus {{num_jobs}} {% set mem = 45 / num_jobs %}
-#$ -l excl=true,mem_free={{mem|int}}G,mem_token={{mem|int}}G,h_vmem={{mem|int}}G
+#$ -N {{sample.name}} {% set ncpus = num_jobs if num_jobs < 2 else 2 %} {% set mem = 8 %} 
+#$ -pe ncpus {{ncpus}}
+#$ -l mem_free={{mem}}G,mem_token={{mem}}G,h_vmem={{mem}}G
 #$ -j y
 #$ -V
 
@@ -17,7 +17,7 @@ python {{rsem_pipeline_py}} \
     --logging_config {{logging_config}} \
     --use_pickle \
     --top_outdir {{top_outdir}} \
-    --jobs {{num_jobs}} \
+    --jobs {{ncpus}} \
     --use_threads \
     --recreate_database \
     -T sra2fastq -T rsem
@@ -26,6 +26,9 @@ python {{rsem_pipeline_py}} \
 echo returncode: $?
 
 if [ -f rsem.COMPLETE ]; then
+    find . -name '*.sra' -exec du -h '{}' ';'
+    find . -name '*.fastq.gz' -exec du -h '{}' ';'
+
     find . -name '*.sra' -exec rm -v '{}' ';'
     find . -name '*.fastq.gz' -exec rm -v '{}' ';'
 fi
