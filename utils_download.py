@@ -27,10 +27,12 @@ def gen_orig_params(samples, use_pickle):
             logger.info(
                 'fetching list of sras from FTP for {0}'.format(sample))
             sras = fetch_sras_list(sample, ftp_handler)
-            with open(pickle_file, 'wb') as opf:
-                pickle.dump(sras, opf)
-        orig_params = gen_orig_params_per(sample, sras)
-        orig_params_sets.extend(orig_params)
+            if sras:            # could be None due to Network problem
+                with open(pickle_file, 'wb') as opf:
+                    pickle.dump(sras, opf)
+        if sras:
+            orig_params = gen_orig_params_per(sample, sras)
+            orig_params_sets.extend(orig_params)
     if ftp_handler is not None:
         ftp_handler.quit()
     return orig_params_sets
