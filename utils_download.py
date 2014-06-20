@@ -70,12 +70,14 @@ def fetch_sras_list(sample, ftp_handler=None):
     before_srx_dir = os.path.dirname(url_obj.path)
     ftp_handler.cwd(before_srx_dir)
     srx = os.path.basename(url_obj.path)
-    srrs =  ftp_handler.nlst(srx)
-    # cool trick for flatten 2D list:
-    # http://stackoverflow.com/questions/2961983/convert-multi-dimensional-list-to-a-1d-list-in-python
-    sras = [_ for srr in srrs for _ in ftp_handler.nlst(srr)]
-    return sras
-
+    try:
+        srrs =  ftp_handler.nlst(srx)
+        # cool trick for flatten 2D list:
+        # http://stackoverflow.com/questions/2961983/convert-multi-dimensional-list-to-a-1d-list-in-python
+        sras = [_ for srr in srrs for _ in ftp_handler.nlst(srr)]
+        return sras
+    except Exception, e:
+        logger.exception(e)
 
 def get_ftp_handler(sample):
     hostname = urlparse.urlparse(sample.url).hostname
