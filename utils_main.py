@@ -118,6 +118,16 @@ def gen_samples_from_soft_and_isamples(soft_files, data, config):
                         if _.name in interested_samples])
     logger.info('After intersection among soft and data, '
                 '{0} samples remained'.format(len(samples)))
+    # gsm ids of interested samples
+    gsm_set1 = [_ for val in data.values() for _ in val]
+    # gsm ids of samples after intersection
+    gsm_set2 = [_.name for _ in samples]
+    logger.info(
+        'samples in isamples (-i) but not to be processed:\n\t{0}'.format(
+            list(set(gsm_set1) - set(gsm_set2))))
+    logger.info(
+        'samples to be processed but not in isamples (-i):\n\t{0}'.format(
+            list(set(gsm_set2) - set(gsm_set1))))
     return samples
 
 
