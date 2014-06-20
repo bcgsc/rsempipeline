@@ -122,12 +122,14 @@ def gen_samples_from_soft_and_isamples(soft_files, data, config):
     gsm_set1 = [_ for val in data.values() for _ in val]
     # gsm ids of samples after intersection
     gsm_set2 = [_.name for _ in samples]
-    logger.info(
-        'samples in isamples (-i) but not to be processed:\n\t{0}'.format(
-            list(set(gsm_set1) - set(gsm_set2))))
-    logger.info(
-        'samples to be processed but not in isamples (-i):\n\t{0}'.format(
-            list(set(gsm_set2) - set(gsm_set1))))
+    diff1 = list(set(gsm_set1) - set(gsm_set2))
+    if diff1:
+        logger.error('samples in isamples (-i) but not to be processed:\n\t'
+                     '{0}'.format(diff1))
+    diff2 = list(set(gsm_set2) - set(gsm_set1))
+    if diff2:
+        logger.error('samples to be processed but not in isamples (-i):\n\t'
+                     '{0}'.format(diff2))
     return samples
 
 
