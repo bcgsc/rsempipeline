@@ -156,10 +156,9 @@ def rsem(inputs, outputs):
 
     flag_file = outputs[-1]
 
-    num_jobs = U.decide_num_jobs(outdir)
     cmd = ' '.join([
         'rsem-calculate-expression', # 1.2.5
-        '-p {0}'.format(num_jobs),   # not the best way to determine num jobs,
+        '-p {0}'.format(options.jobs),   # not the best way to determine num jobs,
                                      # but consistent with the number of sra
                                      # files
         '--time',
