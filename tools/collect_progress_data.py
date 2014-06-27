@@ -50,9 +50,9 @@ def get_jobs_from_qstat_data(qstat_cmd):
     """
     raw_xml = get_qstat_data(qstat_cmd)
     xml_data = xml.fromstring(raw_xml)
-    queue_info = xml_data.find('queue_info')
     queued_gsms, running_gsms = [], []
-    for job in queue_info.findall('.//job_list'):
+    # xpath: finding job_list recursively
+    for job in xml_data.findall('.//job_list'):
         state = job.get('state')
         job_name = job.find('JB_name').text.strip()
         gsm_search = re.search('GSM\d+', job_name)
