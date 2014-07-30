@@ -1,9 +1,7 @@
 *.log
 *#
 *.pyc
-venv
-lele*
-soft
-sra
-.ruffus_history.sqlite
 *.yaml
+venv*
+lele*
+.ruffus_history.sqlite
