@@ -74,20 +74,18 @@ def process(k, row):
 
 def write_csv(rows, out_csv):
     with open(out_csv, 'wb') as opf:
-        csv_writer = csv.writer(opf, delimiter='\t')
+        csv_writer = csv.writer(opf)
         for _ in sorted(rows):
             csv_writer.writerow(_)
 
 
 def find_species(gse, gsm, html_dir):
     """functions calling order: find_sepecies -> gen_soup -> download_html"""
-
     soup = gen_soup(gse, gsm, html_dir)
-    tds = soup.findAll('td')
-    for _ in tds:
-        if _.text.strip() == 'Organism':
-            species = _.findNextSibling().text.strip()
-            return species
+    td = soup.find('td', text=re.compile('Organism|Organisms'))
+    if td:
+        species = td.find_next_sibling().text.strip()
+        return species
 
 
 def gen_soup(gse, gsm, html_dir):
@@ -112,10 +110,8 @@ def gen_soup(gse, gsm, html_dir):
 def download_html(GSM, out_html):
     url = "http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={0}".format(GSM)
     response = requests.get(url)
-    html = response.text
-    soup = BeautifulSoup(html)
     with open(out_html, 'wb') as opf:
-        opf.write(soup.prettify().encode('utf-8'))
+        opf.write(response.text.encode('utf-8'))
     return out_html
 
 
