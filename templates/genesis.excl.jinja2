@@ -1,0 +1,31 @@
+#!/bin/bash
+#$ -S /bin/bash
+#$ -q all.q
+#$ -N {{sample.name}}_{{sample.series.name}} {% set ncpus = 12 %} {% set mem = 3.83 %} 
+#$ -pe ncpus {{ncpus}}
+#$ -l excl=true,mem_free={{mem}}G,mem_token={{mem}}G,h_vmem={{mem}}G
+#$ -j y
+#$ -V
+
+cd ${SGE_O_WORKDIR}
+
+python {{rsem_pipeline_py}} \
+    --soft_file {{soft_file}} \
+    --isamples "{{isamples_str}}" \
+    --host_to_run local \
+    --config_file {{config_file}} \
+    --logging_config {{logging_config}} \
+    --use_pickle \
+    --top_outdir {{top_outdir}} \
+    --jobs {{ncpus}} \
+    --use_threads \
+    --recreate_database \
+    -T sra2fastq -T rsem
+
+if [ -f rsem.COMPLETE ]; then
+    find . -name '*.sra' -exec du -h '{}' ';'
+    find . -name '*.fastq.gz' -exec du -h '{}' ';'
+
+    find . -name '*.sra' -exec rm -v '{}' ';'
+    find . -name '*.fastq.gz' -exec rm -v '{}' ';'
+fi
