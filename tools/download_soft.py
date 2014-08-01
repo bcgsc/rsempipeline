@@ -6,12 +6,9 @@ where the input csv_file (e.g. GSE_GSM_species.csv) is located
 """
 
 import os
-import sys
 import urlparse
 import gzip
-import itertools
-# import Queue
-# import threading
+import argparse
 import logging
 logging.basicConfig(
     level=logging.DEBUG,
@@ -19,7 +16,8 @@ logging.basicConfig(
 
 from ftplib import FTP
 
-from utils import gen_data_from_csv
+from utils import read
+
 
 class SOFTDownloader(object):
     """
@@ -99,45 +97,42 @@ class SOFTDownloader(object):
                         opf.write(line)
         return soft_subset
 
-def main(input_csv):
+
+def main():
     """
-    @param input_csv: e.g. GSE_GSM_species.csv
+    @param input_csv: e.g. GSE_species_GSM.csv
     """
-    output_dir = os.path.dirname(input_csv)
-    soft_dir = os.path.join(output_dir, 'soft')
+    options = parse_args()
+    input_csv = options.input_csv
+    out_dir = options.out_dir
+
+    if out_dir is None:
+        out_dir = os.path.dirname(input_csv)
+
+    out_dir = os.path.dirname(input_csv)
+    soft_dir = os.path.join(out_dir, 'soft')
     if not os.path.exists(soft_dir):
         os.mkdir(soft_dir)
 
-    input_data = gen_data_from_csv(input_csv)
-    # merging all GSEs
-    gses = set(list(itertools.chain(
-        *[input_data[_].keys() for _ in input_data])))
-
-    # Parallelization not successful yet! 2014-04-23, not sure why
-    # ftp.gen_soft_subset always points to the same object (via id()), need to
-    # come up with a better parallelization design.
-
-    # def worker(queue):
-    #     while True:
-    #         func, args = queue.get()
-    #         func(*args)
-    #         queue.task_done()
-
-    # queue = Queue.Queue()
-    # for i in range(7):
-    #     thrd = threading.Thread(target=worker, args=(queue,))
-    #     thrd.daemon = True
-    #     thrd.start()
-
     ftp = SOFTDownloader()
-    for _ in gses:
-        ftp.gen_soft_subset(_, soft_dir)
-    # queue.join()
+    current_gse = None
+    for gse, gsm in read(input_csv):
+        if current_gse is None or gse != current_gse:
+            ftp.gen_soft_subset(gse, soft_dir)
+            current_gse = gse
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='detect duplicated GSMs in GSE_GSM.csv')
+    parser.add_argument(
+        '-f', '--input_csv', type=str,
+        help='input GSE_GSM.csv, check check example_GSE_GSM.csv for format ')
+    parser.add_argument(
+        '--out_dir', type=str,
+        help='directory for output default to where GSE_GSM.csv is located ')
+    options = parser.parse_args()
+    return options
+
 
 if __name__ == '__main__':
-    try:
-        input_csv = sys.argv[1] # e.g. GSE_GSM_SPECIES.csv
-        main(input_csv)
-    except IndexError:
-        print 'Usage: python2.7.x download_soft.py input_csv (e.g. GSE_GSM_species.csv)'
-
+    main()
