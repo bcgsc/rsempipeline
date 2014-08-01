@@ -15,4 +15,5 @@ Todo:
 3. isolate hardcoded parts, num\_of\_threads, gen_cmds, etc.
 
 ```python rsem_pipeline.py -s sample_data/soft/GSE24455_family.soft.subset sample_data/soft/GSE35213_family.soft.subset sample_data/soft/GSE50599_family.soft.subset -f sample_data/sample_GSE_GSM_species.csv  --host-to-run local -n 7 --tasks download```
+
 ```python rsem_pipeline.py -s sample_data/soft/GSE24455_family.soft.subset sample_data/soft/GSE35213_family.soft.subset sample_data/soft/GSE50599_family.soft.subset -d "GSE24455 GSM602557 GSM602558; GSE35213 GSM863770" -o some_outdir --host-to-run local --tasks download ```

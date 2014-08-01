@@ -27,10 +27,12 @@ def gen_orig_params(samples, use_pickle):
             logger.info(
                 'fetching list of sras from FTP for {0}'.format(sample))
             sras = fetch_sras_list(sample, ftp_handler)
-            with open(pickle_file, 'wb') as opf:
-                pickle.dump(sras, opf)
-        orig_params = gen_orig_params_per(sample, sras)
-        orig_params_sets.extend(orig_params)
+            if sras:            # could be None due to Network problem
+                with open(pickle_file, 'wb') as opf:
+                    pickle.dump(sras, opf)
+        if sras:
+            orig_params = gen_orig_params_per(sample, sras)
+            orig_params_sets.extend(orig_params)
     if ftp_handler is not None:
         ftp_handler.quit()
     return orig_params_sets
@@ -70,12 +72,14 @@ def fetch_sras_list(sample, ftp_handler=None):
     before_srx_dir = os.path.dirname(url_obj.path)
     ftp_handler.cwd(before_srx_dir)
     srx = os.path.basename(url_obj.path)
-    srrs =  ftp_handler.nlst(srx)
-    # cool trick for flatten 2D list:
-    # http://stackoverflow.com/questions/2961983/convert-multi-dimensional-list-to-a-1d-list-in-python
-    sras = [_ for srr in srrs for _ in ftp_handler.nlst(srr)]
-    return sras
-
+    try:
+        srrs =  ftp_handler.nlst(srx)
+        # cool trick for flatten 2D list:
+        # http://stackoverflow.com/questions/2961983/convert-multi-dimensional-list-to-a-1d-list-in-python
+        sras = [_ for srr in srrs for _ in ftp_handler.nlst(srr)]
+        return sras
+    except Exception, e:
+        logger.exception(e)
 
 def get_ftp_handler(sample):
     hostname = urlparse.urlparse(sample.url).hostname
