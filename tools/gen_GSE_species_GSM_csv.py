@@ -184,11 +184,12 @@ def main():
     # write output
     out_csv = os.path.join(out_dir, 'GSE_species_GSM.csv')
     backup_file(out_csv)
-    no_species_csv = os.path.join(out_dir, 'GSE_no_species_GSM.csv')
-    backup_file(no_species_csv)
-
     write_csv(res, out_csv)
-    write_csv(res_no_species, no_species_csv)
+
+    if res_no_species:
+        no_species_csv = os.path.join(out_dir, 'GSE_no_species_GSM.csv')
+        backup_file(no_species_csv)
+        write_csv(res_no_species, no_species_csv)
 
 
 def parse_args():
