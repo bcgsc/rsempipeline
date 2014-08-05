@@ -1,3 +1,6 @@
+"""parser for GSE_species_GSM.csv, which include isamp (Interested Samples)"""
+
+import re
 import os
 import csv
 import json
@@ -5,12 +8,11 @@ import json
 from utils import cache_usable
 
 import logging
-logger = logging.getLogger('isamples_parser')
-
+logger = logging.getLogger('isamp_parser')
 
 def read_csv_gse_as_key(infile):
     """
-    "param infile: input file, usually named GSE_GSM_species.csv
+    "param infile: input file, usually named GSE_species_GSM.csv
 
     Data structure of sample_data returned:
     sample_data = {
@@ -30,13 +32,39 @@ def read_csv_gse_as_key(infile):
     """
     sample_data = {}
     with open(infile, 'rb') as inf:
-        csvreader = csv.reader(inf, delimiter='\t')
-        for (gse, gsm, species) in csvreader:
-            if gse in sample_data:
-                sample_data[gse].append(gsm)
-            else:
-                sample_data[gse] = [gsm]
+        csv_reader = csv.reader(inf)
+        for k, row in enumerate(csv_reader):
+            if row:
+                res = process(k+1, row)
+                if res is not None:
+                    gse, species, gsm = res
+                    if gse in sample_data:
+                        sample_data[gse].append(gsm)
+                    else:
+                        sample_data[gse] = [gsm]
     return sample_data
+
+
+def process(k, row):
+    def err():
+        print ('Ignored invalid row ({0}): {1}'.format(k, row))
+
+    # check if there are only two columns
+    if len(row) != 3:
+        err()
+        return
+
+    gse, species, gsm = row
+    # check if GSE is properly named
+    if not re.search('^GSE\d+$', gse):
+        err()
+        return
+    # check if GSMs are properly named
+    if not re.search('^GSM\d+$', gsm):
+        err()
+        return
+    return gse, species, gsm
+
 
 def gen_isamples_from_csv(input_csv):
     """
