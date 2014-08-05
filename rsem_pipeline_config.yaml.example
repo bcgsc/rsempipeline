@@ -1,6 +1,23 @@
 # Configurations that change when in different hosts should be put here, those
 # that don't change (e.g. logging configuration) should be put in settings.py
 
+# -Q Fair transfer policy, -T Disable encryption
+# -L log dir
+CMD_ASCP: >-
+  /home/kmnip/bin/ascp 
+  -i /home/kmnip/.aspera/connect/etc/asperaweb_id_dsa.putty 
+  --ignore-host-key 
+  -QT 
+  -L {log_dir}
+  -k2 
+  -l 300m 
+  anonftp@ftp-trace.ncbi.nlm.nih.gov:{url_path} {output_dir}
+
+CMD_WGET: >-
+  wget ftp://ftp-trace.ncbi.nlm.nih.gov{url_path} -P {output_dir} -N
+
+
+
 # used when parsing soft files
 INTERESTED_ORGANISMS: 
   - Homo sapiens

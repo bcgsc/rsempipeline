@@ -72,21 +72,13 @@ def download(inputs, outputs, sample):
     # /sra/sra-instant/reads/ByExp/sra/SRX/SRX029/SRX029242
     url_path = urlparse.urlparse(sample.url).path
     sra_url_path = os.path.join(url_path, *sra.split('/')[-2:])
-    cmd = (
-        "/home/kmnip/bin/ascp "
-        "-i /home/kmnip/.aspera/connect/etc/asperaweb_id_dsa.putty "
-        "--ignore-host-key "
-        "-QT "                 # -Q Fair transfer policy, -T Disable encryption
-        "-L {0} "              # log dir
-        "-k2 "
-        "-l 300m "
-        "anonftp@ftp-trace.ncbi.nlm.nih.gov:{1} {0}".format(
-            sra_outdir, sra_url_path))
+    cmd = config['CMD_ASCP'].format(
+        log_dir=sra_outdir, url_path=sra_url_path, output_dir=sra_outdir)
     returncode = U.execute(cmd, msg_id, flag_file, options.debug)
     if returncode != 0 or returncode is None:
         # try wget
-        cmd = "wget ftp://ftp-trace.ncbi.nlm.nih.gov{0} -P {1} -N".format(
-            sra_url_path, sra_outdir)
+        cmd = config['CMD_WGET'].format(
+            url_path=sra_url_path, output_dir=sra_outdir)
         U.execute(cmd, msg_id, flag_file, options.debug)
 
                
