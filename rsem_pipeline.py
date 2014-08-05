@@ -22,7 +22,7 @@ import utils_main as UM
 from utils_download import gen_orig_params
 from utils_rsem import gen_fastq_gz_input
 
-PATH_RE = r'(.*)/(?P<species>\S+)/(?P<GSE>GSE\d+)/(?P<GSM>GSM\d+)'
+PATH_RE = r'(.*)/(?P<GSE>GSE\d+)/(?P<species>\S+)/(?P<GSM>GSM\d+)'
 
 # because of ruffus, have to use some global variables
 # global variables: options, config, samples, logger, logger_mutex
