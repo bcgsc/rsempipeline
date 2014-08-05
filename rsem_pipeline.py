@@ -160,21 +160,27 @@ def rsem(inputs, outputs):
 
     flag_file = outputs[-1]
 
-    cmd = ' '.join([
-        'rsem-calculate-expression', # 1.2.5
-        '-p {0}'.format(options.jobs),   # not the best way to determine num jobs,
-                                     # but consistent with the number of sra
-                                     # files
-        '--time',
-        '--no-bam-output',
-        '--bowtie-chunkmbs 256',
-        # could also be found in the PATH
-        # '--bowtie-path', '/home/zxue/Downloads/rchiu_Downloads/bowtie-1.0.0',
-        fastq_gz_input,
-        reference_name,
-        sample_name,
-        '1>{0}/rsem.log'.format(outdir),
-        '2>{0}/align.stats'.format(outdir)])
+    cmd = config['CMD_RSEM'].format(
+        n_jobs=options.jobs,
+        fastq_gz_input=fastq_gz_input,
+        reference_name=reference_name,
+        sample_name=sample_name,
+        output_dir=outdir)
+    # cmd = ' '.join([
+    #     'rsem-calculate-expression', # 1.2.5
+    #     '-p {0}'.format(options.jobs),   # not the best way to determine num jobs,
+    #                                  # but consistent with the number of sra
+    #                                  # files
+    #     '--time',
+    #     '--no-bam-output',
+    #     '--bowtie-chunkmbs 256',
+    #     # could also be found in the PATH
+    #     # '--bowtie-path', '/home/zxue/Downloads/rchiu_Downloads/bowtie-1.0.0',
+    #     fastq_gz_input,
+    #     reference_name,
+    #     sample_name,
+    #     '1>{0}/rsem.log'.format(outdir),
+    #     '2>{0}/align.stats'.format(outdir)])
     U.execute(cmd, flag_file=flag_file, debug=options.debug)
 
 if __name__ == "__main__":
