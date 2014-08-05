@@ -16,8 +16,9 @@ CMD_ASCP: >-
 CMD_WGET: >-
   wget ftp://ftp-trace.ncbi.nlm.nih.gov{url_path} -P {output_dir} -N
 
-
-
+CMD_FASTQ_DUMP: >-
+  fastq-dump --minReadLen 25 --gzip --split-files --outdir {output_dir} {accession}
+  
 # used when parsing soft files
 INTERESTED_ORGANISMS: 
   - Homo sapiens

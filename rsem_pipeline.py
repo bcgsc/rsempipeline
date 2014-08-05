@@ -72,11 +72,23 @@ def download(inputs, outputs, sample):
     # /sra/sra-instant/reads/ByExp/sra/SRX/SRX029/SRX029242
     url_path = urlparse.urlparse(sample.url).path
     sra_url_path = os.path.join(url_path, *sra.split('/')[-2:])
+
+    # cmd template looks like this:
+    # /home/kmnip/bin/ascp 
+    # -i /home/kmnip/.aspera/connect/etc/asperaweb_id_dsa.putty 
+    # --ignore-host-key 
+    # -QT 
+    # -L {log_dir}
+    # -k2 
+    # -l 300m 
+    # anonftp@ftp-trace.ncbi.nlm.nih.gov:{url_path} {output_dir}
     cmd = config['CMD_ASCP'].format(
         log_dir=sra_outdir, url_path=sra_url_path, output_dir=sra_outdir)
     returncode = U.execute(cmd, msg_id, flag_file, options.debug)
     if returncode != 0 or returncode is None:
         # try wget
+        # cmd template looks like this:
+        # wget ftp://ftp-trace.ncbi.nlm.nih.gov{url_path} -P {output_dir} -N
         cmd = config['CMD_WGET'].format(
             url_path=sra_url_path, output_dir=sra_outdir)
         U.execute(cmd, msg_id, flag_file, options.debug)
@@ -91,8 +103,7 @@ def sra2fastq(inputs, outputs):
     sra, _ = inputs             # ignore the flag file from previous task
     flag_file = outputs[-1]
     outdir = os.path.dirname(os.path.dirname(os.path.dirname(sra)))
-    cmd = ('fastq-dump --minReadLen 25 --gzip --split-files '
-           '--outdir {0} {1}'.format(outdir, sra))
+    cmd = config['CMD_FASTQ_DUMP'].format(output_dir=outdir, accession=sra)
     U.execute(cmd, flag_file=flag_file, debug=options.debug)
 
 
