@@ -98,7 +98,7 @@ def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
     # for historical reason, soft files parsed does not return dict as
     # get_isamp
     isamp = get_isamp(isamp_file_or_str)
-    samples = []                # a list of Sample instances
+    samp_proc = []                # a list of Sample instances
     for soft_file in soft_files:
         # e.g. soft_file: GSE51008_family.soft.subset
         gse = re.search('(GSE\d+)\_family\.soft\.subset', soft_file)
@@ -115,34 +115,60 @@ def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
                 interested_samples = isamp[series.name]
                 # intersection among GSMs found in the soft file and
                 # sample_data_file
-                samples.extend([_ for _ in series.passed_samples
+                samp_proc.extend([_ for _ in series.passed_samples
                                 if _.name in interested_samples])
     logger.info('After intersection among soft and data, '
-                '{0} samples remained'.format(len(samples)))
-    sanity_check(samples, isamp)
-    return samples
+                '{0} samples remained'.format(len(samp_proc)))
+    sanity_check(samp_proc, isamp)
+    return samp_proc
 
-def sanity_check(samples, isamp):
+def sanity_check(samp_proc, isamp):
     # gsm ids of interested samples
-    gsms_isamp = [_ for val in isamp.values() for _ in val]
+    gsms_isamp = ['{0}:{1}'.format(k, v) for k in isamp.keys() for v in isamp[k]]
     # gsm ids of samples after intersection
-    gsms_process = [_.name for _ in samples]
+    gsms_proc = ['{0}:{1}'.format(_.series.name, _.name) for _ in samp_proc]
 
-    diff1 = list(set(gsms_isamp) - set(gsms_process))
+    def unmatch(x, y):
+        raise ValueError('Unmatched numbers of samples interested ({0}) '
+                         'and to be processed ({1})'.format(x, y))
+
+    diff1 = sorted(list(set(gsms_isamp) - set(gsms_proc)))
     if diff1:
-        logger.error('samples in isamp (-i) but not to be processed:\n\t'
-                     '{0}'.format(diff1))
-        raise ValueError('Unmatched numbers of samples interested ({0}) '
-                         'and to be processed ({1})'.format(
-                             len(gsms_isamp), len(gsms_process)))
+        logger.error('{0} samples in isamp (-i) but not to be processed:\n'
+                     # '{1}'.format(len(diff1), os.linesep.join(diff1)))
+                     '{1}'.format(len(diff1), format_gsms_diff(diff1)))
+        unmatch(len(gsms_isamp), len(gsms_proc))
 
-    diff2 = list(set(gsms_process) - set(gsms_isamp))
+    diff2 = sorted(list(set(gsms_proc) - set(gsms_isamp)))
     if diff2:
-        logger.error('samples to be processed but not in isamples (-i):\n\t'
-                     '{0}'.format(diff2))
-        raise ValueError('Unmatched numbers of samples interested ({0}) '
-                         'and to be processed ({1})'.format(
-                             len(gsms_isamp), len(gsms_process)))
+        logger.error('{0} samples to be processed but not in isamples (-i):\n\t'
+                     '{1}'.format(len(diff2), format_gsms_diff(diff2)))
+        unmatch(len(gsms_isamp), len(gsms_proc))
+
+def format_gsms_diff(diff):
+    """format diff gsms for pretty output to the screen"""
+    # the code is horrible, don't look into it, just need to know the input is
+    # like:
+    # ['GSExxxxx:GSMxxxxxxx', 'GSExxxxx:GSMxxxxxxx', 'GSExxxxx:GSMxxxxxxx']
+    # and the output is like
+    # GSExxxxx (3): GSMxxxxxxx;GSMxxxxxxx;GSMxxxxxxx
+    # GSExxxxx (1): GSMxxxxxxx
+    # GSExxxxx (2): GSMxxxxxxx;GSMxxxxxxx
+    
+    dd = {}
+    current_gse = None
+    for _ in sorted(diff):
+        gse, gsm = _.split(':')
+        if current_gse is None or gse != current_gse:
+            current_gse = gse
+            dd[gse] = [gsm]
+        else:
+            dd[gse].append(gsm)
+    dd2 = {}
+    for gse in dd:
+        dd2['{0} ({1})'.format(gse, len(dd[gse]))] = dd[gse]
+    return os.linesep.join('{0}: {1}'.format(gse, ' '.join(gsms)) for gse, gsms in dd2.items())
+
 
 def init_sample_outdirs(samples, outdir):
     for sample in samples:
