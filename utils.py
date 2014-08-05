@@ -1,11 +1,9 @@
 import os
 import logging
-import logging.config
 import subprocess
 import pickle
 
-import logging
-logger = logging.getLogger('utils')
+logger = logging.getLogger(__name__)
 
 def backup_file(f):
     if os.path.exists(f):

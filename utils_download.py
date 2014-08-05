@@ -5,7 +5,7 @@ import pickle
 from ftplib import FTP
 
 import logging
-logger = logging.getLogger('utils_download')
+logger = logging.getLogger(__name__)
 
 def gen_orig_params(samples, use_pickle):
     """
