@@ -91,14 +91,14 @@ def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
     # Nomenclature:
     #     soft_files: soft_files downloaded with tools/download_soft.py
     #     isamp: interested samples extracted from (e.g. GSE_species_GSM.csv)
-    #     samples: a list of Sample instances
+
     #     sample_data: data from the sample_data_file stored in a dict
     #     series: a series instance constructed from information in a soft file
 
     # for historical reason, soft files parsed does not return dict as
     # get_isamp
     isamp = get_isamp(isamp_file_or_str)
-    samples = []
+    samples = []                # a list of Sample instances
     for soft_file in soft_files:
         # e.g. soft_file: GSE51008_family.soft.subset
         gse = re.search('(GSE\d+)\_family\.soft\.subset', soft_file)
@@ -119,20 +119,30 @@ def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
                                 if _.name in interested_samples])
     logger.info('After intersection among soft and data, '
                 '{0} samples remained'.format(len(samples)))
+    sanity_check(samples, isamp)
+    return samples
+
+def sanity_check(samples, isamp):
     # gsm ids of interested samples
-    gsm_set1 = [_ for val in isamp.values() for _ in val]
+    gsms_isamp = [_ for val in isamp.values() for _ in val]
     # gsm ids of samples after intersection
-    gsm_set2 = [_.name for _ in samples]
-    diff1 = list(set(gsm_set1) - set(gsm_set2))
+    gsms_process = [_.name for _ in samples]
+
+    diff1 = list(set(gsms_isamp) - set(gsms_process))
     if diff1:
-        logger.error('samples in isamples (-i) but not to be processed:\n\t'
+        logger.error('samples in isamp (-i) but not to be processed:\n\t'
                      '{0}'.format(diff1))
-    diff2 = list(set(gsm_set2) - set(gsm_set1))
+        raise ValueError('Unmatched numbers of samples interested ({0}) '
+                         'and to be processed ({1})'.format(
+                             len(gsms_isamp), len(gsms_process)))
+
+    diff2 = list(set(gsms_process) - set(gsms_isamp))
     if diff2:
         logger.error('samples to be processed but not in isamples (-i):\n\t'
                      '{0}'.format(diff2))
-    return samples
-
+        raise ValueError('Unmatched numbers of samples interested ({0}) '
+                         'and to be processed ({1})'.format(
+                             len(gsms_isamp), len(gsms_process)))
 
 def init_sample_outdirs(samples, outdir):
     for sample in samples:
