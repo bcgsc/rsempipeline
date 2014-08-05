@@ -5,7 +5,7 @@ import subprocess
 import ruffus as R
 
 from soft_parser import parse
-from isamples_parser import gen_isamples_from_csv, gen_isamples_from_str
+from isamp_parser import gen_isamples_from_csv, gen_isamples_from_str
 from utils import decide_num_jobs
 
 import logging
