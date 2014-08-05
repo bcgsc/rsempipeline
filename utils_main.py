@@ -1,15 +1,15 @@
 import os
-import pickle
+import re
 import subprocess
 
 import ruffus as R
 
 from soft_parser import parse
-from isamp_parser import gen_isamples_from_csv, gen_isamples_from_str
+from isamp_parser import get_isamp
 from utils import decide_num_jobs
 
 import logging
-logger = logging.getLogger('utils_main')
+logger = logging.getLogger(__name__)
 
 def parse_args():
     parser = R.cmdline.get_argparse(
@@ -21,7 +21,7 @@ def parse_args():
         '-s', '--soft_files', nargs='+', required=True,
         help='a list of soft files')
     parser.add_argument(
-        '-i', '--isamples',
+        '-i', '--isamp',
         help=('interested samples, could be in a file (e.g. GSE_GSM_species.csv prepared) '
               'based on the xlsx/csv file provided by the collaborator '
               'or a string in the form of '
@@ -61,65 +61,66 @@ def parse_args():
 
 
 def get_top_outdir(options):
+    """
+    decides the top output dir, if specified in the command line, then use the
+    specified one, otherwise, use the directory where GSE_species_GSM.csv is
+    located
+    """
     if options.top_outdir:
         top_outdir = options.top_outdir
     else:
-        if os.path.exists(options.isamples):
-            top_outdir = os.path.dirname(options.isamples)
+        if os.path.exists(options.isamp):
+            top_outdir = os.path.dirname(options.isamp)
         else:
             top_outdir = os.path.dirname(__file__)
     return top_outdir
 
 
 def get_rsem_outdir(options):
+    """get the output directory for rsem, it's top_outdir/rsem_output by default"""
     top_outdir = get_top_outdir(options)
     return os.path.join(top_outdir, 'rsem_output')
 
 
-def get_isamples(isamples_file_or_str):
+def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
     """
-    get the mannually curated data of interested samples (isamples) in a
-    particular data structure
-    """
-    V = isamples_file_or_str
-    if os.path.exists(V):     # then it's a file
-        if os.path.splitext(V)[-1] == '.csv':
-            res = gen_isamples_from_csv(V)
-        else:
-            raise ValueError(
-                "uncognized file type of {0} as input_file for isamples".format(V))
-    else:                       # it's a string
-        res = gen_isamples_from_str(V)
-    return res
-
-
-def gen_samples_from_soft_and_isamples(soft_files, data, config):
-    """
-    :param data: e.g. mannually prepared sample data from data_file
-    (GSE_GSM_species.csv) or data_str
+    :param isamp: e.g. mannually prepared interested sample file
+    (e.g. GSE_species_GSM.csv) or isamp_str
+    :type isamp: dict
     """
     # Nomenclature:
     #     soft_files: soft_files downloaded with tools/download_soft.py
+    #     isamp: interested samples extracted from (e.g. GSE_species_GSM.csv)
     #     samples: a list of Sample instances
     #     sample_data: data from the sample_data_file stored in a dict
-    #     data_file: the file with sample_data stored (e.g. GSE_GSM_species.csv)
     #     series: a series instance constructed from information in a soft file
 
+    # for historical reason, soft files parsed does not return dict as
+    # get_isamp
+    isamp = get_isamp(isamp_file_or_str)
     samples = []
     for soft_file in soft_files:
-        series = parse(soft_file, config['INTERESTED_ORGANISMS'])
-        # samples that are interested by the collaborator 
-        if not series.name in data:
-            continue
-        interested_samples = data[series.name]
-        # intersection among GSMs found in the soft file and
-        # sample_data_file
-        samples.extend([_ for _ in series.passed_samples
-                        if _.name in interested_samples])
+        # e.g. soft_file: GSE51008_family.soft.subset
+        gse = re.search('(GSE\d+)\_family\.soft\.subset', soft_file)
+        if not gse:
+            logger.error(
+                'unrecognized soft file: {0} '
+                '(not GSE information in its file name'.format(soft_file))
+        else:
+            if gse.group(1) in isamp:
+                series = parse(soft_file, config['INTERESTED_ORGANISMS'])
+                # samples that are interested by the collaborator 
+                if not series.name in isamp:
+                    continue
+                interested_samples = isamp[series.name]
+                # intersection among GSMs found in the soft file and
+                # sample_data_file
+                samples.extend([_ for _ in series.passed_samples
+                                if _.name in interested_samples])
     logger.info('After intersection among soft and data, '
                 '{0} samples remained'.format(len(samples)))
     # gsm ids of interested samples
-    gsm_set1 = [_ for val in data.values() for _ in val]
+    gsm_set1 = [_ for val in isamp.values() for _ in val]
     # gsm ids of samples after intersection
     gsm_set2 = [_.name for _ in samples]
     diff1 = list(set(gsm_set1) - set(gsm_set2))

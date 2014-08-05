@@ -67,9 +67,12 @@ class Sample(object):
         Generate the output directory where all downloads and analysis
         results of this particular sample are to going to be
         """
+        # dir hirarchy: <GSE>/<species>/<GSM>
         self.outdir = os.path.join(
-            outdir, self.organism.lower().replace(' ', '_'), 
-            self.series.name, self.name)
+            outdir,
+            self.series.name,
+            self.organism.lower().replace(' ', '_'),
+            self.name)
         return self.outdir
 
     # def num_sras(self):

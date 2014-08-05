@@ -7,6 +7,7 @@ on them, either on local system or on remote cluster.
 """
 
 import os
+import sys
 import re
 import logging.config
 
@@ -30,8 +31,8 @@ with open(options.config_file) as inf:
     config = yaml.load(inf.read())
 logging.config.fileConfig(options.logging_config)
 
-samples = UM.gen_samples_from_soft_and_isamples(
-    options.soft_files, UM.get_isamples(options.isamples), config)
+samples = UM.gen_samples_from_soft_and_isamp(
+    options.soft_files, options.isamp, config)
 
 logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
     R.proxy_logger.setup_std_shared_logger,

@@ -3,9 +3,6 @@
 import re
 import os
 import csv
-import json
-
-from utils import cache_usable
 
 import logging
 logger = logging.getLogger('isamp_parser')
@@ -66,25 +63,16 @@ def process(k, row):
     return gse, species, gsm
 
 
-def gen_isamples_from_csv(input_csv):
+def gen_isamp_from_csv(input_csv):
     """
     Generate input data with the specified data structure as shown below
     """
 
     dirname, basename = os.path.split(input_csv)
-    cache_file = os.path.join(
-        dirname, '.{0}.json'.format(os.path.splitext(basename)[0]))
-    if cache_usable(cache_file, input_csv):
-        logger.info('reading from cache: {0}'.format(cache_file))
-        with open(cache_file, 'rb') as inf:
-            sample_data = json.load(inf)
-    else:
-        sample_data = read_csv_gse_as_key(input_csv)
-        with open(cache_file, 'wb') as opf:
-            json.dump(sample_data, opf)
+    sample_data = read_csv_gse_as_key(input_csv)
     return sample_data
 
-def gen_isamples_from_str(data_str):
+def gen_isamp_from_str(data_str):
     sample_data = {}
     for _ in data_str.split(';'):
         stuffs = _.strip().split()
@@ -94,3 +82,23 @@ def gen_isamples_from_str(data_str):
         else:
             sample_data[gse].extend(gsms)
     return sample_data
+
+
+def get_isamp(isamp_file_or_str):
+    """
+    get a dict of interested samples from GSE_species_GSM.csv or str
+
+    data structure returned:
+    {'GSExxxxx': ['GSMxxxxxxx', 'GSMxxxxxxx', 'GSMxxxxxxx'],
+     'GSExxxxx': ['GSMxxxxxxx', 'GSMxxxxxxx', 'GSMxxxxxxx']}
+    """
+    V = isamp_file_or_str
+    if os.path.exists(V):                     # then it's a file
+        if os.path.splitext(V)[-1] == '.csv': # then it's a csv file
+            res = gen_isamp_from_csv(V)
+        else:
+            raise ValueError(
+                "uncognized file type of {0} as input_file for isamples".format(V))
+    else:                       # it's a string
+        res = gen_isamp_from_str(V)
+    return res
