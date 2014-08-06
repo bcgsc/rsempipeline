@@ -3,11 +3,13 @@ import sys
 import re
 import yaml
 import datetime
-import paramiko
-
+import subprocess
 import logging
-logging.basicConfig(level=logging.INFO, disable_existing_loggers=True,
+logging.basicConfig(level=logging.DEBUG, disable_existing_loggers=True,
                     format='%(levelname)s|%(asctime)s|%(name)s:%(message)s')
+
+import paramiko
+from jinja2 import Template
 
 
 def sshexec(cmd, host, username, private_key_file='~/.ssh/id_rsa'):
@@ -47,18 +49,18 @@ def get_remote_free_disk_space(df_cmd, remote, username):
 
 
 def get_current_remote_usage(find_cmd, remote, username,
-                             r_rsem_output_dir, l_rsem_output_dir):
+                             r_dir, l_dir):
     """find the space that has already been consumed by rsem_output by walking
     through each GSM and computing the sum of their estimated usage, if
     rsem.COMPLETE exists for a GSM, then ignore that GSM
     
-    mechanism: fetch the list of files in r_rsem_output_dir, and find the
+    mechanism: fetch the list of files in r_dir, and find the
     fastq.gz for each GSM, then find the corresponding fastq.gz in
-    l_rsem_output_dir, and calculate sizes based on them
+    l_dir, and calculate sizes based on them
 
-    :param find_cmd: should be in the form of find {remote_rsem_output_dir}
-    :param r_rsem_output_dir: remote rsem output directory
-    :param l_rsem_output_dir: local rsem output directory
+    :param find_cmd: should be in the form of find {remote_dir}
+    :param r_dir: remote rsem output directory
+    :param l_dir: local rsem output directory
 
     """
     output = sshexec(find_cmd, remote, username)
@@ -71,87 +73,16 @@ def get_current_remote_usage(find_cmd, remote, username,
             if not os.path.join(dir_, 'rsem.COMPLETE') in output:
                 # only count the disk spaces used by those GSMs that are finished
                 # or processed successfully
-                gsm_dir = dir_.replace(r_rsem_output_dir, l_rsem_output_dir)
+                gsm_dir = dir_.replace(r_dir, l_dir)
                 usage += estimate_rsem_usage(find_fq_gzs(gsm_dir))
     logging.info('current remote usage by {0}: {1}'.format(
-        r_rsem_output_dir, pretty_usage(usage)))
+        r_dir, pretty_usage(usage)))
     return usage
 
 
 def pretty_usage(val):
     """val should be in KB"""
     return '{0:.1f} GB'.format(val / 1e6)
-
-
-def main():
-    with open('rsem_pipeline_config.yaml') as inf:
-        config = yaml.load(inf.read())
-
-    r_host, username = config['REMOTE_HOST'], config['USERNAME']
-    l_top_outdir = config['LOCAL_TOP_OUTDIR']
-    r_top_outdir = config['REMOTE_TOP_OUTDIR']
-
-    l_rsem_output_dir = os.path.join(l_top_outdir, 'rsem_output')
-    r_rsem_output_dir = os.path.join(r_top_outdir, 'rsem_output')
-
-    free_space = get_remote_free_disk_space(
-        config['REMOTE_CMD_DF'], r_host, username)
-    logging.info('free space available on remote host: {0}'.format(
-        pretty_usage(free_space)))
-
-    r_current_usage = get_current_remote_usage(
-        'find {0}'.format(r_rsem_output_dir),
-        r_host, username,
-        r_rsem_output_dir, l_rsem_output_dir)
-    
-    r_max_usage = config['REMOTE_MAX_USAGE'] # in KB, 1e9 = 1TB
-    r_min_free = config['REMOTE_MIN_FREE']
-
-    r_free_to_use = max(0, r_max_usage - r_current_usage)
-    logging.info('free to use: {0}'.format(pretty_usage(r_free_to_use)))
-
-
-    if r_free_to_use < r_min_free:
-        logging.info('free to use space ({0}) < min free ({1}) on remote host, '
-                     'no transfer is happening'.format(
-                         pretty_usage(r_free_to_use),
-                         pretty_usage(r_min_free)))
-
-    
-    gsms_transfer_record = os.path.join(l_top_outdir, 'GSMs_transferred.txt')
-    gsms_transferred = get_gsms_transferred(gsms_transfer_record)
-
-    gsms_to_transfer = []
-    for root, dirs, files in os.walk(l_rsem_output_dir):
-        # trying to capture directory as such GSExxxxx/species/GSMxxxxx
-        gse_path, gsm = os.path.split(root)
-        gse = os.path.basename(os.path.dirname(gse_path))
-        if not (re.search('GSM\d+$', gsm) and re.search('GSE\d+$', gse)):
-            continue
-
-        gsm_dir = root
-        transfer_id = os.path.relpath(gsm_dir, l_top_outdir)
-        if transfer_id in gsms_transferred:
-            continue
-
-        fq_gzs = find_fq_gzs(gsm_dir)
-        # fq_gzs could be [] in cases when sra2fastq hasn't been completed yet
-        if fq_gzs:
-            rsem_usage = estimate_rsem_usage(fq_gzs)
-            if rsem_usage < r_free_to_use:
-                # use relpath for easy mirror between local and remote hosts
-                gsms_to_transfer.append(transfer_id)
-                r_free_to_use -= rsem_usage
-
-    append_transfer_record(gsms_to_transfer, gsms_transfer_record)
-    print gsms_to_transfer
-        # # check sra2fastq.COMPLETE
-
-        # os.path.getsize(
-        # print gse, gsm
-        # print gsm_dir
-        # print dirs
-        # print files
 
 
 RE_fq_gz = re.compile('(SRR\d+)_[12]\.fastq\.gz', re.IGNORECASE)
@@ -220,6 +151,128 @@ def append_transfer_record(gsm_to_transfer, record_file):
         opf.write('# {0}\n'.format(now.strftime('%y-%m-%d %H:%M:%S')))
         for _ in gsm_to_transfer:
             opf.write('{0}\n'.format(_))
+
+
+def write(transfer_script, **params):
+    input_file = 'templates/transfer_apollo.sh'
+    with open(input_file) as inf:
+        template = Template(inf.read())
+
+    with open(transfer_script, 'wb') as opf:
+        opf.write(template.render(**params))
+
+
+def submit(transfer_script):
+    popen = subprocess.Popen(
+        ['ssh', 'apollo', 'qsub', '-terse', transfer_script],
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    (stdoutdata, stderrdata) = popen.communicate()
+    if stdoutdata:
+        for line in stdoutdata.split(os.linesep):
+            linestripped = line.strip()
+            if len(linestripped) > 0 and linestripped.isdigit():
+                #it was a job id
+                return True             
+        logging.info(stdoutdata)
+    return False
+
+
+def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
+                          r_free_to_use, r_min_free):
+    """
+    walk through local top outdir, and for each GSMs, estimate its usage, and if
+    it fits free_to_use space on remote host, count it as an element
+    gsms_to_transfer
+    """
+    gsms_transferred = get_gsms_transferred(gsms_transfer_record)
+    gsms_to_transfer = []
+    for root, dirs, files in os.walk(l_top_outdir):
+        # trying to capture directory as such GSExxxxx/species/GSMxxxxx
+        gse_path, gsm = os.path.split(root)
+        gse = os.path.basename(os.path.dirname(gse_path))
+        if not (re.search('GSM\d+$', gsm) and re.search('GSE\d+$', gse)):
+            continue
+
+        gsm_dir = root
+        transfer_id = os.path.relpath(gsm_dir, l_top_outdir)
+        if transfer_id in gsms_transferred:
+            logging.debug('{0} is in {1} already, ignore it'.format(
+                transfer_id, gsms_transfer_record))
+            continue
+
+        fq_gzs = find_fq_gzs(gsm_dir)
+        # fq_gzs could be [] in cases when sra2fastq hasn't been completed yet
+        if fq_gzs:
+            rsem_usage = estimate_rsem_usage(fq_gzs)
+            print pretty_usage(rsem_usage)
+            if rsem_usage < r_free_to_use:
+                # use relpath for easy mirror between local and remote hosts
+                gsms_to_transfer.append(transfer_id)
+                r_free_to_use -= rsem_usage
+                if r_free_to_use < r_min_free:
+                    break
+        else:
+            logging.debug('no fastq.gz files found in {0}'.format(gsm_dir))
+    return gsms_to_transfer
+
+
+def main():
+    with open('rsem_pipeline_config.yaml') as inf:
+        config = yaml.load(inf.read())
+
+    r_host, username = config['REMOTE_HOST'], config['USERNAME']
+    l_top_outdir = config['LOCAL_TOP_OUTDIR']
+    r_top_outdir = config['REMOTE_TOP_OUTDIR']
+
+    r_free_space = get_remote_free_disk_space(
+        config['REMOTE_CMD_DF'], r_host, username)
+    logging.info('free space available on remote host: {0}'.format(
+        pretty_usage(r_free_space)))
+
+    r_current_usage = get_current_remote_usage(
+        'find {0}'.format(r_top_outdir),
+        r_host, username,
+        r_top_outdir, l_top_outdir)
+    logging.info('current usage on remote host: {0}'.format(
+        pretty_usage(r_current_usage)))
+    
+    r_max_usage = config['REMOTE_MAX_USAGE'] # in KB, 1e9 = 1TB
+    r_min_free = config['REMOTE_MIN_FREE']
+    r_free_to_use = max(0, r_max_usage - r_current_usage)
+    logging.info('free to use: {0}'.format(pretty_usage(r_free_to_use)))
+
+    if r_free_to_use < r_min_free:
+        logging.info('free to use space ({0}) < min free ({1}) on remote host, '
+                     'no transfer is happening'.format(
+                         pretty_usage(r_free_to_use),
+                         pretty_usage(r_min_free)))
+        return
+        
+    gsms_transfer_record = os.path.join(l_top_outdir, 'GSMs_transferred.txt')
+    gsms_to_transfer = find_gsms_to_transfer(
+        l_top_outdir, gsms_transfer_record, r_free_to_use, r_min_free)
+
+    if not gsms_to_transfer:
+        logging.info('no GSMs fit the current r_free_to_use ({0}), '
+                     'no transferring will happen'.format(
+                         pretty_usage(r_free_to_use)))
+        return
+
+    now = datetime.datetime.now()
+    transfer_script = os.path.join(
+        l_top_outdir,
+        'transfer.{0}.sh'.format(now.strftime('%y-%m-%d_%H-%M-%S')))
+    write(transfer_script,
+          work_dir=l_top_outdir,
+          gsms_to_transfer=' \{0}'.format(os.linesep).join(gsms_to_transfer),
+          remote_top_outdir=r_top_outdir)
+    
+    rc = submit(transfer_script)
+    print rc
+    if rc:
+        append_transfer_record(gsms_to_transfer, gsms_transfer_record)
+
 
 
 if __name__ == "__main__":
