@@ -2,6 +2,7 @@ import os
 import sys
 import re
 import yaml
+import datetime
 import paramiko
 
 import logging
@@ -87,8 +88,11 @@ def main():
         config = yaml.load(inf.read())
 
     r_host, username = config['REMOTE_HOST'], config['USERNAME']
-    l_rsem_output_dir = config['LOCAL_RSEM_OUTPUT_DIR']
-    r_rsem_output_dir = config['REMOTE_RSEM_OUTPUT_DIR']
+    l_top_outdir = config['LOCAL_TOP_OUTDIR']
+    r_top_outdir = config['REMOTE_TOP_OUTDIR']
+
+    l_rsem_output_dir = os.path.join(l_top_outdir, 'rsem_output')
+    r_rsem_output_dir = os.path.join(r_top_outdir, 'rsem_output')
 
     free_space = get_remote_free_disk_space(
         config['REMOTE_CMD_DF'], r_host, username)
@@ -96,7 +100,7 @@ def main():
         pretty_usage(free_space)))
 
     r_current_usage = get_current_remote_usage(
-        'find {0}'.format(config['REMOTE_RSEM_OUTPUT_DIR']),
+        'find {0}'.format(r_rsem_output_dir),
         r_host, username,
         r_rsem_output_dir, l_rsem_output_dir)
     
@@ -114,7 +118,11 @@ def main():
                          pretty_usage(r_min_free)))
 
     
-    for root, dirs, files in os.walk(os.path.abspath(l_rsem_output_dir)):
+    gsms_transfer_record = os.path.join(l_top_outdir, 'GSMs_transferred.txt')
+    gsms_transferred = get_gsms_transferred(gsms_transfer_record)
+
+    gsms_to_transfer = []
+    for root, dirs, files in os.walk(l_rsem_output_dir):
         # trying to capture directory as such GSExxxxx/species/GSMxxxxx
         gse_path, gsm = os.path.split(root)
         gse = os.path.basename(os.path.dirname(gse_path))
@@ -122,11 +130,21 @@ def main():
             continue
 
         gsm_dir = root
+        transfer_id = os.path.relpath(gsm_dir, l_top_outdir)
+        if transfer_id in gsms_transferred:
+            continue
+
         fq_gzs = find_fq_gzs(gsm_dir)
+        # fq_gzs could be [] in cases when sra2fastq hasn't been completed yet
         if fq_gzs:
-            size_fq_gzs = estimate_rsem_usage(fq_gzs)
-            print pretty_usage(size_fq_gzs)
-            
+            rsem_usage = estimate_rsem_usage(fq_gzs)
+            if rsem_usage < r_free_to_use:
+                # use relpath for easy mirror between local and remote hosts
+                gsms_to_transfer.append(transfer_id)
+                r_free_to_use -= rsem_usage
+
+    append_transfer_record(gsms_to_transfer, gsms_transfer_record)
+    print gsms_to_transfer
         # # check sra2fastq.COMPLETE
 
         # os.path.getsize(
@@ -186,6 +204,22 @@ def estimate_rsem_usage(fq_gzs):
     # overestimate
     res = res * overestimate_ratio
     return res
+
+
+def get_gsms_transferred(record_file):
+    if not os.path.exists(record_file):
+        return []
+    else:
+        with open(record_file) as inf:
+            return [_.strip() for _ in inf if not _.strip().startswith('#')]
+        
+
+def append_transfer_record(gsm_to_transfer, record_file):
+    with open(record_file, 'ab') as opf:
+        now = datetime.datetime.now()
+        opf.write('# {0}\n'.format(now.strftime('%y-%m-%d %H:%M:%S')))
+        for _ in gsm_to_transfer:
+            opf.write('{0}\n'.format(_))
 
 
 if __name__ == "__main__":
