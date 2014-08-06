@@ -37,6 +37,10 @@ def parse_args():
               'a corresponding template of submission script '
               'is expected to be found in the templates folder'))
     parser.add_argument(
+        '--qsub_template',
+        help=('used when tasks is gen_qsub_script, '
+              'see a list of templates in templates directory'))
+    parser.add_argument(
         '-o', '--top_outdir', 
         help=('top output directory, which defaults to the dirname of '
               'the value of --data if it\'s a file. Otherwise it '

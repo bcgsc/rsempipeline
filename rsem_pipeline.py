@@ -16,6 +16,8 @@ import yaml
 
 import ruffus as R
 
+from jinja2 import Template
+
 import utils as U
 
 import utils_main as UM
@@ -106,6 +108,41 @@ def sra2fastq(inputs, outputs):
     outdir = os.path.dirname(os.path.dirname(os.path.dirname(sra)))
     cmd = config['CMD_FASTQ_DUMP'].format(output_dir=outdir, accession=sra)
     U.execute(cmd, flag_file=flag_file, debug=options.debug)
+
+
+@R.collate(
+    sra2fastq,
+    # the commented R.formatter line is for reference only, use the next one
+    # because thus ruffus can guarantee that all the required
+    # sra2fastq.COMPLETE files do exist before starting rsem, this is
+    # inconvenient when it comes to multiple samples because a single missing
+    # sra2fastq.COMPLETE will make the analysis for all samples crash, but
+    # generally you run one sample at a time when it comes to sra2fastq and
+    # rsem, so it should be fine most of the time
+
+    # R.formatter(r'{0}\/(?P<SRR>SRR\d+)\_[12]\.fastq.gz'.format(PATH_RE)),
+    R.formatter(PATH_RE),
+    '{subpath[0][0]}/0_submit.sh')
+def gen_qsub_script(inputs, outputs):
+    inputs = [_ for _ in inputs if not _.endswith('.sra2fastq.COMPLETE')]
+    outdir = os.path.dirname(inputs[0])
+    fastq_gz_input = gen_fastq_gz_input(inputs)
+
+    res = re.search(PATH_RE, outdir)
+    gse = res.group('GSE')
+    species = res.group('species')
+    gsm = res.group('GSM')
+    reference_name = config['REFERENCE_NAMES'][species]
+    n_jobs=options.jobs
+
+    qsub_script = os.path.join(outdir, '0_submit.sh')
+    with open (os.path.join(os.path.dirname(__file__),
+                            options.qsub_template), 'rb') as inf:
+        template = Template(inf.read())
+    with open(qsub_script, 'wb') as opf:
+        content = template.render(**locals())
+        opf.write(content)
+        logger.info('templated {0}'.format(qsub_script))
 
 
 @R.collate(
