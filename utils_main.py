@@ -45,9 +45,6 @@ def parse_args():
         '--config_file', default='rsem_pipeline_config.yaml', 
         help='a YAML configuration file')
     parser.add_argument(
-        '--logging_config', default='logging.config', 
-        help='logging configuration file')
-    parser.add_argument(
         '--debug', action='store_true',
         help='if debug, commands won\'t be executed, just print out per task')
     parser.add_argument(

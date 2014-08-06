@@ -29,7 +29,8 @@ PATH_RE = r'(.*)/(?P<GSE>GSE\d+)/(?P<species>\S+)/(?P<GSM>GSM\d+)'
 options = UM.parse_args()
 with open(options.config_file) as inf:
     config = yaml.load(inf.read())
-logging.config.fileConfig(options.logging_config)
+logging.config.fileConfig(
+    os.path.join(os.path.dirname(__file__), 'logging.config'))
 
 samples = UM.gen_samples_from_soft_and_isamp(
     options.soft_files, options.isamp, config)
@@ -37,7 +38,7 @@ samples = UM.gen_samples_from_soft_and_isamp(
 logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
     R.proxy_logger.setup_std_shared_logger,
     "rsem_pipeline",
-    {"config_file": options.logging_config})
+    {"config_file": os.path.join(os.path.dirname(__file__), 'logging.config')})
 
 UM.init_sample_outdirs(samples, UM.get_rsem_outdir(options))
 
