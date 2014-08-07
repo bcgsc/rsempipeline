@@ -126,19 +126,20 @@ def sra2fastq(inputs, outputs):
     '{subpath[0][0]}/0_submit.sh')
 def gen_qsub_script(inputs, outputs):
     inputs = [_ for _ in inputs if not _.endswith('.sra2fastq.COMPLETE')]
-    # R.formatter will convert path to abspath, but prefert to use relative
-    # path for mirroring the directory hierarchy between remote and local hosts
-    inputs = [os.path.relpath(_, config['LOCAL_TOP_OUTDIR']) for _ in inputs]
     outdir = os.path.dirname(inputs[0])
-    fastq_gz_input = gen_fastq_gz_input(inputs)
+    fastq_gz_input = gen_fastq_gz_input(
+        # only need the basename since the 0_submit.sh will be executed in the
+        # GSM dir
+        [os.path.basename(_) for _ in inputs])
 
     res = re.search(PATH_RE, outdir)
     gse = res.group('GSE')
     species = res.group('species')
     gsm = res.group('GSM')
     reference_name = config['REMOTE_REFERENCE_NAMES'][species]
-    sample_name = '{outdir}/{gsm}'.format(outdir=outdir, gsm=gsm)
-    n_jobs=options.jobs
+    sample_name = '{gsm}'.format(gsm=gsm)
+    n_jobs=1 # need a better way to decide n_jobs, 1 for convenience and quick
+             # start after submission
 
     qsub_script = os.path.join(outdir, '0_submit.sh')
     with open (os.path.join(os.path.dirname(__file__), 'templates',
