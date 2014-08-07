@@ -181,8 +181,15 @@ def init_sample_outdirs(samples, outdir):
 
 def act(options, samples):
     if options.host_to_run == 'local':
-        R.pipeline_run(options.target_tasks, logger=logger,
-                       multiprocess=options.jobs, verbose=options.verbose)
+        R.pipeline_run(
+            logger=logger,
+            target_tasks=options.target_tasks,
+            forcedtorun_tasks=options.forced_tasks,
+            multiprocess=options.jobs,
+            verbose=options.verbose,
+            touch_files_only=options.touch_files_only,
+
+        )
     elif options.host_to_run == 'genesis':
         from jinja2 import Environment, PackageLoader
         env = Environment(loader=PackageLoader('rsem_pipeline', 'templates'))
