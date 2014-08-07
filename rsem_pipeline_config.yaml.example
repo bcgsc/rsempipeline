@@ -33,13 +33,38 @@ CMD_RSEM: >-
   2>{output_dir}/align.stats
 
 
+REMOTE_HOST: genesis.bcgsc.ca
+USERNAME: zxue
+
+# the disk space consumed on remote host should not exceed REMOTE_MAX_USAGE
+# (KB)
+# REMOTE_MAX_USAGE: 1000000000    # 1TB
+REMOTE_MAX_USAGE: 100000000    # 100 GB
+
+# if the disk space on remote host is less than REMOTE_MIN_FREE, won't do any
+# transfer
+REMOTE_MIN_FREE: 1000000    # 1GB
+
+REMOTE_TOP_OUTDIR: /extscratch/btl/zxue/batch8/00to04
+LOCAL_TOP_OUTDIR: /projects/btl2/batch8/00to04
+
+# command that starts with REMOTE means it is to be executed remotely
+REMOTE_CMD_DF: df -k -P /extscratch/btl
+
 # used when parsing soft files
 INTERESTED_ORGANISMS: 
   - Homo sapiens
   - Mus musculus
   - Rattus norvegicus
 
-REFERENCE_NAMES:
+REMOTE_REFERENCE_NAMES:
+  homo_sapiens: /extscratch/btl/zxue/rsem_pipeline/index/rsem_reference/hg19/hg19_ensembl_72
+  mus_musculus: /extscratch/btl/zxue/rsem_pipeline/index/rsem_reference/mm10/mm10_ensembl_72
+  rattus_norvegicus: /extscratch/btl/zxue/rsem_pipeline/index/rsem_reference/rn5/rn5_ensembl_72
+
+
+LOCAL_REFERENCE_NAMES:
   homo_sapiens: /projects/btl2/batch.2013.05.22/rsem/hg19/hg19_ensembl_72
   mus_musculus: /projects/btl2/batch.2013.05.22/rsem/mm10/mm10_ensembl_72
   rattus_norvegicus: /projects/btl2/batch.2013.05.22/rsem/rn5/rn5_ensembl_72
+
