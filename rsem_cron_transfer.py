@@ -5,12 +5,19 @@ import yaml
 import datetime
 import subprocess
 import logging
-logging.basicConfig(level=logging.DEBUG, disable_existing_loggers=True,
-                    format='%(levelname)s|%(asctime)s|%(name)s:%(message)s')
 
 import paramiko
 from jinja2 import Template
 
+with open(os.path.join(os.path.dirname(__file__),
+                       'rsem_pipeline_config.yaml')) as inf:
+    config = yaml.load(inf.read())
+
+logging.basicConfig(level=logging.DEBUG, disable_existing_loggers=True,
+                    format='%(levelname)s|%(asctime)s|%(name)s:%(message)s',
+                    filename=os.path.join(
+                        config['LOCAL_TOP_OUTDIR'],
+                        os.path.basename(__file__).replace('.py', '.log')))
 
 def sshexec(cmd, host, username, private_key_file='~/.ssh/id_rsa'):
     """
@@ -154,7 +161,9 @@ def append_transfer_record(gsm_to_transfer, record_file):
 
 
 def write(transfer_script, **params):
-    input_file = 'templates/transfer_apollo.sh'
+    # needs improvment to make it configurable
+    input_file = os.path.join(os.path.dirname(__file__),
+                              'templates/transfer_apollo.sh')
     with open(input_file) as inf:
         template = Template(inf.read())
 
@@ -205,7 +214,6 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
         # fq_gzs could be [] in cases when sra2fastq hasn't been completed yet
         if fq_gzs:
             rsem_usage = estimate_rsem_usage(fq_gzs)
-            print pretty_usage(rsem_usage)
             if rsem_usage < r_free_to_use:
                 # use relpath for easy mirror between local and remote hosts
                 gsms_to_transfer.append(transfer_id)
@@ -218,9 +226,6 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
 
 
 def main():
-    with open('rsem_pipeline_config.yaml') as inf:
-        config = yaml.load(inf.read())
-
     r_host, username = config['REMOTE_HOST'], config['USERNAME']
     l_top_outdir = config['LOCAL_TOP_OUTDIR']
     r_top_outdir = config['REMOTE_TOP_OUTDIR']
@@ -249,7 +254,7 @@ def main():
                          pretty_usage(r_min_free)))
         return
         
-    gsms_transfer_record = os.path.join(l_top_outdir, 'GSMs_transferred.txt')
+    gsms_transfer_record = os.path.join(l_top_outdir, 'transferred_GSMs.txt')
     gsms_to_transfer = find_gsms_to_transfer(
         l_top_outdir, gsms_transfer_record, r_free_to_use, r_min_free)
 
@@ -260,16 +265,16 @@ def main():
         return
 
     now = datetime.datetime.now()
-    transfer_script = os.path.join(
-        l_top_outdir,
-        'transfer.{0}.sh'.format(now.strftime('%y-%m-%d_%H-%M-%S')))
+    job_name = 'transfer.{0}'.format(now.strftime('%y-%m-%d_%H-%M-%S'))
+    transfer_script = os.path.join(l_top_outdir, '{0}.sh'.format(job_name))
     write(transfer_script,
-          work_dir=l_top_outdir,
-          gsms_to_transfer=' \{0}'.format(os.linesep).join(gsms_to_transfer),
+          job_name = job_name,
+          gsms_to_transfer=gsms_to_transfer,
+          local_top_outdir=l_top_outdir,
           remote_top_outdir=r_top_outdir)
     
     rc = submit(transfer_script)
-    print rc
+    logging.info('submission success: {0}'.format(rc))
     if rc:
         append_transfer_record(gsms_to_transfer, gsms_transfer_record)
 
