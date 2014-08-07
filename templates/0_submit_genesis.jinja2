@@ -1,0 +1,43 @@
+#!/bin/bash
+#$ -S /bin/bash
+#$ -q all.q
+#$ -N {{gsm}}_{{gse}} {% set ncpus = n_jobs if n_jobs < 2 else 2 %} {% set mem = 8 %} 
+#$ -pe ncpus {{ncpus}}
+#$ -l mem_free={{mem}}G,mem_token={{mem}}G,h_vmem={{mem}}G
+#$ -j y
+#$ -V
+
+cd ${SGE_O_WORKDIR}
+
+# Example code:
+# rsem-calculate-expression \
+#     -p 1 \
+#     --time \
+#     --no-bam-output \
+#     --bowtie-chunkmbs 256 \
+#     <(/bin/zcat SRR074979_1.fastq.gz) \
+#     /extscratch/btl/zxue/rsem_pipeline/index/rsem_reference/hg19/hg19_ensembl_72 \
+#     GSM629246 \
+#     1>rsem.log \
+#     2>align.stats
+
+rsem-calculate-expression \
+  -p {n_jobs} \
+  --time \
+  --no-bam-output \
+  --bowtie-chunkmbs 256 \
+  {fastq_gz_input} \
+  {gsm} \
+  {sample_name} \
+  1>{output_dir}/rsem.log \
+  2>{output_dir}/align.stats
+
+
+
+if [ -f rsem.COMPLETE ]; then
+    find . -name '*.sra' -exec du -h '{}' ';'
+    find . -name '*.fastq.gz' -exec du -h '{}' ';'
+
+    find . -name '*.sra' -exec rm -v '{}' ';'
+    find . -name '*.fastq.gz' -exec rm -v '{}' ';'
+fi
