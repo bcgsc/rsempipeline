@@ -136,7 +136,7 @@ def gen_qsub_script(inputs, outputs):
     n_jobs=options.jobs
 
     qsub_script = os.path.join(outdir, '0_submit.sh')
-    with open (os.path.join(os.path.dirname(__file__),
+    with open (os.path.join(os.path.dirname(__file__), 'templates',
                             options.qsub_template), 'rb') as inf:
         template = Template(inf.read())
     with open(qsub_script, 'wb') as opf:
