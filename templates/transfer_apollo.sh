@@ -35,11 +35,8 @@ cmd="rsync -R -r -a -v -h --stats --progress $source $dest_parent"
 echo "$cmd"
 eval "$cmd"
 
-echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-echo "Job ended at:   $(date)"
-
-echo 'do submission'
 if [ $? -eq 0 ]; then
+    echo 'do submission'
     ssh -l zxue genesis \
 	"gsms_to_transfer=\"${GSMS_TO_TRANSFER}\"; cd {{remote_top_outdir}};" \
 	'
@@ -52,3 +49,7 @@ if [ $? -eq 0 ]; then
         '
 fi
 
+echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
+echo "Job ended at:   $(date)"
+
+echo 'do submission'
