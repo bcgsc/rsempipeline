@@ -104,6 +104,7 @@ def download(inputs, outputs, sample):
      '{subpath[0][2]}/{SRR[0]}.sra.sra2fastq.COMPLETE'])
 def sra2fastq(inputs, outputs):
     sra, _ = inputs             # ignore the flag file from previous task
+    print inputs
     flag_file = outputs[-1]
     outdir = os.path.dirname(os.path.dirname(os.path.dirname(sra)))
     cmd = config['CMD_FASTQ_DUMP'].format(output_dir=outdir, accession=sra)
@@ -125,6 +126,7 @@ def sra2fastq(inputs, outputs):
     '{subpath[0][0]}/0_submit.sh')
 def gen_qsub_script(inputs, outputs):
     inputs = [_ for _ in inputs if not _.endswith('.sra2fastq.COMPLETE')]
+    print inputs
     outdir = os.path.dirname(inputs[0])
     fastq_gz_input = gen_fastq_gz_input(inputs)
 
@@ -132,7 +134,8 @@ def gen_qsub_script(inputs, outputs):
     gse = res.group('GSE')
     species = res.group('species')
     gsm = res.group('GSM')
-    reference_name = config['REFERENCE_NAMES'][species]
+    reference_name = config['REMOTE_REFERENCE_NAMES'][species]
+    sample_name = '{outdir}/{gsm}'.format(outdir=outdir, gsm=gsm)
     n_jobs=options.jobs
 
     qsub_script = os.path.join(outdir, '0_submit.sh')
@@ -193,7 +196,7 @@ def rsem(inputs, outputs):
     gsm = res.group('GSM')
 
     # following rsem naming convention
-    reference_name = config['REFERENCE_NAMES'][species]
+    reference_name = config['LOCAL_REFERENCE_NAMES'][species]
     sample_name = '{outdir}/{gsm}'.format(**locals())
 
     flag_file = outputs[-1]
@@ -223,3 +226,4 @@ def rsem(inputs, outputs):
 
 if __name__ == "__main__":
     UM.act(options, samples)
+
