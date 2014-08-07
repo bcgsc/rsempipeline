@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import stat
 import yaml
 import datetime
 import subprocess
@@ -9,8 +10,7 @@ import logging
 import paramiko
 from jinja2 import Template
 
-with open(os.path.join(os.path.dirname(__file__),
-                       'rsem_pipeline_config.yaml')) as inf:
+with open('./rsem_pipeline_config.yaml') as inf:
     config = yaml.load(inf.read())
 
 logging.basicConfig(level=logging.DEBUG, disable_existing_loggers=True,
@@ -82,8 +82,6 @@ def get_current_remote_usage(find_cmd, remote, username,
                 # or processed successfully
                 gsm_dir = dir_.replace(r_dir, l_dir)
                 usage += estimate_rsem_usage(find_fq_gzs(gsm_dir))
-    logging.info('current remote usage by {0}: {1}'.format(
-        r_dir, pretty_usage(usage)))
     return usage
 
 
@@ -163,7 +161,8 @@ def append_transfer_record(gsm_to_transfer, record_file):
 def write(transfer_script, **params):
     # needs improvment to make it configurable
     input_file = os.path.join(os.path.dirname(__file__),
-                              'templates/transfer_apollo.sh')
+                              # 'templates/qsub_rsync_apollo.sh',
+                              'templates/rsync.sh')
     with open(input_file) as inf:
         template = Template(inf.read())
 
@@ -204,6 +203,7 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
             continue
 
         gsm_dir = root
+        # use relpath for easy mirror between local and remote hosts
         transfer_id = os.path.relpath(gsm_dir, l_top_outdir)
         if transfer_id in gsms_transferred:
             logging.debug('{0} is in {1} already, ignore it'.format(
@@ -215,7 +215,10 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
         if fq_gzs:
             rsem_usage = estimate_rsem_usage(fq_gzs)
             if rsem_usage < r_free_to_use:
-                # use relpath for easy mirror between local and remote hosts
+                logging.debug(
+                    '{0} ({1}) fit remote free_to_use ({2})'.format(
+                        transfer_id, pretty_usage(rsem_usage),
+                        pretty_usage(r_free_to_use)))
                 gsms_to_transfer.append(transfer_id)
                 r_free_to_use -= rsem_usage
                 if r_free_to_use < r_min_free:
@@ -239,10 +242,10 @@ def main():
         'find {0}'.format(r_top_outdir),
         r_host, username,
         r_top_outdir, l_top_outdir)
-    logging.info('current usage on remote host: {0}'.format(
-        pretty_usage(r_current_usage)))
+    logging.info('current usage on remote host by {0}: {1}'.format(
+        r_top_outdir, pretty_usage(r_current_usage)))
     
-    r_max_usage = config['REMOTE_MAX_USAGE'] # in KB, 1e9 = 1TB
+    r_max_usage = config['REMOTE_MAX_USAGE']
     r_min_free = config['REMOTE_MIN_FREE']
     r_free_to_use = max(0, r_max_usage - r_current_usage)
     logging.info('free to use: {0}'.format(pretty_usage(r_free_to_use)))
@@ -264,6 +267,9 @@ def main():
                          pretty_usage(r_free_to_use)))
         return
 
+    for gsm in gsms_to_transfer:
+        print gsm
+
     now = datetime.datetime.now()
     job_name = 'transfer.{0}'.format(now.strftime('%y-%m-%d_%H-%M-%S'))
     transfer_script = os.path.join(l_top_outdir, '{0}.sh'.format(job_name))
@@ -273,12 +279,20 @@ def main():
           local_top_outdir=l_top_outdir,
           remote_top_outdir=r_top_outdir)
     
-    rc = submit(transfer_script)
-    logging.info('submission success: {0}'.format(rc))
-    if rc:
-        append_transfer_record(gsms_to_transfer, gsms_transfer_record)
 
+    os.chmod(transfer_script, stat.S_IRUSR | stat.S_IWUSR| stat.S_IXUSR)
+    rc = subprocess.call(transfer_script, shell=True, executable="/bin/bash")
+
+    # todo: fix stdout, stderr redirect with communicate
+    
+    if rc == 0:
+        logging.info('rsync and qsub successful: {0}; writing to {1}'.format(
+            rc, gsms_transfer_record))
+        append_transfer_record(gsms_to_transfer, gsms_transfer_record)
+    else:
+        logging.info('rsync and qsub unsuccessful: {0}'.format(rc))
 
 
 if __name__ == "__main__":
+    sys.stdout.flush()          #flush print outputs to screen
     main()
