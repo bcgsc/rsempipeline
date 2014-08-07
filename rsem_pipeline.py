@@ -126,8 +126,8 @@ def sra2fastq(inputs, outputs):
     '{subpath[0][0]}/0_submit.sh')
 def gen_qsub_script(inputs, outputs):
     inputs = [_ for _ in inputs if not _.endswith('.sra2fastq.COMPLETE')]
-    # use relative path for mirroring the directory hierarchy between remote
-    # and local hosts
+    # R.formatter will convert path to abspath, but prefert to use relative
+    # path for mirroring the directory hierarchy between remote and local hosts
     inputs = [os.path.relpath(_, config['LOCAL_TOP_OUTDIR']) for _ in inputs]
     outdir = os.path.dirname(inputs[0])
     fastq_gz_input = gen_fastq_gz_input(inputs)
