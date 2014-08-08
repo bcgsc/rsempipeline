@@ -52,11 +52,11 @@ def parse_args():
         '--debug', action='store_true',
         help='if debug, commands won\'t be executed, just print out per task')
     parser.add_argument(
-        '--use_pickle', action='store_true',
-        help=('if true, will create a pickle file per sample to store '
-              'a list of sra files as cache, this not only speed up rerun, '
-              'but also is useful when there is no Internet connection. '
-              'Otherwise, the list will be fetched from FTP server.'))
+        '--not_use_pickle', action='store_true',
+        help=('if specified, it will recreate a pickle file per sample to store '
+              'a list of sra files as cache by fetching them from FTP server), '
+              'Rerun without this option is faster, and also useful '
+              'when there is no Internet connection.'))
     args = parser.parse_args()
     return args
 

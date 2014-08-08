@@ -54,7 +54,7 @@ def originate_params():
     """
     logger.info('preparing originate_params '
                 'for {0} samples'.format(len(samples)))
-    orig_params_sets = gen_orig_params(samples, options.use_pickle)
+    orig_params_sets = gen_orig_params(samples, options.not_use_pickle)
     logger.info(
         '{0} sets of orig_params generated'.format(len(orig_params_sets)))
     for _ in orig_params_sets:
