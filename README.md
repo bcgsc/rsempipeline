@@ -51,8 +51,21 @@ space. [Optional]
 rsem_pipeline.py -s path/to/soft/* -i GSE_species_GSM.csv -T sra2fastq  -j 7
 ```
 
+#### Utilizing existing fastq.gz files by touch them only without reruning the sra2fastq task in the pipeline
+
+```
+rsem_pipeline.py -s path/to/soft/* -i GSE_species_GSM.csv -T gen_qsub_script -j 7 --touch_files_only
+```
+
+#### Force to rerun tasks (e.g. gen_qsub_script, when the template has been updated after last run of gen_qsub_script)
+
+```
+rsem_pipeline.py -s path/to/soft/* -i GSE_species_GSM.csv  --qsub_template 0_submit_genesis.jinja2 -T gen_qsub_script -j 7 --forced_tasks gen_qsub_script 
+```
+
 #### Fixing died GSMs locally on big memory nodes
 
 ```
 rsem_pipeline.py -s path/to/soft/* -i 'GSE43631 GSM1067318 GSM1067319' -T rsem -j 2
 ```
+
