@@ -42,7 +42,7 @@ logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
     "rsem_pipeline",
     {"config_file": os.path.join(os.path.dirname(__file__), 'logging.config')})
 
-UM.init_sample_outdirs(samples, UM.get_rsem_outdir(options))
+UM.init_sample_outdirs(samples, UM.get_rsem_outdir(config, options))
 
 ##################################end of main##################################
 

@@ -41,11 +41,6 @@ def parse_args():
         help=('used when tasks is gen_qsub_script, '
               'see a list of templates in templates directory'))
     parser.add_argument(
-        '-o', '--top_outdir', 
-        help=('top output directory, which defaults to the dirname of '
-              'the value of --data if it\'s a file. Otherwise it '
-              'defaults to the current directory'))
-    parser.add_argument(
         '--config_file', default='rsem_pipeline_config.yaml', 
         help='a YAML configuration file')
     parser.add_argument(
@@ -61,25 +56,29 @@ def parse_args():
     return args
 
 
-def get_top_outdir(options):
+def get_top_outdir(config, options):
     """
-    decides the top output dir, if specified in the command line, then use the
-    specified one, otherwise, use the directory where GSE_species_GSM.csv is
-    located
+    decides the top output dir, if specified in the configuration file, then
+    use the specified one, otherwise, use the directory where
+    GSE_species_GSM.csv is located
     """
-    if options.top_outdir:
-        top_outdir = options.top_outdir
+    top_outdir = config.get('LOCAL_TOP_OUTDIR')
+    if top_outdir is not None:
+        return top_outdir
     else:
         if os.path.exists(options.isamp):
             top_outdir = os.path.dirname(options.isamp)
         else:
-            top_outdir = os.path.dirname(__file__)
+            raise ValueError(
+                'input from -i is not a file and '
+                'no LOCAL_TOP_OUTDIR parameter found in {0}'.format(
+                    options.config_file))
     return top_outdir
 
 
-def get_rsem_outdir(options):
+def get_rsem_outdir(config, options):
     """get the output directory for rsem, it's top_outdir/rsem_output by default"""
-    top_outdir = get_top_outdir(options)
+    top_outdir = get_top_outdir(config, options)
     return os.path.join(top_outdir, 'rsem_output')
 
 
