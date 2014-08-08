@@ -113,33 +113,23 @@ def sra2fastq(inputs, outputs):
 
 @R.collate(
     sra2fastq,
-    # the commented R.formatter line is for reference only, use the next one
-    # because thus ruffus can guarantee that all the required
-    # sra2fastq.COMPLETE files do exist before starting rsem, this is
-    # inconvenient when it comes to multiple samples because a single missing
-    # sra2fastq.COMPLETE will make the analysis for all samples crash, but
-    # generally you run one sample at a time when it comes to sra2fastq and
-    # rsem, so it should be fine most of the time
-
-    # R.formatter(r'{0}\/(?P<SRR>SRR\d+)\_[12]\.fastq.gz'.format(PATH_RE)),
     R.formatter(PATH_RE),
     '{subpath[0][0]}/0_submit.sh')
 def gen_qsub_script(inputs, outputs):
     inputs = [_ for _ in inputs if not _.endswith('.sra2fastq.COMPLETE')]
     outdir = os.path.dirname(inputs[0])
-    fastq_gz_input = gen_fastq_gz_input(
-        # only need the basename since the 0_submit.sh will be executed in the
-        # GSM dir
-        [os.path.basename(_) for _ in inputs])
 
+    # only need the basename since the 0_submit.sh will be executed in the
+    # GSM dir
+    fastq_gz_input = gen_fastq_gz_input(
+        [os.path.basename(_) for _ in inputs])
     res = re.search(PATH_RE, outdir)
     gse = res.group('GSE')
     species = res.group('species')
     gsm = res.group('GSM')
     reference_name = config['REMOTE_REFERENCE_NAMES'][species]
     sample_name = '{gsm}'.format(gsm=gsm)
-    n_jobs=1 # need a better way to decide n_jobs, 1 for convenience and quick
-             # start after submission
+    n_jobs=U.decide_num_jobs(outdir) 
 
     qsub_script = os.path.join(outdir, '0_submit.sh')
     with open (os.path.join(os.path.dirname(__file__), 'templates',
@@ -194,39 +184,25 @@ def rsem(inputs, outputs):
     inputs = [_ for _ in inputs if not _.endswith('.sra2fastq.COMPLETE')]
     # this is equivalent to the sample.outdir or GSM dir 
     outdir = os.path.dirname(inputs[0])
-    fastq_gz_input = gen_fastq_gz_input(inputs)
 
+    # the names of parameters are the same as that in gen_qsub_script, but
+    # their values are more or less different, so better keep them separate
+    fastq_gz_input = gen_fastq_gz_input(inputs)
     res = re.search(PATH_RE, outdir)
+    gse = res.group('GSE')
     species = res.group('species')
     gsm = res.group('GSM')
-
-    # following rsem naming convention
     reference_name = config['LOCAL_REFERENCE_NAMES'][species]
     sample_name = '{outdir}/{gsm}'.format(**locals())
+    n_jobs=U.decide_num_jobs(outdir)
 
     flag_file = outputs[-1]
-
     cmd = config['CMD_RSEM'].format(
-        n_jobs=options.jobs,
+        n_jobs=n_jobs,
         fastq_gz_input=fastq_gz_input,
         reference_name=reference_name,
         sample_name=sample_name,
         output_dir=outdir)
-    # cmd = ' '.join([
-    #     'rsem-calculate-expression', # 1.2.5
-    #     '-p {0}'.format(options.jobs),   # not the best way to determine num jobs,
-    #                                  # but consistent with the number of sra
-    #                                  # files
-    #     '--time',
-    #     '--no-bam-output',
-    #     '--bowtie-chunkmbs 256',
-    #     # could also be found in the PATH
-    #     # '--bowtie-path', '/home/zxue/Downloads/rchiu_Downloads/bowtie-1.0.0',
-    #     fastq_gz_input,
-    #     reference_name,
-    #     sample_name,
-    #     '1>{0}/rsem.log'.format(outdir),
-    #     '2>{0}/align.stats'.format(outdir)])
     U.execute(cmd, flag_file=flag_file, debug=options.debug)
 
 if __name__ == "__main__":
