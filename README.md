@@ -43,7 +43,7 @@ files to a soft directory. Example commnad:
 8. Remove htmls of unwanted GSEs in the htmls directory to save some
 space. [Optional]
 			
-# Running the pipeline
+# Running the pipeline:
 
 #### Download sra files and convert them to fastq.gz files:
 
