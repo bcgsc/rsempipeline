@@ -69,7 +69,7 @@ def estimate_current_remote_usage(find_cmd, remote, username,
     
     mechanism: fetch the list of files in r_dir, and find the
     fastq.gz for each GSM, then find the corresponding fastq.gz in
-    l_dir, and calculate sizes based on them
+    l_dir, and estimate sizes based on them
 
     :param find_cmd: should be in the form of find {remote_dir}
     :param r_dir: remote rsem output directory
@@ -107,7 +107,6 @@ def pretty_usage(val):
 
 RE_fq_gz = re.compile('(SRR\d+)_[12]\.fastq\.gz', re.IGNORECASE)
 def find_fq_gzs(gsm_dir):
-
     """
     return a list of fastq.gz files for a GSM if sra2fastq.COMPLETE exists
 
