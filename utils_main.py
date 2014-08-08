@@ -31,12 +31,6 @@ def parse_args():
               'The pipeline will check data is a file and exists, or '
               'it assumes it\'s a data string'))
     parser.add_argument(
-        '--host_to_run', required =True,
-        choices=['local', 'genesis'], 
-        help=('choose a host to run, if it is not local, '
-              'a corresponding template of submission script '
-              'is expected to be found in the templates folder'))
-    parser.add_argument(
         '--qsub_template',
         help=('used when tasks is gen_qsub_script, '
               'see a list of templates in templates directory'))
@@ -179,50 +173,10 @@ def init_sample_outdirs(samples, outdir):
 
 
 def act(options, samples):
-    if options.host_to_run == 'local':
-        R.pipeline_run(
-            logger=logger,
-            target_tasks=options.target_tasks,
-            forcedtorun_tasks=options.forced_tasks,
-            multiprocess=options.jobs,
-            verbose=options.verbose,
-            touch_files_only=options.touch_files_only,
-
-        )
-    elif options.host_to_run == 'genesis':
-        from jinja2 import Environment, PackageLoader
-        env = Environment(loader=PackageLoader('rsem_pipeline', 'templates'))
-        template = env.get_template('{}.jinja2'.format(options.host_to_run))
-        for sample in samples:
-            submission_script = os.path.join(sample.outdir, '0_submit.sh')
-            render(submission_script, template, sample, options)
-            logger.info('preparing submitting {0}'.format(submission_script))
-            qsub(submission_script)
-
-
-def render(submission_script, template, sample, options):
-    """
-    :param submission_script: target submission_script with path
-    """
-    num_jobs = decide_num_jobs(sample.outdir)
-    top_outdir = get_top_outdir(options)
-    with open(submission_script, 'wb') as opf:
-        content = template.render(
-            sample=sample,
-            rsem_pipeline_py=os.path.relpath(
-                os.path.join(os.path.dirname(__file__), 'rsem_pipeline.py'),
-                sample.outdir),
-            soft_file=os.path.relpath(sample.series.soft_file, sample.outdir),
-            isamples_str='{0} {1}'.format(sample.series.name, sample.name),
-            top_outdir=os.path.relpath(top_outdir, sample.outdir),
-            config_file=os.path.relpath(options.config_file, sample.outdir),
-            logging_config=os.path.relpath(options.logging_config, sample.outdir),
-            num_jobs=num_jobs)
-        opf.write(content)
-
-
-def qsub(submission_script):
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    os.chdir(os.path.dirname(submission_script))
-    subprocess.call(['qsub', os.path.basename(submission_script)])
-    os.chdir(current_dir)
+    R.pipeline_run(
+        logger=logger,
+        target_tasks=options.target_tasks,
+        forcedtorun_tasks=options.forced_tasks,
+        multiprocess=options.jobs,
+        verbose=options.verbose,
+        touch_files_only=options.touch_files_only)
