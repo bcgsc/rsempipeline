@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*
+
 import os
 import sys
 import re
@@ -55,11 +58,12 @@ def get_remote_free_disk_space(df_cmd, remote, username):
     return int(output[1].split()[3])
 
 
-def get_current_remote_usage(find_cmd, remote, username,
+def estimate_current_remote_usage(find_cmd, remote, username,
                              r_dir, l_dir):
-    """find the space that has already been consumed by rsem_output by walking
-    through each GSM and computing the sum of their estimated usage, if
-    rsem.COMPLETE exists for a GSM, then ignore that GSM
+    """
+    estimate the space that has already been or will be consumed by rsem_output
+    by walking through each GSM and computing the sum of their estimated usage,
+    if rsem.COMPLETE exists for a GSM, then ignore that GSM
     
     mechanism: fetch the list of files in r_dir, and find the
     fastq.gz for each GSM, then find the corresponding fastq.gz in
@@ -82,6 +86,15 @@ def get_current_remote_usage(find_cmd, remote, username,
                 # or processed successfully
                 gsm_dir = dir_.replace(r_dir, l_dir)
                 usage += estimate_rsem_usage(find_fq_gzs(gsm_dir))
+    return usage
+
+
+def get_real_current_usage(remote, username, r_dir):
+    """this will return real space consumed currently by rsem analysis"""
+    output = sshexec('du -s {0}'.format(r_dir), remote, username)
+    # e.g. output:
+    # ['3096\t/path/to/top_outdir\n']
+    usage = int(output[0].split('\t')[0])
     return usage
 
 
@@ -114,7 +127,7 @@ def find_fq_gzs(gsm_dir):
 def estimate_rsem_usage(fq_gzs):
     """
     estimate the maximum disk space that is gonna be consumed by rsem analysis
-    on a GSM based on a list of fq_gzs
+    on one GSM based on a list of fq_gzs
     """
     # when estimating rsem usage, it has to search fastq.gz first and then
     # sra2fastq.COMPLETE because the later is created at last and there could
@@ -238,16 +251,26 @@ def main():
     logging.info('free space available on remote host: {0}'.format(
         pretty_usage(r_free_space)))
 
-    r_current_usage = get_current_remote_usage(
+    r_estimated_currest_usage = estimate_current_remote_usage(
         'find {0}'.format(r_top_outdir),
         r_host, username,
         r_top_outdir, l_top_outdir)
-    logging.info('current usage on remote host by {0}: {1}'.format(
-        r_top_outdir, pretty_usage(r_current_usage)))
-    
+    logging.info(
+        'estimated current usage (excluding samples with rsem.COMPLETE) '
+        'on remote host by {0}: {1}'.format(
+        r_top_outdir, pretty_usage(r_estimated_currest_usage)))
+
+    # this is just for giving an idea, this variable is not utilized by
+    # following calculations
+    r_real_current_usage = get_real_current_usage(
+        r_host, username,
+        r_top_outdir)
+    logging.info('real current usage on remote host by {0}: {1}'.format(
+        r_top_outdir, pretty_usage(r_real_current_usage)))
+
     r_max_usage = config['REMOTE_MAX_USAGE']
     r_min_free = config['REMOTE_MIN_FREE']
-    r_free_to_use = max(0, r_max_usage - r_current_usage)
+    r_free_to_use = max(0, r_max_usage - r_estimated_currest_usage)
     logging.info('free to use: {0}'.format(pretty_usage(r_free_to_use)))
 
     if r_free_to_use < r_min_free:
