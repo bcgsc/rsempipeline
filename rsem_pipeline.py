@@ -129,7 +129,7 @@ def gen_qsub_script(inputs, outputs):
     gsm = res.group('GSM')
     reference_name = config['REMOTE_REFERENCE_NAMES'][species]
     sample_name = '{gsm}'.format(gsm=gsm)
-    n_jobs=U.decide_num_jobs(outdir) 
+    n_jobs=U.decide_num_jobs(outdir, options.j_rsem) 
 
     qsub_script = os.path.join(outdir, '0_submit.sh')
     with open (os.path.join(os.path.dirname(__file__), 'templates',
@@ -194,7 +194,7 @@ def rsem(inputs, outputs):
     gsm = res.group('GSM')
     reference_name = config['LOCAL_REFERENCE_NAMES'][species]
     sample_name = '{outdir}/{gsm}'.format(**locals())
-    n_jobs=U.decide_num_jobs(outdir)
+    n_jobs=U.decide_num_jobs(outdir, options.j_rsem)
 
     flag_file = outputs[-1]
     cmd = config['CMD_RSEM'].format(

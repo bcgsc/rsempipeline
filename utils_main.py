@@ -30,6 +30,9 @@ def parse_args():
               'The pipeline will check data is a file and exists, or '
               'it assumes it\'s a data string'))
     parser.add_argument(
+        '--j_rsem', type=int,
+        help="the number of jobs to run when running rsem (-j)")
+    parser.add_argument(
         '--qsub_template',
         help=('used when tasks is gen_qsub_script, '
               'see a list of templates in templates directory'))

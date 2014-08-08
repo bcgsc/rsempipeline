@@ -101,12 +101,19 @@ def gen_completion_stamp(key, stamp_dir):
     return os.path.join(stamp_dir, '{0}.COMPLETE'.format(key))
 
 
-def decide_num_jobs(sample_outdir):
-    """decide num jobs based on num of sra files"""
-    pickle_file = os.path.join(sample_outdir, 'orig_sras.pickle')
-    if os.path.exists(pickle_file):
-        with open(pickle_file) as inf: # a list of sras
-            num_jobs = len(pickle.load(inf))
-    else:                       # default to 1
-        num_jobs = 1
+def decide_num_jobs(sample_outdir, j_rsem=None):
+    """
+    decide num jobs: if j_rsem is specified in the command, use it, else based
+    on num of sra files recorded in the pickle file, if not pickle, just return
+    1
+    """
+    if j_rsem is not None:
+        return j_rsem
+    else:
+        pickle_file = os.path.join(sample_outdir, 'orig_sras.pickle')
+        if os.path.exists(pickle_file):
+            with open(pickle_file) as inf: # a list of sras
+                num_jobs = len(pickle.load(inf))
+        else:                       # default to 1
+            num_jobs = 1
     return num_jobs
