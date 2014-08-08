@@ -173,16 +173,18 @@ def gen_qsub_script(inputs, outputs):
      '{subpath[0][0]}/rsem.COMPLETE'])
 
 # example of outputs:
-# ├── GSM629265
-# │── ├── GSM629265.genes.results
-# │── ├── GSM629265.isoforms.results
-# │── ├── align.stats
-# │── ├── rsem.log
-# │── ├── rsem.COMPLETE
-# │── └── GSM629265.stat
-# │──     ├── GSM629265.cnt
-# │──     ├── GSM629265.model
-# │──     └── GSM629265.theta
+# GSE42735/
+# `-- homo_sapiens
+#     |-- GSM1048945
+#     |   |-- GSM1048945.genes.results
+#     |   |-- GSM1048945.isoforms.results
+#     |   |-- GSM1048945.stat
+#     |   |   |-- GSM1048945.cnt
+#     |   |   |-- GSM1048945.model
+#     |   |   `-- GSM1048945.theta
+#     |   |-- align.stats
+#     |   |-- rsem.COMPLETE
+#     |   `-- rsem.log
 def rsem(inputs, outputs):
     """
     :params inputs: a tuple of 1 or 2 fastq.gz files, e.g.
