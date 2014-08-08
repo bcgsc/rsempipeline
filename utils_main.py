@@ -6,7 +6,6 @@ import ruffus as R
 
 from soft_parser import parse
 from isamp_parser import get_isamp
-from utils import decide_num_jobs
 
 import logging
 logger = logging.getLogger(__name__)
@@ -38,14 +37,14 @@ def parse_args():
         '--config_file', default='rsem_pipeline_config.yaml', 
         help='a YAML configuration file')
     parser.add_argument(
-        '--debug', action='store_true',
-        help='if debug, commands won\'t be executed, just print out per task')
-    parser.add_argument(
         '--not_use_pickle', action='store_true',
         help=('if specified, it will recreate a pickle file per sample to store '
               'a list of sra files as cache by fetching them from FTP server), '
               'Rerun without this option is faster, and also useful '
               'when there is no Internet connection.'))
+    parser.add_argument(
+        '--debug', action='store_true',
+        help='if debug, commands won\'t be executed, just print out per task')
     args = parser.parse_args()
     return args
 
@@ -138,6 +137,7 @@ def sanity_check(samp_proc, isamp):
         logger.error('{0} samples to be processed but not in isamples (-i):\n\t'
                      '{1}'.format(len(diff2), format_gsms_diff(diff2)))
         unmatch(len(gsms_isamp), len(gsms_proc))
+
 
 def format_gsms_diff(diff):
     """format diff gsms for pretty output to the screen"""
