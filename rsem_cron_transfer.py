@@ -24,6 +24,8 @@ logging.basicConfig(level=logging.DEBUG, disable_existing_loggers=True,
 
 def sshexec(cmd, host, username, private_key_file='~/.ssh/id_rsa'):
     """
+    ssh to username@remote and execute cmd.
+
     :param private_key_file: could be ~/.ssh/id_dsa, as well
     """
 
@@ -94,7 +96,7 @@ def get_real_current_usage(remote, username, r_dir):
     output = sshexec('du -s {0}'.format(r_dir), remote, username)
     # e.g. output:
     # ['3096\t/path/to/top_outdir\n']
-    usage = int(output[0].split('\t')[0])
+    usage = int(output[0].split('\t')[0]) # in KB
     return usage
 
 
@@ -128,6 +130,8 @@ def estimate_rsem_usage(fq_gzs):
     """
     estimate the maximum disk space that is gonna be consumed by rsem analysis
     on one GSM based on a list of fq_gzs
+
+    :param fq_gzs: a list of fastq.gz files
     """
     # when estimating rsem usage, it has to search fastq.gz first and then
     # sra2fastq.COMPLETE because the later is created at last and there could
@@ -156,6 +160,9 @@ def estimate_rsem_usage(fq_gzs):
 
 
 def get_gsms_transferred(record_file):
+    """
+    fetch the list of GSMs that have already been transferred from record_file
+    """ 
     if not os.path.exists(record_file):
         return []
     else:
@@ -164,6 +171,10 @@ def get_gsms_transferred(record_file):
         
 
 def append_transfer_record(gsm_to_transfer, record_file):
+    """
+    append the GSMs that have just beened transferred successfully to
+    record_file
+    """
     with open(record_file, 'ab') as opf:
         now = datetime.datetime.now()
         opf.write('# {0}\n'.format(now.strftime('%y-%m-%d %H:%M:%S')))
@@ -172,6 +183,10 @@ def append_transfer_record(gsm_to_transfer, record_file):
 
 
 def write(transfer_script, **params):
+    """
+    template the qsub_rsync (for qsub e.g. on apollo thosts.q queue) or rsync
+    (for execution directly (e.g. westgrid) script
+    """
     # needs improvment to make it configurable
     input_file = os.path.join(os.path.dirname(__file__),
                               # 'templates/qsub_rsync_apollo.sh',
@@ -184,6 +199,8 @@ def write(transfer_script, **params):
 
 
 def submit(transfer_script):
+    """submit the templated qsub_rsync script"""
+    # needs further improvement, get rid of hard-coded apollo
     popen = subprocess.Popen(
         ['ssh', 'apollo', 'qsub', '-terse', transfer_script],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -202,8 +219,8 @@ def submit(transfer_script):
 def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
                           r_free_to_use, r_min_free):
     """
-    walk through local top outdir, and for each GSMs, estimate its usage, and if
-    it fits free_to_use space on remote host, count it as an element
+    Walk through local top outdir, and for each GSMs, estimate its usage, and
+    if it fits free_to_use space on remote host, count it as an element
     gsms_to_transfer
     """
     gsms_transferred = get_gsms_transferred(gsms_transfer_record)
