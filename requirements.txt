@@ -1,5 +1,10 @@
+Jinja2==2.7.3
+MarkupSafe==0.23
 PyYAML==3.11
 beautifulsoup4==4.3.2
+ecdsa==0.11
+paramiko==1.14.0
+pycrypto==2.6.1
 pyflakes==0.8.1
 requests==2.3.0
 ruffus==2.4.1
