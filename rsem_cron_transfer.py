@@ -83,12 +83,18 @@ def estimate_current_remote_usage(find_cmd, remote, username,
     for dir_ in sorted(output):
         match = re.search('(GSM\d+$)', os.path.basename(dir_))
         if match:
-            if not os.path.join(dir_, 'rsem.COMPLETE') in output:
+            if ((not os.path.join(dir_, 'rsem.COMPLETE') in output) and 
+                (not is_empty_dir(dir_, output))):
                 # only count the disk spaces used by those GSMs that are finished
                 # or processed successfully
                 gsm_dir = dir_.replace(r_dir, l_dir)
                 usage += estimate_rsem_usage(find_fq_gzs(gsm_dir))
     return usage
+
+
+def is_empty_dir(dir_, output):
+    # it's an empty dir, then there should be only one item is the list (output)
+    return len([_ for _ in output if dir_ in _]) == 1
 
 
 def get_real_current_usage(remote, username, r_dir):
