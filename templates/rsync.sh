@@ -29,7 +29,7 @@ eval "$cmd"
 if [ $? -eq 0 ]; then
     echo 'do submission'
     ssh -l zxue genesis \
-	"gsms_to_transfer=\"${GSMS_TO_TRANSFER}\"; cd {{remote_top_outdir}};" \
+	". ~/.bash_profile; gsms_to_transfer=\"${GSMS_TO_TRANSFER}\"; cd {{remote_top_outdir}};" \
 	'
         pwd=${PWD}
         for gsm in ${gsms_to_transfer}; do
