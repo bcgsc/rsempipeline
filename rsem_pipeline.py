@@ -32,7 +32,7 @@ options = UM.parse_args()
 with open(options.config_file) as inf:
     config = yaml.load(inf.read())
 logging.config.fileConfig(
-    os.path.join(os.path.dirname(__file__), 'logging.config'))
+    os.path.join(os.path.dirname(__file__), 'rsem_pipeline.logging.config'))
 
 samples = UM.gen_samples_from_soft_and_isamp(
     options.soft_files, options.isamp, config)
@@ -207,4 +207,3 @@ def rsem(inputs, outputs):
 
 if __name__ == "__main__":
     UM.act(options, samples)
-
