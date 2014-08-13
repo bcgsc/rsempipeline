@@ -1,6 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*
 
+"""
+This script will find out if enough space is available on remote cluster, if
+there is, then it will find out the suitable GSMs, of which their sizes fit the
+available space remotely and transfer them to remote by templating an rsync.sh
+and execute it
+"""
+
 import os
 import sys
 import re
