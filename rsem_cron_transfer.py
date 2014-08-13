@@ -62,13 +62,12 @@ def get_remote_free_disk_space(df_cmd, remote, username):
     return int(output[1].split()[3])
 
 
-def estimate_current_remote_usage(find_cmd, remote, username,
-                             r_dir, l_dir):
+def estimate_current_remote_usage(find_cmd, remote, username, r_dir, l_dir):
     """
     estimate the space that has already been or will be consumed by rsem_output
     by walking through each GSM and computing the sum of their estimated usage,
     if rsem.COMPLETE exists for a GSM, then ignore that GSM
-    
+
     mechanism: fetch the list of files in r_dir, and find the
     fastq.gz for each GSM, then find the corresponding fastq.gz in
     l_dir, and estimate sizes based on them
@@ -83,19 +82,22 @@ def estimate_current_remote_usage(find_cmd, remote, username,
 
     usage = 0
     for dir_ in sorted(output):
-        match = re.search('(GSM\d+$)', os.path.basename(dir_))
+        match = re.search(r'(GSM\d+$)', os.path.basename(dir_))
         if match:
-            if ((not os.path.join(dir_, 'rsem.COMPLETE') in output) and 
-                (not is_empty_dir(dir_, output))):
-                # only count the disk spaces used by those GSMs that are finished
-                # or processed successfully
+            rsem_comp = os.path.join(dir_, 'rsem.COMPLETE')
+            if (not rsem_comp in output) and (not is_empty_dir(dir_, output)):
+                # only count the disk spaces used by those GSMs that are
+                # finished or processed successfully
                 gsm_dir = dir_.replace(r_dir, l_dir)
                 usage += estimate_rsem_usage(find_fq_gzs(gsm_dir))
     return usage
 
 
 def is_empty_dir(dir_, output):
-    # it's an empty dir, then there should be only one item is the list (output)
+    """
+    test if dir_ is an empty dir based on output. If it's an empty dir, then
+    there should be only one item is the list (output)
+    """
     return len([_ for _ in output if dir_ in _]) == 1
 
 
@@ -113,7 +115,7 @@ def pretty_usage(val):
     return '{0:.1f} GB'.format(val / 1e6)
 
 
-RE_fq_gz = re.compile('(SRR\d+)_[12]\.fastq\.gz', re.IGNORECASE)
+RE_FQ_GZ = re.compile(r'(SRR\d+)_[12]\.fastq\.gz', re.IGNORECASE)
 def find_fq_gzs(gsm_dir):
     """
     return a list of fastq.gz files for a GSM if sra2fastq.COMPLETE exists
@@ -123,7 +125,7 @@ def find_fq_gzs(gsm_dir):
     fq_gzs = []
     files = os.listdir(gsm_dir)
     for _ in files:
-        match = RE_fq_gz.search(_)
+        match = RE_FQ_GZ.search(_)
         if match:
             srr = match.group(1)
             flag_sra2fastq = os.path.join(
@@ -169,13 +171,13 @@ def estimate_rsem_usage(fq_gzs):
 def get_gsms_transferred(record_file):
     """
     fetch the list of GSMs that have already been transferred from record_file
-    """ 
+    """
     if not os.path.exists(record_file):
         return []
     else:
         with open(record_file) as inf:
             return [_.strip() for _ in inf if not _.strip().startswith('#')]
-        
+
 
 def append_transfer_record(gsm_to_transfer, record_file):
     """
@@ -211,15 +213,26 @@ def submit(transfer_script):
         ['ssh', 'apollo', 'qsub', '-terse', transfer_script],
         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-    (stdoutdata, stderrdata) = popen.communicate()
+    (stdoutdata, _) = popen.communicate()
     if stdoutdata:
         for line in stdoutdata.split(os.linesep):
             linestripped = line.strip()
             if len(linestripped) > 0 and linestripped.isdigit():
                 #it was a job id
-                return True             
+                return True
         logger.info(stdoutdata)
     return False
+
+
+def get_gse_species_gsm_from_path(path):
+    """
+    trying to capture info from directory like
+    path/to/GSExxxxx/species/GSMxxxxx
+    """
+    gse_species_path, gsm = os.path.split(path)
+    gse_path, species = os.path.split(gse_species_path)
+    gse = os.path.basename(gse_path)
+    return gse, species, gsm
 
 
 def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
@@ -231,11 +244,10 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
     """
     gsms_transferred = get_gsms_transferred(gsms_transfer_record)
     gsms_to_transfer = []
-    for root, dirs, files in os.walk(l_top_outdir):
-        # trying to capture directory as such GSExxxxx/species/GSMxxxxx
-        gse_path, gsm = os.path.split(root)
-        gse = os.path.basename(os.path.dirname(gse_path))
-        if not (re.search('GSM\d+$', gsm) and re.search('GSE\d+$', gse)):
+    # _, _ (dirs, files): ignored since they're not used
+    for root, _, _ in os.walk(l_top_outdir):
+        gse, _, gsm = get_gse_species_gsm_from_path(root)
+        if not (re.search(r'GSM\d+$', gsm) and re.search(r'GSE\d+$', gse)):
             continue
 
         gsm_dir = root
@@ -265,6 +277,7 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
 
 
 def main():
+    """the main function"""
     # r_: means relevant to remote host, l_: to local host
     r_host, r_username = config['REMOTE_HOST'], config['USERNAME']
     l_top_outdir = config['LOCAL_TOP_OUTDIR']
@@ -278,10 +291,9 @@ def main():
     r_estimated_current_usage = estimate_current_remote_usage(
         'find {0}'.format(r_top_outdir),
         r_host, r_username, r_top_outdir, l_top_outdir)
-    logger.info(
-        'estimated current usage (excluding samples with rsem.COMPLETE) '
-        'on remote host by {0}: {1}'.format(
-        r_top_outdir, pretty_usage(r_estimated_current_usage)))
+    logger.info('estimated current usage (excluding samples with '
+                'rsem.COMPLETE) on remote host by {0}: {1}'.format(
+                    r_top_outdir, pretty_usage(r_estimated_current_usage)))
 
     # this is just for giving an idea of real usage on remote, this variable is
     # not utilized by following calculations
@@ -297,27 +309,26 @@ def main():
 
     if r_free_to_use < r_min_free:
         logger.info('free to use space ({0}) < min free ({1}) on remote host, '
-                     'no transfer is happening'.format(
-                         pretty_usage(r_free_to_use),
-                         pretty_usage(r_min_free)))
+                    'no transfer is happening'.format(
+                        pretty_usage(r_free_to_use), pretty_usage(r_min_free)))
         return
-        
+
     gsms_transfer_record = os.path.join(l_top_outdir, 'transferred_GSMs.txt')
     gsms_to_transfer = find_gsms_to_transfer(
         l_top_outdir, gsms_transfer_record, r_free_to_use, r_min_free)
 
     if not gsms_to_transfer:
         logger.info('no GSMs fit the current r_free_to_use ({0}), '
-                     'no transferring will happen'.format(
-                         pretty_usage(r_free_to_use)))
+                    'no transferring will happen'.format(
+                        pretty_usage(r_free_to_use)))
         return
 
     logger.info('GSMs to transfer:')
     for gsm in gsms_to_transfer:
         logger.info('\t{0}'.format(gsm))
 
-    now = datetime.datetime.now()
-    job_name = 'transfer.{0}'.format(now.strftime('%y-%m-%d_%H-%M-%S'))
+    job_name = 'transfer.{0}'.format(
+        datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S'))
     transfer_script = os.path.join(l_top_outdir, '{0}.sh'.format(job_name))
     write(transfer_script, options.rsync_template,
           job_name=job_name,
@@ -326,16 +337,16 @@ def main():
           gsms_to_transfer=gsms_to_transfer,
           local_top_outdir=l_top_outdir,
           remote_top_outdir=r_top_outdir)
-    
 
     os.chmod(transfer_script, stat.S_IRUSR | stat.S_IWUSR| stat.S_IXUSR)
-    rc = execute(transfer_script)
+    rcode = execute(transfer_script)
 
-    if rc == 0:
+    if rcode == 0:
         append_transfer_record(gsms_to_transfer, gsms_transfer_record)
 
 
 def parse_args():
+    """parse command line arguments and return options"""
     parser = argparse.ArgumentParser(
         description='rsem_cron_transfer.py',
         usage='require python-2.7.x',
@@ -349,14 +360,13 @@ def parse_args():
               'refer to {0} (default template) for an example.'.format(
                   default_rsync_template)))
 
-    config_examp = os.path.join(base_dir,'rsem_pipeline_config.yaml.example')
+    config_examp = os.path.join(base_dir, 'rsem_pipeline_config.yaml.example')
     parser.add_argument(
         '-c', '--config_file', default='rsem_pipeline_config.yaml',
         help=('a YAML configuration file, refer to {0} for an example.'.format(
             config_examp)))
 
-    options = parser.parse_args()
-    return options
+    return parser.parse_args()
 
 
 if __name__ == "__main__":
