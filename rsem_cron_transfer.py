@@ -156,7 +156,7 @@ def estimate_rsem_usage(fq_gzs):
     # 241971266          1255233364  80.7% rsem_output/GSE42735/homo_sapiens/GSM1048946/SRR628722_1.fastq
     gzip_compression_ratio = 0.8
     # assume the maximum will be 9 times larger
-    overestimate_ratio = 9
+    fastq2usage_ratio = config['FASTQ2USAGE_RATIO']
 
     raw_size = sum(map(os.path.getsize, fq_gzs))
     # Byte => KB, os.path.getsize return size in bytes
@@ -164,7 +164,7 @@ def estimate_rsem_usage(fq_gzs):
     # estimate the size of uncompressed fastq
     res = res / (1 - gzip_compression_ratio)
     # overestimate
-    res = res * overestimate_ratio
+    res = res * fastq2usage_ratio
     return res
 
 
