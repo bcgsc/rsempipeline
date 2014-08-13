@@ -265,6 +265,7 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
 
 
 def main():
+    # r_: means relevant to remote host, l_: to local host
     r_host, r_username = config['REMOTE_HOST'], config['USERNAME']
     l_top_outdir = config['LOCAL_TOP_OUTDIR']
     r_top_outdir = config['REMOTE_TOP_OUTDIR']
