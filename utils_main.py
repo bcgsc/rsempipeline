@@ -13,9 +13,10 @@ logger = logging.getLogger(__name__)
 def parse_args():
     parser = R.cmdline.get_argparse(
         description="rsem_pipeline",
-        usage='require python2.7.x',
+        usage='require python-2.7.x',
         version='0.1')
 
+    base_dir = os.path.abspath(os.path.dirname(__file__))
     parser.add_argument(
         '-s', '--soft_files', nargs='+', required=True,
         help='a list of soft files')
@@ -36,9 +37,13 @@ def parse_args():
         '--qsub_template',
         help=('used when tasks is gen_qsub_script, '
               'see a list of templates in templates directory'))
+
+    config_examp = os.path.join(base_dir,'rsem_pipeline_config.yaml.example')
     parser.add_argument(
-        '--config_file', default='rsem_pipeline_config.yaml', 
-        help='a YAML configuration file')
+        '-c', '--config_file', default='rsem_pipeline_config.yaml',
+        help=('a YAML configuration file, refer to {0} for an example.'.format(
+            config_examp)))
+
     parser.add_argument(
         '--not_use_pickle', action='store_true',
         help=('if specified, it will recreate a pickle file per sample to store '
