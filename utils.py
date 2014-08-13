@@ -131,6 +131,7 @@ def execute(cmd, msg_id='', flag_file=None, debug=False):
                         'CMD "{2}"'.format(msg_id, returncode, cmd))
             if flag_file is not None:
                 touch(flag_file)
+        return returncode
     except OSError, err:
         logger.exception(
             '{0}, failed to start, raising OSError {1}. '
