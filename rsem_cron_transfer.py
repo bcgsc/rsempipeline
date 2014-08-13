@@ -15,19 +15,12 @@ import stat
 import yaml
 import datetime
 import subprocess
-import logging
+import logging.config
+import argparse
 
 import paramiko
 from jinja2 import Template
 
-with open('./rsem_pipeline_config.yaml') as inf:
-    config = yaml.load(inf.read())
-
-logging.basicConfig(level=logging.DEBUG, disable_existing_loggers=True,
-                    format='%(levelname)s|%(asctime)s|%(name)s:%(message)s',
-                    filename=os.path.join(
-                        config['LOCAL_TOP_OUTDIR'],
-                        os.path.basename(__file__).replace('.py', '.log')))
 
 def sshexec(cmd, host, username, private_key_file='~/.ssh/id_rsa'):
     """
@@ -194,15 +187,14 @@ def append_transfer_record(gsm_to_transfer, record_file):
             opf.write('{0}\n'.format(_))
 
 
-def write(transfer_script, **params):
+def write(transfer_script, template, **params):
     """
     template the qsub_rsync (for qsub e.g. on apollo thosts.q queue) or rsync
     (for execution directly (e.g. westgrid) script
     """
     # needs improvment to make it configurable
-    input_file = os.path.join(os.path.dirname(__file__),
-                              # 'templates/qsub_rsync_apollo.sh',
-                              'templates/rsync.sh')
+    input_file = os.path.join(template)
+
     with open(input_file) as inf:
         template = Template(inf.read())
 
@@ -224,7 +216,7 @@ def submit(transfer_script):
             if len(linestripped) > 0 and linestripped.isdigit():
                 #it was a job id
                 return True             
-        logging.info(stdoutdata)
+        logger.info(stdoutdata)
     return False
 
 
@@ -248,7 +240,7 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
         # use relpath for easy mirror between local and remote hosts
         transfer_id = os.path.relpath(gsm_dir, l_top_outdir)
         if transfer_id in gsms_transferred:
-            logging.debug('{0} is in {1} already, ignore it'.format(
+            logger.debug('{0} is in {1} already, ignore it'.format(
                 transfer_id, gsms_transfer_record))
             continue
 
@@ -257,7 +249,7 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
         if fq_gzs:
             rsem_usage = estimate_rsem_usage(fq_gzs)
             if rsem_usage < r_free_to_use:
-                logging.debug(
+                logger.debug(
                     '{0} ({1}) fit remote free_to_use ({2})'.format(
                         transfer_id, pretty_usage(rsem_usage),
                         pretty_usage(r_free_to_use)))
@@ -266,7 +258,7 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
                 if r_free_to_use < r_min_free:
                     break
         else:
-            logging.debug('no fastq.gz files found in {0}'.format(gsm_dir))
+            logger.debug('no fastq.gz files found in {0}'.format(gsm_dir))
     return gsms_to_transfer
 
 
@@ -277,13 +269,13 @@ def main():
 
     r_free_space = get_remote_free_disk_space(
         config['REMOTE_CMD_DF'], r_host, r_username)
-    logging.info('free space available on remote host: {0}'.format(
+    logger.info('free space available on remote host: {0}'.format(
         pretty_usage(r_free_space)))
 
     r_estimated_current_usage = estimate_current_remote_usage(
         'find {0}'.format(r_top_outdir),
         r_host, r_username, r_top_outdir, l_top_outdir)
-    logging.info(
+    logger.info(
         'estimated current usage (excluding samples with rsem.COMPLETE) '
         'on remote host by {0}: {1}'.format(
         r_top_outdir, pretty_usage(r_estimated_current_usage)))
@@ -292,16 +284,16 @@ def main():
     # not utilized by following calculations
     r_real_current_usage = get_real_current_usage(
         r_host, r_username, r_top_outdir)
-    logging.info('real current usage on remote host by {0}: {1}'.format(
+    logger.info('real current usage on remote host by {0}: {1}'.format(
         r_top_outdir, pretty_usage(r_real_current_usage)))
 
     r_max_usage = config['REMOTE_MAX_USAGE']
     r_min_free = config['REMOTE_MIN_FREE']
     r_free_to_use = max(0, r_max_usage - r_estimated_current_usage)
-    logging.info('free to use: {0}'.format(pretty_usage(r_free_to_use)))
+    logger.info('free to use: {0}'.format(pretty_usage(r_free_to_use)))
 
     if r_free_to_use < r_min_free:
-        logging.info('free to use space ({0}) < min free ({1}) on remote host, '
+        logger.info('free to use space ({0}) < min free ({1}) on remote host, '
                      'no transfer is happening'.format(
                          pretty_usage(r_free_to_use),
                          pretty_usage(r_min_free)))
@@ -312,37 +304,77 @@ def main():
         l_top_outdir, gsms_transfer_record, r_free_to_use, r_min_free)
 
     if not gsms_to_transfer:
-        logging.info('no GSMs fit the current r_free_to_use ({0}), '
+        logger.info('no GSMs fit the current r_free_to_use ({0}), '
                      'no transferring will happen'.format(
                          pretty_usage(r_free_to_use)))
         return
 
+    logger.info('GSMs to transfer:')
     for gsm in gsms_to_transfer:
-        print gsm
+        logger.info('\t{0}'.format(gsm))
 
     now = datetime.datetime.now()
     job_name = 'transfer.{0}'.format(now.strftime('%y-%m-%d_%H-%M-%S'))
     transfer_script = os.path.join(l_top_outdir, '{0}.sh'.format(job_name))
-    write(transfer_script,
-          job_name = job_name,
+    write(transfer_script, options.rsync_template,
+          job_name=job_name,
+          username=r_username,
+          hostname=r_host,
           gsms_to_transfer=gsms_to_transfer,
           local_top_outdir=l_top_outdir,
           remote_top_outdir=r_top_outdir)
     
 
-    os.chmod(transfer_script, stat.S_IRUSR | stat.S_IWUSR| stat.S_IXUSR)
-    rc = subprocess.call(transfer_script, shell=True, executable="/bin/bash")
+    # os.chmod(transfer_script, stat.S_IRUSR | stat.S_IWUSR| stat.S_IXUSR)
+    # rc = subprocess.call(transfer_script, shell=True, executable="/bin/bash")
 
-    # todo: fix stdout, stderr redirect with communicate
+    # # todo: fix stdout, stderr redirect with communicate
     
-    if rc == 0:
-        logging.info('rsync and qsub successful: {0}; writing to {1}'.format(
-            rc, gsms_transfer_record))
-        append_transfer_record(gsms_to_transfer, gsms_transfer_record)
-    else:
-        logging.info('rsync and qsub unsuccessful: {0}'.format(rc))
+    # if rc == 0:
+    #     logger.info('rsync and qsub successful: {0}; writing to {1}'.format(
+    #         rc, gsms_transfer_record))
+    #     append_transfer_record(gsms_to_transfer, gsms_transfer_record)
+    # else:
+    #     logger.info('rsync and qsub unsuccessful: {0}'.format(rc))
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description='rsem_cron_transfer.py',
+        usage='require python-2.7.x',
+        version='0.1')
+
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    default_rsync_template = os.path.join(base_dir, 'templates/rsync.sh')
+    parser.add_argument(
+        '-t', '--rsync_template', default=default_rsync_template,
+        help=('template for transferring GSMs from localhost to remote host, '
+              'refer to {0} (default template) for an example.'.format(
+                  default_rsync_template)))
+
+    config_examp = os.path.join(base_dir,'rsem_pipeline_config.yaml.example')
+    parser.add_argument(
+        '-c', '--config_file', default='rsem_pipeline_config.yaml',
+        help=('a YAML configuration file, refer to {0} for an example.'.format(
+            config_examp)))
+
+    options = parser.parse_args()
+    return options
 
 
 if __name__ == "__main__":
     sys.stdout.flush()          #flush print outputs to screen
+
+    # global variables: options, config
+    options = parse_args()
+    try:
+        with open(options.config_file) as inf:
+            config = yaml.load(inf.read())
+    except IOError, _:
+        print 'configuration file: {0} not found'.format(options.config_file)
+        sys.exit(1)
+
+    logging.config.fileConfig(os.path.join(
+        os.path.dirname(__file__), 'rsem_cron_transfer.logging.config'))
+
+    logger = logging.getLogger('rsem_cron_transfer')
     main()
