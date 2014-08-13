@@ -40,7 +40,8 @@ samples = UM.gen_samples_from_soft_and_isamp(
 logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
     R.proxy_logger.setup_std_shared_logger,
     "rsem_pipeline",
-    {"config_file": os.path.join(os.path.dirname(__file__), 'logging.config')})
+    {"config_file": os.path.join(os.path.dirname(__file__),
+                                 'rsem_pipeline.logging.config')})
 
 UM.init_sample_outdirs(samples, UM.get_rsem_outdir(config, options))
 
