@@ -52,8 +52,8 @@ def execute_mutex(cmd, msg_id='', flag_file=None, debug=False):
     :param msg_id: id for identifying a message
     """
     with logger_mutex:
-        U.execute(cmd, msg_id, flag_file, debug)
-
+        returncode = U.execute(cmd, msg_id, flag_file, debug)
+    return returncode
     
 def originate_params():
     """
