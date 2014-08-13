@@ -263,7 +263,7 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
         if fq_gzs:
             rsem_usage = estimate_rsem_usage(fq_gzs)
             if rsem_usage < r_free_to_use:
-                logger.debug(
+                logger.info(
                     '{0} ({1}) fit remote free_to_use ({2})'.format(
                         transfer_id, pretty_usage(rsem_usage),
                         pretty_usage(r_free_to_use)))
