@@ -280,26 +280,24 @@ def main():
     logging.info('free space available on remote host: {0}'.format(
         pretty_usage(r_free_space)))
 
-    r_estimated_currest_usage = estimate_current_remote_usage(
+    r_estimated_current_usage = estimate_current_remote_usage(
         'find {0}'.format(r_top_outdir),
-        r_host, username,
-        r_top_outdir, l_top_outdir)
+        r_host, username, r_top_outdir, l_top_outdir)
     logging.info(
         'estimated current usage (excluding samples with rsem.COMPLETE) '
         'on remote host by {0}: {1}'.format(
-        r_top_outdir, pretty_usage(r_estimated_currest_usage)))
+        r_top_outdir, pretty_usage(r_estimated_current_usage)))
 
-    # this is just for giving an idea, this variable is not utilized by
-    # following calculations
+    # this is just for giving an idea of real usage on remote, this variable is
+    # not utilized by following calculations
     r_real_current_usage = get_real_current_usage(
-        r_host, username,
-        r_top_outdir)
+        r_host, username, r_top_outdir)
     logging.info('real current usage on remote host by {0}: {1}'.format(
         r_top_outdir, pretty_usage(r_real_current_usage)))
 
     r_max_usage = config['REMOTE_MAX_USAGE']
     r_min_free = config['REMOTE_MIN_FREE']
-    r_free_to_use = max(0, r_max_usage - r_estimated_currest_usage)
+    r_free_to_use = max(0, r_max_usage - r_estimated_current_usage)
     logging.info('free to use: {0}'.format(pretty_usage(r_free_to_use)))
 
     if r_free_to_use < r_min_free:
