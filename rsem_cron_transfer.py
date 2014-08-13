@@ -21,6 +21,8 @@ import argparse
 import paramiko
 from jinja2 import Template
 
+from utils import execute
+
 
 def sshexec(cmd, host, username, private_key_file='~/.ssh/id_rsa'):
     """
@@ -325,17 +327,12 @@ def main():
           remote_top_outdir=r_top_outdir)
     
 
-    # os.chmod(transfer_script, stat.S_IRUSR | stat.S_IWUSR| stat.S_IXUSR)
-    # rc = subprocess.call(transfer_script, shell=True, executable="/bin/bash")
+    os.chmod(transfer_script, stat.S_IRUSR | stat.S_IWUSR| stat.S_IXUSR)
+    rc = execute(transfer_script)
 
-    # # todo: fix stdout, stderr redirect with communicate
-    
-    # if rc == 0:
-    #     logger.info('rsync and qsub successful: {0}; writing to {1}'.format(
-    #         rc, gsms_transfer_record))
-    #     append_transfer_record(gsms_to_transfer, gsms_transfer_record)
-    # else:
-    #     logger.info('rsync and qsub unsuccessful: {0}'.format(rc))
+    if rc == 0:
+        append_transfer_record(gsms_to_transfer, gsms_transfer_record)
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
