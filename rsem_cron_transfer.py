@@ -271,18 +271,18 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
 
 
 def main():
-    r_host, username = config['REMOTE_HOST'], config['USERNAME']
+    r_host, r_username = config['REMOTE_HOST'], config['USERNAME']
     l_top_outdir = config['LOCAL_TOP_OUTDIR']
     r_top_outdir = config['REMOTE_TOP_OUTDIR']
 
     r_free_space = get_remote_free_disk_space(
-        config['REMOTE_CMD_DF'], r_host, username)
+        config['REMOTE_CMD_DF'], r_host, r_username)
     logging.info('free space available on remote host: {0}'.format(
         pretty_usage(r_free_space)))
 
     r_estimated_current_usage = estimate_current_remote_usage(
         'find {0}'.format(r_top_outdir),
-        r_host, username, r_top_outdir, l_top_outdir)
+        r_host, r_username, r_top_outdir, l_top_outdir)
     logging.info(
         'estimated current usage (excluding samples with rsem.COMPLETE) '
         'on remote host by {0}: {1}'.format(
@@ -291,7 +291,7 @@ def main():
     # this is just for giving an idea of real usage on remote, this variable is
     # not utilized by following calculations
     r_real_current_usage = get_real_current_usage(
-        r_host, username, r_top_outdir)
+        r_host, r_username, r_top_outdir)
     logging.info('real current usage on remote host by {0}: {1}'.format(
         r_top_outdir, pretty_usage(r_real_current_usage)))
 
