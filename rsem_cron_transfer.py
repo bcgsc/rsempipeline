@@ -62,7 +62,7 @@ def get_remote_free_disk_space(df_cmd, remote, username):
     return int(output[1].split()[3])
 
 
-def estimate_current_remote_usage(find_cmd, remote, username, r_dir, l_dir):
+def estimate_current_remote_usage(remote, username, r_dir, l_dir):
     """
     estimate the space that has already been or will be consumed by rsem_output
     by walking through each GSM and computing the sum of their estimated usage,
@@ -77,7 +77,12 @@ def estimate_current_remote_usage(find_cmd, remote, username, r_dir, l_dir):
     :param l_dir: local rsem output directory
 
     """
+    find_cmd = 'find {0}'.format(r_dir)
     output = sshexec(find_cmd, remote, username)
+    if output is None:
+        raise ValueError(
+            'cannot estimate current usage on remote host. please check '
+            '{0} exists on {1}'.format(r_dir, remote))
     output = [_.strip() for _ in output] # remote trailing '\n'
 
     usage = 0
@@ -289,7 +294,6 @@ def main():
         pretty_usage(r_free_space)))
 
     r_estimated_current_usage = estimate_current_remote_usage(
-        'find {0}'.format(r_top_outdir),
         r_host, r_username, r_top_outdir, l_top_outdir)
     logger.info('estimated current usage (excluding samples with '
                 'rsem.COMPLETE) on remote host by {0}: {1}'.format(
