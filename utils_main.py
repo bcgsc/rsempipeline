@@ -34,8 +34,8 @@ def parse_args():
         '--j_rsem', type=int,
         help="the number of jobs to run when running rsem (-j)")
     parser.add_argument(
-        '--qsub_template',
-        help=('used when tasks is gen_qsub_script, '
+        '-t', '--qsub_template',
+        help=('used when -T is gen_qsub_script, '
               'see a list of templates in templates directory'))
 
     config_examp = os.path.join(base_dir,'rsem_pipeline_config.yaml.example')
