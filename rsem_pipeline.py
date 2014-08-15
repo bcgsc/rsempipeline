@@ -47,13 +47,13 @@ UM.init_sample_outdirs(samples, UM.get_rsem_outdir(config, options))
 
 ##################################end of main##################################
 
-def execute_mutex(cmd, msg_id='', flag_file=None, debug=False):
-    """
-    :param msg_id: id for identifying a message
-    """
-    with logger_mutex:
-        returncode = U.execute(cmd, msg_id, flag_file, debug)
-    return returncode
+# def execute_mutex(cmd, msg_id='', flag_file=None, debug=False):
+#     """
+#     :param msg_id: id for identifying a message
+#     """
+#     with logger_mutex:
+#         returncode = U.execute(cmd, msg_id, flag_file, debug)
+#     return returncode
     
 def originate_params():
     """
@@ -96,14 +96,14 @@ def download(inputs, outputs, sample):
     # anonftp@ftp-trace.ncbi.nlm.nih.gov:{url_path} {output_dir}
     cmd = config['CMD_ASCP'].format(
         log_dir=sra_outdir, url_path=sra_url_path, output_dir=sra_outdir)
-    returncode = execute_mutex(cmd, msg_id, flag_file, options.debug)
+    returncode = U.execute(cmd, msg_id, flag_file, options.debug)
     if returncode != 0 or returncode is None:
         # try wget
         # cmd template looks like this:
         # wget ftp://ftp-trace.ncbi.nlm.nih.gov{url_path} -P {output_dir} -N
         cmd = config['CMD_WGET'].format(
             url_path=sra_url_path, output_dir=sra_outdir)
-        execute_mutex(cmd, msg_id, flag_file, options.debug)
+        U.execute(cmd, msg_id, flag_file, options.debug)
 
                
 @R.subdivide(
@@ -125,7 +125,6 @@ def sra2fastq(inputs, outputs):
     flag_file = outputs[-1]
     outdir = os.path.dirname(os.path.dirname(os.path.dirname(sra)))
     cmd = config['CMD_FASTQ_DUMP'].format(output_dir=outdir, accession=sra)
-    # execute_mutex(cmd, flag_file=flag_file, debug=options.debug)
     U.execute(cmd, flag_file=flag_file, debug=options.debug)
 
 
@@ -220,7 +219,7 @@ def rsem(inputs, outputs):
         reference_name=reference_name,
         sample_name=sample_name,
         output_dir=outdir)
-    execute_mutex(cmd, flag_file=flag_file, debug=options.debug)
+    U.execute(cmd, flag_file=flag_file, debug=options.debug)
 
 if __name__ == "__main__":
     UM.act(options, samples)
