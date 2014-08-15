@@ -108,16 +108,25 @@ def download(inputs, outputs, sample):
                
 @R.subdivide(
     download,
-    R.formatter(r'{0}/(?P<SRX>SRX\d+)/(?P<SRR>SRR\d+)/(.*)\.sra'.format(PATH_RE)),
-    ['{subpath[0][2]}/{SRR[0]}_[12].fastq.gz',
-     '{subpath[0][2]}/{SRR[0]}.sra.sra2fastq.COMPLETE'])
+    R.formatter(r'{0}/(?P<RX>[SED]RX\d+)/(?P<RR>[SED]RR\d+)/(.*)\.sra'.format(PATH_RE)),
+    ['{subpath[0][2]}/{RR[0]}_[12].fastq.gz',
+     '{subpath[0][2]}/{RR[0]}.sra.sra2fastq.COMPLETE'])
 def sra2fastq(inputs, outputs):
+    """for meaning of [SED]RR, see
+    http://www.ncbi.nlm.nih.gov/books/NBK56913/#search.the_entrez_sra_search_response_pa
+
+    S =NCBI-SRA, E = EMBL-SRA, D = DDBJ-SRA
+    SRR: SRA run accession
+    ERR: ERA run accession
+    DRR: DRA run accession
+    """
     sra, _ = inputs             # ignore the flag file from previous task
     print inputs
     flag_file = outputs[-1]
     outdir = os.path.dirname(os.path.dirname(os.path.dirname(sra)))
     cmd = config['CMD_FASTQ_DUMP'].format(output_dir=outdir, accession=sra)
-    execute_mutex(cmd, flag_file=flag_file, debug=options.debug)
+    # execute_mutex(cmd, flag_file=flag_file, debug=options.debug)
+    U.execute(cmd, flag_file=flag_file, debug=options.debug)
 
 
 @R.collate(
@@ -160,7 +169,6 @@ def gen_qsub_script(inputs, outputs):
     # generally you run one sample at a time when it comes to sra2fastq and
     # rsem, so it should be fine most of the time
 
-    # R.formatter(r'{0}\/(?P<SRR>SRR\d+)\_[12]\.fastq.gz'.format(PATH_RE)),
     R.formatter(PATH_RE),
     ['{subpath[0][0]}/{GSM[0]}.genes.results',
      '{subpath[0][0]}/{GSM[0]}.isoforms.results',
