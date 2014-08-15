@@ -227,24 +227,6 @@ def write(transfer_script, template, **params):
         opf.write(template.render(**params))
 
 
-def submit(transfer_script):
-    """submit the templated qsub_rsync script"""
-    # needs further improvement, get rid of hard-coded apollo
-    popen = subprocess.Popen(
-        ['ssh', 'apollo', 'qsub', '-terse', transfer_script],
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    (stdoutdata, _) = popen.communicate()
-    if stdoutdata:
-        for line in stdoutdata.split(os.linesep):
-            linestripped = line.strip()
-            if len(linestripped) > 0 and linestripped.isdigit():
-                #it was a job id
-                return True
-        logger.info(stdoutdata)
-    return False
-
-
 def get_gse_species_gsm_from_path(path):
     """
     trying to capture info from directory like
