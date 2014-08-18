@@ -334,21 +334,22 @@ def main():
 
     r_free_space = get_remote_free_disk_space(
         config['REMOTE_CMD_DF'], r_host, r_username)
-    logger.info('free space available on remote host: {0}'.format(
-        pretty_usage(r_free_space)))
+    logger.info('free space available on {0}: {1}'.format(
+        r_host, pretty_usage(r_free_space)))
 
     r_estimated_current_usage = estimate_current_remote_usage(
         r_host, r_username, r_top_outdir, l_top_outdir)
-    logger.info('estimated current usage (excluding samples with '
-                'rsem.COMPLETE) on remote host by {0}: {1}'.format(
-                    r_top_outdir, pretty_usage(r_estimated_current_usage)))
+    logger.info(
+        'estimated current usage (excluding samples with '
+        'rsem.COMPLETE) on {0} by {1}: {2}'.format(
+            r_host, r_top_outdir, pretty_usage(r_estimated_current_usage)))
 
     # this is just for giving an idea of real usage on remote, this variable is
     # not utilized by following calculations
     r_real_current_usage = get_real_current_usage(
         r_host, r_username, r_top_outdir)
-    logger.info('real current usage on remote host by {0}: {1}'.format(
-        r_top_outdir, pretty_usage(r_real_current_usage)))
+    logger.info('real current usage on {0} by {1}: {2}'.format(
+        r_host, r_top_outdir, pretty_usage(r_real_current_usage)))
 
     r_max_usage = convert_disk_space(config['REMOTE_MAX_USAGE'])
     logging.info('r_max_usage: {0}'.format(pretty_usage(r_max_usage)))
@@ -358,9 +359,10 @@ def main():
     logger.info('free to use: {0}'.format(pretty_usage(r_free_to_use)))
 
     if r_free_to_use < r_min_free:
-        logger.info('free to use space ({0}) < min free ({1}) on remote host, '
-                    'no transfer is happening'.format(
-                        pretty_usage(r_free_to_use), pretty_usage(r_min_free)))
+        logger.info(
+            'free to use space ({0}) < min free ({1}) on {2}, '
+            'no transfer is happening'.format(
+                pretty_usage(r_free_to_use), pretty_usage(r_min_free), r_host))
         return
 
     gsms_transfer_record = os.path.join(l_top_outdir, 'transferred_GSMs.txt')
