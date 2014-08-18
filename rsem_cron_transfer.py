@@ -60,7 +60,7 @@ def get_remote_free_disk_space(df_cmd, remote, username):
     # e.g. output:
     # ['Filesystem         1024-blocks      Used Available Capacity Mounted on\n',
     #  '/dev/analysis        16106127360 12607690752 3498436608      79% /extscratch\n']
-    return int(output[1].split()[3]) * 1000
+    return int(output[1].split()[3]) * 1024
 
 
 def estimate_current_remote_usage(remote, username, r_dir, l_dir):
@@ -113,7 +113,7 @@ def get_real_current_usage(remote, username, r_dir):
     output = sshexec('du -s {0}'.format(r_dir), remote, username)
     # e.g. output:
     # ['3096\t/path/to/top_outdir\n']
-    usage = int(output[0].split('\t')[0]) * 1000 # in KB => byte
+    usage = int(output[0].split('\t')[0]) * 1024 # in KB => byte
     return usage
 
 
@@ -270,6 +270,10 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
 
 
 def get_fq_gz_sizes(gsm_dir):
+    """
+    get sizes from <gsm_dir>/fq_gz_sizes.txt, if it doesn't exist, then create
+    it
+    """
     sizes_file = os.path.join(gsm_dir, 'fq_gz_sizes.txt')
     if not os.path.exists(sizes_file):
         create(sizes_file, gsm_dir)
@@ -281,6 +285,7 @@ def get_fq_gz_sizes(gsm_dir):
 
 
 def create(sizes_file, gsm_dir):
+    """create <gsm_dir>/fq_gz_sizes.txt"""
     fq_gzs = glob.glob(os.path.join(gsm_dir, '*.fastq.gz'))
 
     sizes = []
@@ -295,6 +300,31 @@ def create(sizes_file, gsm_dir):
     logger.info('written {0}'.format(sizes_file))
 
 
+def convert_disk_space(val):
+    """convert human readable disk space to byte"""
+    def err(val):
+        raise ValueError(
+            "Unreadable size: '{0}', make sure it's in the format "
+            "of e.g. 1024 Byte|KB|MB|GB|TB (case insensitive)".format(val))
+    sv = str(val).split()
+    if len(sv) != 2:
+        err(val)
+    size = int(sv[0])
+    unit = sv[1].lower()
+    if unit == 'byte':
+        return size
+    elif unit == 'kb':
+        return size * 2 ** 10
+    elif unit == 'mb':
+        return size * 2 ** 20
+    elif unit == 'gb':
+        return size * 2 ** 30
+    elif unit == 'tb':
+        return size * 2 ** 40
+    else:
+        err(val)
+
+        
 def main():
     """the main function"""
     # r_: means relevant to remote host, l_: to local host
@@ -320,8 +350,11 @@ def main():
     logger.info('real current usage on remote host by {0}: {1}'.format(
         r_top_outdir, pretty_usage(r_real_current_usage)))
 
-    r_max_usage = config['REMOTE_MAX_USAGE']
-    r_min_free = config['REMOTE_MIN_FREE']
+    r_max_usage = convert_disk_space(config['REMOTE_MAX_USAGE'])
+    print pretty_usage(r_max_usage)
+        
+    r_min_free = convert_disk_space(config['REMOTE_MIN_FREE'])
+    print pretty_usage(r_min_free)
     r_free_to_use = max(0, r_max_usage - r_estimated_current_usage)
     logger.info('free to use: {0}'.format(pretty_usage(r_free_to_use)))
 
