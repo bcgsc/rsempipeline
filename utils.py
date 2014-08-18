@@ -162,3 +162,12 @@ def decide_num_jobs(sample_outdir, j_rsem=None):
         else:                       # default to 1
             num_jobs = 1
     return num_jobs
+
+
+def pretty_usage(num):
+    # http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
+    for x in ['bytes','KB','MB','GB']:
+        if num < 1024.0 and num > -1024.0:
+            return "%3.1f %s" % (num, x)
+        num /= 1024.0
+    return "%3.1f %s" % (num, 'TB')
