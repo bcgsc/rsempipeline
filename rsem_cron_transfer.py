@@ -95,7 +95,8 @@ def estimate_current_remote_usage(remote, username, r_dir, l_dir):
                 # only count the disk spaces used by those GSMs that are
                 # finished or processed successfully
                 gsm_dir = dir_.replace(r_dir, l_dir)
-                usage += estimate_rsem_usage(find_fq_gzs(gsm_dir))
+                fq_gz_sizes = get_fq_gz_sizes(gsm_dir)
+                usage += estimate_rsem_usage(fq_gz_sizes)
     return usage
 
 
@@ -148,24 +149,20 @@ def find_fq_gzs(gsm_dir):
             match = re.search(r'([SER]RR\d+)_[12]\.fastq\.gz', f, re.IGNORECASE)
             if match:
                 fq_gzs.append(os.path.join(gsm_dir, match.group(0)))
+        # e.g. fq_gzs:
+        # ['/path/rsem_output/GSExxxxx/species/GSMxxxxxxx/SRRxxxxxxx_x.fastq.gz',
+        #  '/path/rsem_output/GSExxxxx/species/GSMxxxxxxx/SRRxxxxxxx_x.fastq.gz']
         return fq_gzs
 
 
-def estimate_rsem_usage(fq_gzs):
+def estimate_rsem_usage(fq_gz_size):
     """
     estimate the maximum disk space that is gonna be consumed by rsem analysis
     on one GSM based on a list of fq_gzs
 
-    :param fq_gzs: a list of fastq.gz files
+    :param fq_gz_size: a number reprsenting the total size of fastq.gz files
+                       for the corresponding GSM
     """
-    # when estimating rsem usage, it has to search fastq.gz first and then
-    # sra2fastq.COMPLETE because the later is created at last and there could
-    # be multiple sra files to be converted
-
-    # e.g. fq_gzs:
-    # ['/path/rsem_output/GSExxxxx/species/GSMxxxxxxx/SRRxxxxxxx_x.fastq.gz',
-    #  '/path/rsem_output/GSExxxxx/species/GSMxxxxxxx/SRRxxxxxxx_x.fastq.gz']
-
     # Based on observation of smaller fastq.gz file by gunzip -l
     # compressed        uncompressed  ratio uncompressed_name
     # 266348960          1384762028  80.8% rsem_output/GSE42735/homo_sapiens/GSM1048945/SRR628721_1.fastq
@@ -174,9 +171,8 @@ def estimate_rsem_usage(fq_gzs):
     # assume the maximum will be 9 times larger
     fastq2usage_ratio = config['FASTQ2USAGE_RATIO']
 
-    raw_size = sum(map(os.path.getsize, fq_gzs))
     # estimate the size of uncompressed fastq
-    res = raw_size / (1 - gzip_compression_ratio)
+    res = fq_gz_size / (1 - gzip_compression_ratio)
     # overestimate
     res = res * fastq2usage_ratio
     return res
@@ -257,7 +253,8 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
         fq_gzs = find_fq_gzs(gsm_dir)
         # fq_gzs could be [] in cases when sra2fastq hasn't been completed yet
         if fq_gzs:
-            rsem_usage = estimate_rsem_usage(fq_gzs)
+            fq_gz_sizes = get_fq_gz_sizes(gsm_dir)
+            rsem_usage = estimate_rsem_usage(fq_gz_sizes)
             if rsem_usage < r_free_to_use:
                 logger.info(
                     '{0} ({1}) fit remote free_to_use ({2})'.format(
@@ -270,6 +267,32 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
         else:
             logger.debug('no fastq.gz files found in {0}'.format(gsm_dir))
     return gsms_to_transfer
+
+
+def get_fq_gz_sizes(gsm_dir):
+    sizes_file = os.path.join(gsm_dir, 'fq_gz_sizes.txt')
+    if not os.path.exists(sizes_file):
+        create(sizes_file, gsm_dir)
+    with open(sizes_file) as inf:
+        # e.g lines:
+        # rsem_output/GSE48321/rattus_norvegicus/GSM1174815/SRR922253_1.fastq.gz    1027293853
+        return sum([int(_.split()[1]) for _ in inf.readlines()
+                    if not _.strip().startswith('#')])
+
+
+def create(sizes_file, gsm_dir):
+    fq_gzs = glob.glob(os.path.join(gsm_dir, '*.fastq.gz'))
+
+    sizes = []
+    with open(sizes_file, 'wb') as opf:
+        for f in fq_gzs:
+            size = os.path.getsize(f)
+            opf.write('{0}\t{1}\n'.format(f, size))
+            opf.write('# {0}\t{1}\n'.format(f, pretty_usage(size)))
+            sizes.append(size)
+
+        opf.write('# Total\t{0}\n'.format(pretty_usage(sum(sizes))))
+    logger.info('written {0}'.format(sizes_file))
 
 
 def main():
