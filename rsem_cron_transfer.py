@@ -309,7 +309,7 @@ def convert_disk_space(val):
     sv = str(val).split()
     if len(sv) != 2:
         err(val)
-    size = int(sv[0])
+    size = float(sv[0])
     unit = sv[1].lower()
     if unit == 'byte':
         return size
