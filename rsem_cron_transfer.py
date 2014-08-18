@@ -353,7 +353,7 @@ def main():
     r_max_usage = convert_disk_space(config['REMOTE_MAX_USAGE'])
     logging.info('r_max_usage: {0}'.format(pretty_usage(r_max_usage)))
     r_min_free = convert_disk_space(config['REMOTE_MIN_FREE'])
-    logging.fino('r_min_free: {0}'.format(pretty_usage(r_min_free)))
+    logging.info('r_min_free: {0}'.format(pretty_usage(r_min_free)))
     r_free_to_use = max(0, r_max_usage - r_estimated_current_usage)
     logger.info('free to use: {0}'.format(pretty_usage(r_free_to_use)))
 
