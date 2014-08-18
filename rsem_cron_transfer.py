@@ -22,7 +22,7 @@ import argparse
 import paramiko
 from jinja2 import Template
 
-from utils import execute
+from utils import execute, pretty_usage
 
 
 def sshexec(cmd, host, username, private_key_file='~/.ssh/id_rsa'):
@@ -60,7 +60,7 @@ def get_remote_free_disk_space(df_cmd, remote, username):
     # e.g. output:
     # ['Filesystem         1024-blocks      Used Available Capacity Mounted on\n',
     #  '/dev/analysis        16106127360 12607690752 3498436608      79% /extscratch\n']
-    return int(output[1].split()[3])
+    return int(output[1].split()[3]) * 1000
 
 
 def estimate_current_remote_usage(remote, username, r_dir, l_dir):
@@ -112,13 +112,8 @@ def get_real_current_usage(remote, username, r_dir):
     output = sshexec('du -s {0}'.format(r_dir), remote, username)
     # e.g. output:
     # ['3096\t/path/to/top_outdir\n']
-    usage = int(output[0].split('\t')[0]) # in KB
+    usage = int(output[0].split('\t')[0]) * 1000 # in KB => byte
     return usage
-
-
-def pretty_usage(val):
-    """val should be in KB"""
-    return '{0:.1f} GB'.format(val / 1e6)
 
 
 def find_sras(gsm_dir):
@@ -180,10 +175,8 @@ def estimate_rsem_usage(fq_gzs):
     fastq2usage_ratio = config['FASTQ2USAGE_RATIO']
 
     raw_size = sum(map(os.path.getsize, fq_gzs))
-    # Byte => KB, os.path.getsize return size in bytes
-    res = raw_size / 1000.
     # estimate the size of uncompressed fastq
-    res = res / (1 - gzip_compression_ratio)
+    res = raw_size / (1 - gzip_compression_ratio)
     # overestimate
     res = res * fastq2usage_ratio
     return res
