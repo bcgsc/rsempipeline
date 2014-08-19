@@ -125,7 +125,7 @@ def sra2fastq(inputs, outputs):
     flag_file = outputs[-1]
     outdir = os.path.dirname(os.path.dirname(os.path.dirname(sra)))
     cmd = config['CMD_FASTQ_DUMP'].format(output_dir=outdir, accession=sra)
-    U.execute(cmd, flag_file=flag_file, debug=options.debug)
+    U.execute_log_stdout_stderr(cmd, flag_file=flag_file, debug=options.debug)
 
 
 @R.collate(
@@ -219,7 +219,7 @@ def rsem(inputs, outputs):
         reference_name=reference_name,
         sample_name=sample_name,
         output_dir=outdir)
-    U.execute(cmd, flag_file=flag_file, debug=options.debug)
+    U.execute_log_stdout_stderr(cmd, flag_file=flag_file, debug=options.debug)
 
 if __name__ == "__main__":
     UM.act(options, samples)
