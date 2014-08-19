@@ -31,7 +31,8 @@ def read_csv_gse_as_key(infile):
     with open(infile, 'rb') as inf:
         csv_reader = csv.reader(inf)
         for k, row in enumerate(csv_reader):
-            if row:
+            # could use # to comment a line
+            if row and not row[0].startswith('#'):
                 res = process(k+1, row)
                 if res is not None:
                     gse, species, gsm = res
