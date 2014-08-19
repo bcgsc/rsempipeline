@@ -22,7 +22,7 @@ import argparse
 import paramiko
 from jinja2 import Template
 
-from utils import execute, pretty_usage
+from utils import execute_log_stdout_stderr, pretty_usage
 
 
 def sshexec(cmd, host, username, private_key_file='~/.ssh/id_rsa'):
@@ -395,7 +395,7 @@ def main():
           remote_top_outdir=r_top_outdir)
 
     os.chmod(transfer_script, stat.S_IRUSR | stat.S_IWUSR| stat.S_IXUSR)
-    rcode = execute(transfer_script)
+    rcode = execute_log_stdout_stderr(transfer_script)
 
     if rcode == 0:
         append_transfer_record(gsms_to_transfer, gsms_transfer_record)
