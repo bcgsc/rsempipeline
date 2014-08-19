@@ -352,9 +352,9 @@ def main():
         r_host, r_top_outdir, pretty_usage(r_real_current_usage)))
 
     r_max_usage = convert_disk_space(config['REMOTE_MAX_USAGE'])
-    logging.info('r_max_usage: {0}'.format(pretty_usage(r_max_usage)))
+    logger.info('r_max_usage: {0}'.format(pretty_usage(r_max_usage)))
     r_min_free = convert_disk_space(config['REMOTE_MIN_FREE'])
-    logging.info('r_min_free: {0}'.format(pretty_usage(r_min_free)))
+    logger.info('r_min_free: {0}'.format(pretty_usage(r_min_free)))
     r_free_to_use = max(0, r_max_usage - r_estimated_current_usage)
     logger.info('free to use: {0}'.format(pretty_usage(r_free_to_use)))
 
@@ -381,7 +381,11 @@ def main():
 
     job_name = 'transfer.{0}'.format(
         datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S'))
-    transfer_script = os.path.join(l_top_outdir, '{0}.sh'.format(job_name))
+    transfer_scripts_dir = os.path.join(l_top_outdir, 'transfer_scripts')
+    if not os.path.exists(transfer_scripts_dir):
+        os.mkdir(transfer_scripts_dir)
+    transfer_script = os.path.join(
+        transfer_scripts_dir, '{0}.sh'.format(job_name))
     write(transfer_script, options.rsync_template,
           job_name=job_name,
           username=r_username,
