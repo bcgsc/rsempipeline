@@ -22,7 +22,7 @@ import argparse
 import paramiko
 from jinja2 import Template
 
-from utils import execute_log_stdout_stderr, pretty_usage
+from utils import execute_log_stdout_stderr, pretty_usage, touch
 
 
 def sshexec(cmd, host, username, private_key_file='~/.ssh/id_rsa'):
@@ -324,7 +324,23 @@ def convert_disk_space(val):
     else:
         err(val)
 
-        
+
+def get_lockers(l_top_outdir):
+    # e.g. transfer script: transfer.14-08-18_12-17-55.sh.locker
+    lockers = glob.glob(os.path.join(l_top_outdir, '.transfer.*sh.locker'))
+    return lockers
+
+
+def create_locker(locker):
+    logger.info('creating {0}'.format(locker))
+    touch(locker)
+
+
+def remove_locker(locker):
+    logger.info('removing {0}'.format(locker))
+    os.remove(locker)
+
+
 def main():
     """the main function"""
     # r_: means relevant to remote host, l_: to local host
@@ -332,6 +348,13 @@ def main():
     l_top_outdir = config['LOCAL_TOP_OUTDIR']
     r_top_outdir = config['REMOTE_TOP_OUTDIR']
 
+    lockers = get_lockers(l_top_outdir)
+    if len(lockers) >= 1:
+        logger.info(
+            'The previous transfer hasn\'t completed yet ({0}), stop current '
+            'session of rsem_cron_transfer.py'.format(' '.join(lockers)))
+        return
+    
     r_free_space = get_remote_free_disk_space(
         config['REMOTE_CMD_DF'], r_host, r_username)
     logger.info('free space available on {0}: {1}'.format(
@@ -386,6 +409,10 @@ def main():
         os.mkdir(transfer_scripts_dir)
     transfer_script = os.path.join(
         transfer_scripts_dir, '{0}.sh'.format(job_name))
+    # locker is used to prevent the next session of transfer from starting
+    # before the current session of transfer finishes
+    locker = os.path.join(l_top_outdir, '.{0}.sh.locker'.format(job_name))
+    create_locker(locker)
     write(transfer_script, options.rsync_template,
           job_name=job_name,
           username=r_username,
@@ -399,6 +426,7 @@ def main():
 
     if rcode == 0:
         append_transfer_record(gsms_to_transfer, gsms_transfer_record)
+        remove_locker(locker)
 
 
 def parse_args():
