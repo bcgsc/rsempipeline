@@ -34,7 +34,9 @@ def update(current_sample, label, value, interested_organisms):
                             sample.name, sample.series.name, value))
             return None
     elif label == '!Sample_library_strategy':
-        if value != 'RNA-Seq':
+        # some RNA-Seq data may still be labeled as OTHER, e.g. GSMs in
+        # GSE52043
+        if value not in ['RNA-Seq', 'OTHER']:
             logger.info('discarding sample {0} of {1} for '
                         '!Sample_library_stragegy: {2}'.format(
                             sample.name, sample.series.name, value))
