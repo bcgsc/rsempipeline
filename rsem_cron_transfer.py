@@ -402,6 +402,7 @@ def main():
             'free to use space ({0}) < min free ({1}) on {2}, '
             'no transfer is happening'.format(
                 pretty_usage(r_free_to_use), pretty_usage(r_min_free), r_host))
+        remove_locker(locker)
         return
 
     gsms_transfer_record = os.path.join(l_top_outdir, 'transferred_GSMs.txt')
@@ -412,6 +413,7 @@ def main():
         logger.info('no GSMs fit the current r_free_to_use ({0}), '
                     'no transferring will happen'.format(
                         pretty_usage(r_free_to_use)))
+        remove_locker(locker)
         return
 
     logger.info('GSMs to transfer:')
