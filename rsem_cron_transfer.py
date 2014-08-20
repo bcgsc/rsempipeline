@@ -389,7 +389,8 @@ def main():
     logger.info('real current usage on {0} by {1}: {2}'.format(
         r_host, r_top_outdir, pretty_usage(r_real_current_usage)))
 
-    r_max_usage = convert_disk_space(config['REMOTE_MAX_USAGE'])
+    r_max_usage = min(convert_disk_space(config['REMOTE_MAX_USAGE']),
+                      r_free_space)
     logger.info('r_max_usage: {0}'.format(pretty_usage(r_max_usage)))
     r_min_free = convert_disk_space(config['REMOTE_MIN_FREE'])
     logger.info('r_min_free: {0}'.format(pretty_usage(r_min_free)))
