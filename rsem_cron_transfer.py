@@ -359,7 +359,17 @@ def main():
             'The previous transfer hasn\'t completed yet ({0}), stop current '
             'session of rsem_cron_transfer.py'.format(' '.join(lockers)))
         return
-    
+
+    # create locker before estimate free space remotely
+    job_name = 'transfer.{0}'.format(
+        datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S'))
+    transfer_scripts_dir = os.path.join(l_top_outdir, 'transfer_scripts')
+    if not os.path.exists(transfer_scripts_dir):
+        os.mkdir(transfer_scripts_dir)
+    locker = os.path.join(l_top_outdir, '.{0}.sh.locker'.format(job_name))
+    create_locker(locker)
+
+    # now calculating different types of space
     r_free_space = get_remote_free_disk_space(
         config['REMOTE_CMD_DF'], r_host, r_username)
     logger.info('free space available on {0}: {1}'.format(
@@ -407,17 +417,11 @@ def main():
     for gsm in gsms_to_transfer:
         logger.info('\t{0}'.format(gsm))
 
-    job_name = 'transfer.{0}'.format(
-        datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S'))
-    transfer_scripts_dir = os.path.join(l_top_outdir, 'transfer_scripts')
-    if not os.path.exists(transfer_scripts_dir):
-        os.mkdir(transfer_scripts_dir)
+    # create transfer script
     transfer_script = os.path.join(
         transfer_scripts_dir, '{0}.sh'.format(job_name))
     # locker is used to prevent the next session of transfer from starting
     # before the current session of transfer finishes
-    locker = os.path.join(l_top_outdir, '.{0}.sh.locker'.format(job_name))
-    create_locker(locker)
     write(transfer_script, options.rsync_template,
           job_name=job_name,
           username=r_username,
