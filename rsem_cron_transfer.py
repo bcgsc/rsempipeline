@@ -167,8 +167,13 @@ def estimate_rsem_usage(fq_gz_size):
     # compressed        uncompressed  ratio uncompressed_name
     # 266348960          1384762028  80.8% rsem_output/GSE42735/homo_sapiens/GSM1048945/SRR628721_1.fastq
     # 241971266          1255233364  80.7% rsem_output/GSE42735/homo_sapiens/GSM1048946/SRR628722_1.fastq
-    gzip_compression_ratio = 0.8
-    # assume the maximum will be 9 times larger
+    # gzip_compression_ratio = 0.8
+
+    # would be easier just incorporate this value into FASTQ2USAGE_RATIO, or
+    # ignore it based on the observation of the size between fastq.gz and
+    # *.temp
+    gzip_compression_ratio = 1
+
     fastq2usage_ratio = config['FASTQ2USAGE_RATIO']
 
     # estimate the size of uncompressed fastq
