@@ -16,7 +16,7 @@ import yaml
 
 import ruffus as R
 
-from jinja2 import Template
+from jinja2 import Environment, FileSystemLoader
 
 import utils as U
 
@@ -36,6 +36,12 @@ logging.config.fileConfig(
 
 samples = UM.gen_samples_from_soft_and_isamp(
     options.soft_files, options.isamp, config)
+
+env = Environment(loader=FileSystemLoader([
+    # the standard templates directory
+    os.path.join(os.path.dirname(__file__), 'templates'),
+    # the current working directory
+    os.getcwd()]))
 
 logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
     R.proxy_logger.setup_std_shared_logger,
@@ -149,9 +155,7 @@ def gen_qsub_script(inputs, outputs):
     n_jobs=U.decide_num_jobs(outdir, options.j_rsem) 
 
     qsub_script = os.path.join(outdir, '0_submit.sh')
-    with open (os.path.join(os.path.dirname(__file__), 'templates',
-                            options.qsub_template), 'rb') as inf:
-        template = Template(inf.read())
+    template = env.get_template(options.qsub_template)
     with open(qsub_script, 'wb') as opf:
         content = template.render(**locals())
         opf.write(content)
