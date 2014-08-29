@@ -1,0 +1,15 @@
+#!/bin/bash
+
+# refer to https://www.westgrid.ca/support/quickstart/hermes_nestor for
+# parameters details
+# walltime maximum: 72 hours (3 days)
+
+{% set ncpus = 8 %}
+#PBS -l walltime=24:00:00,nodes=1:ppn={{ncpus}},mem=20GB
+#PBS -N {{gsm}}_{{gse}}
+#PBS -j eo
+#PBS -V
+
+cd ${PBS_O_WORKDIR}
+
+{% include 'rsem.jinja2' %}
