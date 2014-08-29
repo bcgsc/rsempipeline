@@ -3,7 +3,7 @@ import logging
 import select
 import subprocess
 import pickle
-
+from datetime import datetime
 logger = logging.getLogger(__name__)
 
 def backup_file(f):
@@ -24,7 +24,9 @@ def backup_file(f):
 
 
 def touch(fname, times=None):
-    with file(fname, 'a'):
+    with open(fname, 'a') as opf:
+        opf.write('created: {0}'.format(unicode(datetime.now())))
+        opf.write('path: {0}'.format(os.path.abspath('.')))
         os.utime(fname, times)
 
     
