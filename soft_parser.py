@@ -42,13 +42,14 @@ def update(current_sample, label, value, interested_organisms):
                             sample.name, sample.series.name, value))
             return None
     elif label == '!Sample_instrument_model':
-        if '454 GS' in value or 'AB SOLiD' in value:
+        if any(map(lambda x: x in value, [
+                '454 GS', 'AB SOLiD', 'AB 5500xl Genetic Analyzer'])):
             logger.info('discarding sample {0} of {1} for '
                         '!Sample_instrument_model: {2}'.format(
                             sample.name, sample.series.name, value))
             return None
     elif label == '!Sample_library_source':
-        if value != 'TRANSCRIPTOMIC':
+        if value.lower() != 'transcriptomic':
             logger.info('discarding sample {0} of {1} for '
                         '!Sample_library_source: {2}'.format(
                             sample.name, sample.series.name, value))
@@ -102,7 +103,6 @@ def parse(soft_file, interested_organisms):
         # append the last sample
         append_passed_sample(current_sample, series, index)
 
-    logger.info('=' * 30)
     logger.info("{0}: {1}/{2} samples passed".format(
         series.name, series.num_passed_samples(), series.num_samples()))
     logger.info('=' * 30)

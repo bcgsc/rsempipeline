@@ -92,8 +92,11 @@ class SOFTDownloader(object):
                         line.startswith('^SAMPLE') or
                         line.startswith('!Series_sample_id') or
                         line.startswith('!Sample_organism_ch') or
+                        line.startswith('!Sample_supplementary_file_') or
+                        line.startswith('!Sample_type') or
                         line.startswith('!Sample_library_strategy') or
-                        line.startswith('!Sample_supplementary_file_')):
+                        line.startswith('!Sample_instrument_model') or
+                        line.startswith('!Sample_library_source')):
                         opf.write(line)
         return soft_subset
 
