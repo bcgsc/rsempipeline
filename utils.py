@@ -25,8 +25,8 @@ def backup_file(f):
 
 def touch(fname, times=None):
     with open(fname, 'a') as opf:
-        opf.write('created: {0}'.format(unicode(datetime.now())))
-        opf.write('path: {0}'.format(os.path.abspath('.')))
+        opf.write('created: {0}\n'.format(unicode(datetime.now())))
+        opf.write('location of code execution: {0}\n'.format(os.path.abspath('.')))
         os.utime(fname, times)
 
     
