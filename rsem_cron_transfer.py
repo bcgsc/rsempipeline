@@ -255,6 +255,13 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
                 transfer_id, gsms_transfer_record))
             continue
 
+        sub_sh = os.path.relpath(
+            os.path.join(gsm_dir, '0_submit.sh'), l_top_outdir)
+        if not os.path.exists(sub_sh):
+            logger.debug(
+                '{0} doesn\'t exist, so skip {1}'.format(sub_sh, transfer_id))
+            continue
+
         fq_gzs = find_fq_gzs(gsm_dir)
         # fq_gzs could be [] in cases when sra2fastq hasn't been completed yet
         if fq_gzs:
