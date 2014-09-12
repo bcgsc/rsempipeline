@@ -1,8 +1,5 @@
 #! /bin/bash
 
-# the same as qsub_apollo_rsync.sh but without SGE-specific options at the top
-
-
 cd {{local_top_outdir}}
 
 echo "hostname: $(hostname)"
