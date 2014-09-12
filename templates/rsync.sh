@@ -6,8 +6,7 @@
 cd {{local_top_outdir}}
 
 echo "hostname: $(hostname)"
-echo "temp dir: $TMPDIR"
-echo ${PWD}
+echo "current dir: ${PWD}"
 
 set -euo pipefail
 
@@ -25,9 +24,13 @@ cmd="rsync -R -r -a -v -h --stats --progress $GSMS_TO_TRANSFER $dest_parent --in
 echo "$cmd"
 eval "$cmd"
 
-if [ $? -eq 0 ]; then
+# RC: return code
+RSYNC_RC=$?
+echo "rsync returncode: $RSYNC_RC"
+
+if [ "$RSYNC_RC" -eq 0 ]; then
     echo 'do submission'
-    ssh -l zxue genesis \
+    ssh -l {{username}} {{hostname}} \
 	". ~/.bash_profile; gsms_to_transfer=\"${GSMS_TO_TRANSFER}\"; cd {{remote_top_outdir}};" \
 	'
         pwd=${PWD}
@@ -39,6 +42,13 @@ if [ $? -eq 0 ]; then
         '
 fi
 
+# remove fastq.gz files after transfer to save spaces
+if [ "$RSYNC_RC" -eq 0 ]; then
+    for i in ${GSMS_TO_TRANSFER}; do
+	find $i -name '*.fastq.gz' -exec rm -fv '{}' ';'
+	find $i -name '*.sra' -exec rm -fv '{}' ';'
+    done
+fi
+
 echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
 echo "Job ended at:   $(date)"
-
