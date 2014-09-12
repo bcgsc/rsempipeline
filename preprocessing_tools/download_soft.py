@@ -128,10 +128,10 @@ def main():
 def parse_args():
     parser = argparse.ArgumentParser(description='detect duplicated GSMs in GSE_GSM.csv')
     parser.add_argument(
-        '-f', '--input_csv', type=str,
+        '-f', '--input_csv', type=str, required=True,
         help='input GSE_GSM.csv, check check example_GSE_GSM.csv for format ')
     parser.add_argument(
-        '--out_dir', type=str,
+        '--out_dir', type=str, required=True,
         help='directory for output default to where GSE_GSM.csv is located ')
     options = parser.parse_args()
     return options
