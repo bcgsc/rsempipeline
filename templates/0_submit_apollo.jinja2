@@ -1,0 +1,17 @@
+#!/bin/bash
+
+{% set ncpus = 8 %}
+{% set mem = 1.875 %} 
+
+#$ -S /bin/bash
+#$ -q centos5.q
+#$ -N {{gsm}}_{{gse}}
+#$ -l mem_free={{mem}}G,mem_token={{mem}}G,h_vmem={{mem}}G
+#$ -pe ncpus {{ncpus}}
+#$ -j y
+#$ -V
+
+
+cd ${SGE_O_WORKDIR}
+
+{% include 'rsem.jinja2' %}
