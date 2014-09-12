@@ -1,47 +1,38 @@
-REMOTE_HOST: genesis.bcgsc.ca
-USERNAME: zxue
+# All configurations are required
 
-# used when parsing soft files
-INTERESTED_ORGANISMS: 
-  - Homo sapiens
-  - Mus musculus
-  - Rattus norvegicus
+############Common to both rsem_pipeline.py & rsem_cron_transfer.py############
+REMOTE_HOST: <remote hostname, e.g. genesis.bcgsc.ca>
+USERNAME: <username>
 
+########################rsem_cron_transfer.py specific#########################
 
-REMOTE_REFERENCE_NAMES:
-  homo_sapiens: /extscratch/btl/zxue/rsem_pipeline/index/rsem_reference/hg19/hg19_ensembl_72
-  mus_musculus: /extscratch/btl/zxue/rsem_pipeline/index/rsem_reference/mm10/mm10_ensembl_72
-  rattus_norvegicus: /extscratch/btl/zxue/rsem_pipeline/index/rsem_reference/rn5/rn5_ensembl_72
+# the consumed disk space remotely should not exceed REMOTE_MAX_USAGE (KB)
+REMOTE_MAX_USAGE: 1 TB
 
+# The ratio for estimating the usage by a particular GSM based on its size of
+# fastq.gz files. This ratio is a very rough estimation, further work is
+# underway to come up with a better to estimate the size of usage
+FASTQ2USAGE_RATIO: 5
 
-LOCAL_REFERENCE_NAMES:
-  homo_sapiens: /projects/btl2/batch.2013.05.22/rsem/hg19/hg19_ensembl_72
-  mus_musculus: /projects/btl2/batch.2013.05.22/rsem/mm10/mm10_ensembl_72
-  rattus_norvegicus: /projects/btl2/batch.2013.05.22/rsem/rn5/rn5_ensembl_72
+# if the remote disk space is less than REMOTE_MIN_FREE, no transfer happens
+REMOTE_MIN_FREE: 100 GB
 
-# the disk space consumed on remote host should not exceed REMOTE_MAX_USAGE
-# (KB)
-# REMOTE_MAX_USAGE: 1000000000    # 1TB
-REMOTE_MAX_USAGE: 100000000    # 100 GB
+# absolute path of top output directory on remote host
+REMOTE_TOP_OUTDIR: /remote/path/to/batchx
 
-# if the disk space on remote host is less than REMOTE_MIN_FREE, won't do any
-# transfer
-REMOTE_MIN_FREE: 1000000    # 1GB
+# absolute path of top output directory on local host
+LOCAL_TOP_OUTDIR: /remote/path/to/batchx
 
-REMOTE_TOP_OUTDIR: /extscratch/btl/zxue/batch8/00to04
-LOCAL_TOP_OUTDIR: /projects/btl2/batch8/00to04
-
-# command that starts with REMOTE means it is to be executed remotely
-REMOTE_CMD_DF: df -k -P /extscratch/btl
+# command executed on remote host to get the free size of disk space
+REMOTE_CMD_DF: df -k -P /path
 
 
-# Commands used by rsem_pipeline.py
-
+###########################rsem_pipeline.py specific###########################
 # -Q Fair transfer policy, -T Disable encryption
 # -L log dir
 CMD_ASCP: >-
-  /home/kmnip/bin/ascp 
-  -i /home/kmnip/.aspera/connect/etc/asperaweb_id_dsa.putty 
+  /path/to/ascp 
+  -i /path/to/.aspera/connect/etc/asperaweb_id_dsa.putty 
   --ignore-host-key 
   -QT 
   -L {log_dir}
@@ -67,3 +58,22 @@ CMD_RSEM: >-
   {sample_name}
   1>{output_dir}/rsem.log
   2>{output_dir}/align.stats
+
+# used when parsing soft files
+INTERESTED_ORGANISMS: 
+  - Homo sapiens
+  - Mus musculus
+  - Rattus norvegicus
+
+# location of reference files produced by rsem-build-read-index on remote host
+REMOTE_REFERENCE_NAMES:
+  homo_sapiens: /remote/path/to/rsem_reference/hg19/hg19_ensembl_72
+  mus_musculus: /remote/path/to/rsem_reference/mm10/mm10_ensembl_72
+  rattus_norvegicus: /remote/path/to/rsem_reference/rn5/rn5_ensembl_72
+
+# location of reference files produced by rsem-build-read-index on local host,
+# just exact copies of REMOTE_REFERENCE_NAMES
+LOCAL_REFERENCE_NAMES:
+  homo_sapiens: /local/path/to/rsem/hg19/hg19_ensembl_72
+  mus_musculus: /local/path/to/rsem/mm10/mm10_ensembl_72
+  rattus_norvegicus: /local/path/to/rsem/rn5/rn5_ensembl_72
