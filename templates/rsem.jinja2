@@ -1,0 +1,36 @@
+echo $PATH
+
+echo "job started at" $(date)
+
+rsem-calculate-expression \
+  -p {{ncpus}} \
+  --time \
+  --no-bam-output \
+  --bowtie-chunkmbs 256 \
+  {{fastq_gz_input}} \
+  {{reference_name}} \
+  {{sample_name}} \
+  1>rsem.log \
+  2>align.stats
+
+RETURNCODE=$?
+
+echo "return code: $RETURNCODE" >> rsem.log
+
+if [ "$RETURNCODE" -eq 0 ]; then
+    touch rsem.COMPLETE
+fi
+
+
+if [ -f rsem.COMPLETE ]; then
+    find . -name '*.sra' -exec du -h '{}' ';' >> rsem.log
+    find . -name '*.fastq.gz' -exec du -h '{}' ';' >> rsem.log
+
+    find . -name '*.sra' -exec rm -v '{}' ';' >> rsem.log
+    find . -name '*.fastq.gz' -exec rm -v '{}' ';' >> rsem.log
+fi
+
+
+{# variables needed: ncpus, fastq_gz_input, reference_name, sample_name #}
+
+echo "job finished at" $(date)
