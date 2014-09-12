@@ -78,9 +78,10 @@ rsem_pipeline.py -s path/to/soft/* -i 'GSE43631 GSM1067318 GSM1067319' -T rsem -
 * prepare a `rsem_pipeline_config.yaml`  in /local/path/to/top_outdir based on the `rsem_pipeline_config.yaml.template` that comes with this package
 
 * create a cron job in the following pattern
-*/15 * * * * . /local/path/to/rsem_pipeline/venv/bin/activate; cd /local/path/to/top_outdir; python /local/path/to/rsem_pipeline/rsem_cron_transfer.py
-
+```
+/15 * * * * . /local/path/to/rsem_pipeline/venv/bin/activate; cd /local/path/to/top_outdir; python /local/path/to/rsem_pipeline/rsem_cron_transfer.py
+```
 
 # Setting up a web server to monitor the progress
 
-* This step needs a separate package `rsem_report`, which is built with [Django](https://www.djangoproject.com/, "Django")
+* This step needs a separate package `rsem_report`, which is built with [Django](https://www.djangoproject.com/ "Django")
