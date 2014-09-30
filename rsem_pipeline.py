@@ -27,7 +27,7 @@ from utils_rsem import gen_fastq_gz_input
 PATH_RE = r'(.*)/(?P<GSE>GSE\d+)/(?P<species>\S+)/(?P<GSM>GSM\d+)'
 
 # because of ruffus, have to use some global variables
-# global variables: options, config, samples, logger, logger_mutex
+# global variables: options, config, samples, env, logger, logger_mutex
 options = UM.parse_args()
 with open(options.config_file) as inf:
     config = yaml.load(inf.read())
