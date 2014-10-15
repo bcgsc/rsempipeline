@@ -1,48 +1,68 @@
+# INSTALLATION:
+
+to be written
+
+
 # Preprocessing Steps:
 
-(The scripts during the preprocessing steps are in the preprocessing_tools folder.)
+(The scripts during the preprocessing steps are in the `preprocessing_tools `folder.)
 
-1. Generate `GSE_GSM.csv` in the following format 
- 
+1. Generate `GSE_GSM.csv` in the following format. Note: don't include the
+header row; space after ; will be ignored. Lines starting with # indicate comments.
+
 	```
 	GSExxxxx,GSMxxxxxxx; GSMxxxxxxx; GSMxxxxxxx; GSMxxxxxxx
 	GSExxxxx,GSMxxxxxxx; GSMxxxxxxx; GSMxxxxxxx
 	...
 	```
-	
-2. Run `gen_GSE_species_GSM_csv.py` against `GSE_GSM.csv` to generate
-`GSE_species_GSM.csv`, and check if any species is out of interest. Species
+	The code in the next step will check if the names of GSE and GSM are valid
+	or not. For example, the following entries will be labeld as invalid.
+	```
+	GSE45732, xGSM1113298
+	a,b,c
+	```
+
+2. Run `detect_duplicate_GSMs.py` against `GSE_GSM.csv` to check for possible
+duplications of GSMs within one GSE. Example command:
+
+	```
+	python detect_duplicate_GSMs.py -f dir_to_batchx/GSE_GSM.csv
+	```
+
+3. If there are duplicated GSMs detected in Step 2, please remove them from the
+`GSE_GSM.csv`, and rerun `detect_duplicate_GSMs.py` to make sure no
+duplications are left.
+
+4. Run `gen_GSE_species_GSM_csv.py` against the `GSE_GSM.csv` to generate
+`GSE_species_GSM.csv`. Species
 information is fetched from the webpage of each GSM on
 [GEO website](http://www.ncbi.nlm.nih.gov/geo/ "GEO website"), a html directory
 will be created to keep records of all htmls downloaded. Example command (check
 `-h` for more help):
 
 	```
-	python gen_GSE_species_GSM_csv.py -f dir_to_batchx/GSE_GSM.csv --nt 18
+	python gen_GSE_species_GSM_csv.py -f dir_to_batchx/GSE_GSM.csv --nt 8
 	```
-	
-3. Run `detect_duplicate_GSMs.py` against `GSE_GSM.csv` to check for possible
-duplications of GSMs within one GSE. Example command:
 
-	```
-	python detect_duplicate_GSMs.py -f dir_to_batchx/GSE_GSM.csv
-	```
+5. Check if any species is out of interest in the generated
+`GSE_species_GSM.csv`. One way to do so is
+
+   ```
+   cat GSE_species_GSM.csv | tr ' ' '_' | tr ',' ' '| awk '{print $2}' | sort | uniq
+   ```
 		
-4. Remove GSEs from species that are out of interest (from Step 2) and
-duplicated GSMs (from Step 3) from `GSE_GSM.csv`.
+7. If there are species out of interest (from Step 4 & 5), remove the
+corresponding GSEs and GSMs from the `GSE_GSM.csv`.
 
-5. Rerun `gen_GSE_species_GSM_csv.py` against the updated `GSE_GSM.csv` to
+8. Rerun `gen_GSE_species_GSM_csv.py` against the updated `GSE_GSM.csv` to
 generate an updated version of `GSE_species_GSM.csv`.
 
-6. Rerun `detect_duplicate_GSMs.py` against the updated `GSE_GSM.csv` to make
-sure no duplications are left.
-
-7. Run download_soft.py against updated `GSE_species_GSM.csv` to download soft
+9. Run download_soft.py against updated `GSE_GSM.csv` to download soft
 files to a soft directory. Example commnad:
 
-	```python download_soft.py -f GSE_species_GSM.csv  --out_dir dir_to_batchx/```
+	```python download_soft.py -f GSE_GSM.csv  --out_dir dir_to_batchx/```
 			
-8. Remove htmls of unwanted GSEs in the htmls directory to save some
+10. Remove htmls of unwanted GSEs in the htmls directory to save some
 space. [Optional]
 			
 # Running the pipeline to generate fastq.gz files:
