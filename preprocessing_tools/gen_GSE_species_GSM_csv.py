@@ -150,7 +150,8 @@ def parse_args():
         help='number of threads')
     parser.add_argument(
         '--out_dir', type=str,
-        help='directory for output default to where GSE_GSM.csv is located ')
+        help=('directory for output default to where GSE_GSM.csv is located, '
+              'default to be the location of input_csv.'))
     options = parser.parse_args()
     return options
 
