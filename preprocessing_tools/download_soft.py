@@ -131,8 +131,9 @@ def parse_args():
         '-f', '--input_csv', type=str, required=True,
         help='input GSE_GSM.csv, check check example_GSE_GSM.csv for format ')
     parser.add_argument(
-        '--out_dir', type=str, required=True,
-        help='directory for output default to where GSE_GSM.csv is located ')
+        '--out_dir', type=str,
+        help=('directory for output default to where GSE_GSM.csv is located, '
+              'default to the location of --input_csv'))
     options = parser.parse_args()
     return options
 
