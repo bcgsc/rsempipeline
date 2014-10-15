@@ -65,7 +65,9 @@ to be written
     - Run download_soft.py against updated `GSE_GSM.csv` to download soft
 	files to a soft directory. Example commnad:
 
-	```python download_soft.py -f GSE_GSM.csv  --out_dir dir_to_batchx/```
+	```
+	python download_soft.py -f GSE_GSM.csv  --out_dir dir_to_batchx/
+	```
 			
 5. **Remove htmls (optional)**
     - Remove htmls of unwanted GSEs in the htmls directory to save some
