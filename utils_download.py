@@ -7,7 +7,7 @@ from ftplib import FTP
 import logging
 logger = logging.getLogger(__name__)
 
-def gen_orig_params(samples, not_use_pickle):
+def gen_orig_params(samples, flag_recreate_pickle):
     """
     Connect to the FTP server and fetch the list of files to download
     """
@@ -18,7 +18,7 @@ def gen_orig_params(samples, not_use_pickle):
     orig_params_sets = []
     for sample in samples:
         pickle_file = os.path.join(sample.outdir, 'orig_sras.pickle')
-        if not not_use_pickle and os.path.exists(pickle_file):
+        if not flag_recreate_pickle and os.path.exists(pickle_file):
             with open(pickle_file) as inf:
                 sras = pickle.load(inf)
         else:
