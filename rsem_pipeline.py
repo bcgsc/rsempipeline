@@ -20,6 +20,7 @@ from jinja2 import Environment, FileSystemLoader
 
 import utils as U
 
+import args_parser
 import utils_main as UM
 from utils_download import gen_orig_params
 from utils_rsem import gen_fastq_gz_input
@@ -28,7 +29,8 @@ PATH_RE = r'(.*)/(?P<GSE>GSE\d+)/(?P<species>\S+)/(?P<GSM>GSM\d+)'
 
 # because of ruffus, have to use some global variables
 # global variables: options, config, samples, env, logger, logger_mutex
-options = UM.parse_args()
+# minimize the number of global variables as much as possible
+options = args_parser.parse()
 with open(options.config_file) as inf:
     config = yaml.load(inf.read())
 logging.config.fileConfig(
