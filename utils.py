@@ -3,8 +3,54 @@ import logging
 import select
 import subprocess
 import pickle
+import glob
 from datetime import datetime
+from functools import wraps, update_wrapper
 logger = logging.getLogger(__name__)
+
+
+def get_lockers(locker_pattern):
+    # e.g. transfer script: transfer.14-08-18_12-17-55.sh.locker
+    return glob.glob(locker_pattern)
+
+
+def create_locker(locker):
+    logger.info('creating {0}'.format(locker))
+    touch(locker)
+
+
+def remove_locker(locker):
+    logger.info('removing {0}'.format(locker))
+    os.remove(locker)
+
+
+def lockit(locker_pattern):
+    """
+    It creates a locker and prevent the same function from being run again
+    before the previous one finishes
+    
+    locker_pattern should be composed of locker_path/locker_prefix, an example could be 
+        locker_path/locker_prefix.%y-%m-%d_%H-%M-%S.locker
+    """
+    def decorator(func):
+        def decorated(*args, **kwargs):
+            lockers = get_lockers('{0}*.locker'.format(locker_pattern))
+            if len(lockers) >= 1:
+                logger.info('The previous {0} run hasn\'t completed yet with '
+                            'the following locker(s) found: ({1}). '
+                            'Nothing done.'.format(
+                                func.__name__, ' '.join(lockers)))
+                return
+            else:
+                now = datetime.now().strftime('%y-%m-%d_%H:%M:%S')
+                locker = '{0}.{1}.locker'.format(locker_pattern, now)
+                create_locker(locker)
+                res = func(*args, **kwargs)
+                remove_locker(locker)
+                return res
+        return decorated
+    return decorator
+
 
 def backup_file(f):
     if os.path.exists(f):
