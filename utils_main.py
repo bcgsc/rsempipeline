@@ -22,11 +22,11 @@ def parse_args():
         help='a list of soft files')
     parser.add_argument(
         '-i', '--isamp',
-        help=('interested samples, could be in a file (e.g. GSE_GSM_species.csv prepared) '
-              'based on the xlsx/csv file provided by the collaborator '
+        help=('interested samples, could be in a file (e.g. '
+              'GSE_species_GSM.csv prepared previously) '
               'or a string in the form of '
-              '"GSE11111 GSM000001 GSM000002;GSE222222 GSM000001" '
-              'data is used for intersection with GSMs available '
+              '"GSE11111 GSM000001 GSM000002;GSE222222 GSM000001". '
+              'The data is used for intersecting with GSMs available '
               'in the soft files to extract only those are of interest.'
               'The pipeline will check data is a file and exists, or '
               'it assumes it\'s a data string'))
@@ -45,14 +45,14 @@ def parse_args():
             config_examp)))
 
     parser.add_argument(
-        '--not_use_pickle', action='store_true',
+        '--recreate_pickle', action='store_true',
         help=('if specified, it will recreate a pickle file per sample to store '
               'a list of sra files as cache by fetching them from FTP server), '
               'Rerun without this option is faster, and also useful '
               'when there is no Internet connection.'))
     parser.add_argument(
         '--debug', action='store_true',
-        help='if debug, commands won\'t be executed, just print out per task')
+        help='if debug, commands won\'t be executed, just printed out per task')
     args = parser.parse_args()
     return args
 
