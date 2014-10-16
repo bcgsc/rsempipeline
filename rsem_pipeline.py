@@ -21,7 +21,7 @@ from jinja2 import Environment, FileSystemLoader
 import utils as U
 
 import args_parser
-import utils_main as UM
+from utils_pre_pipeline_run import gen_samples_from_soft_and_isamp, init_sample_outdirs
 from utils_download import gen_orig_params
 from utils_rsem import gen_fastq_gz_input
 
@@ -36,7 +36,7 @@ with open(options.config_file) as inf:
 logging.config.fileConfig(
     os.path.join(os.path.dirname(__file__), 'rsem_pipeline.logging.config'))
 
-samples = UM.gen_samples_from_soft_and_isamp(
+samples = gen_samples_from_soft_and_isamp(
     options.soft_files, options.isamp, config)
 
 env = Environment(loader=FileSystemLoader([
@@ -51,13 +51,14 @@ logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
     {"config_file": os.path.join(os.path.dirname(__file__),
                                  'rsem_pipeline.logging.config')})
 
-UM.init_sample_outdirs(samples, UM.get_rsem_outdir(config, options))
+init_sample_outdirs(samples, config, options)
 
 ##################################end of main##################################
 
 # def execute_mutex(cmd, msg_id='', flag_file=None, debug=False):
 #     """
-#     :param msg_id: id for identifying a message
+#     :param msg_id: id for identifying a message, this prevents parallel
+#     processing
 #     """
 #     with logger_mutex:
 #         returncode = U.execute(cmd, msg_id, flag_file, debug)
@@ -228,4 +229,11 @@ def rsem(inputs, outputs):
     U.execute_log_stdout_stderr(cmd, flag_file=flag_file, debug=options.debug)
 
 if __name__ == "__main__":
-    UM.act(options, samples)
+    R.pipeline_run(
+        logger=logger,
+        target_tasks=options.target_tasks,
+        forcedtorun_tasks=options.forced_tasks,
+        multiprocess=options.jobs,
+        verbose=options.verbose,
+        touch_files_only=options.touch_files_only)
+

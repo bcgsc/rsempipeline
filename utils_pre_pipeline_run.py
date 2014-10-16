@@ -1,8 +1,6 @@
 import os
 import re
 
-import ruffus as R
-
 from soft_parser import parse
 from isamp_parser import get_isamp
 
@@ -75,6 +73,7 @@ def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
     sanity_check(samp_proc, isamp)
     return samp_proc
 
+
 def sanity_check(samp_proc, isamp):
     # gsm ids of interested samples
     gsms_isamp = ['{0}:{1}'.format(k, v) for k in isamp.keys() for v in isamp[k]]
@@ -124,19 +123,11 @@ def format_gsms_diff(diff):
     return os.linesep.join('{0}: {1}'.format(gse, ' '.join(gsms)) for gse, gsms in dd2.items())
 
 
-def init_sample_outdirs(samples, outdir):
+def init_sample_outdirs(samples, config, options):
+    outdir = get_rsem_outdir(config, options)
     for sample in samples:
         sample.gen_outdir(outdir)
         if not os.path.exists(sample.outdir):
             logger.info('creating directory: {0}'.format(sample.outdir))
             os.makedirs(sample.outdir)
 
-
-def act(options, samples):
-    R.pipeline_run(
-        logger=logger,
-        target_tasks=options.target_tasks,
-        forcedtorun_tasks=options.forced_tasks,
-        multiprocess=options.jobs,
-        verbose=options.verbose,
-        touch_files_only=options.touch_files_only)
