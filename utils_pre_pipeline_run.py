@@ -7,31 +7,6 @@ from isamp_parser import get_isamp
 import logging
 logger = logging.getLogger(__name__)
 
-def get_top_outdir(config, options):
-    """
-    decides the top output dir, if specified in the configuration file, then
-    use the specified one, otherwise, use the directory where
-    GSE_species_GSM.csv is located
-    """
-    top_outdir = config.get('LOCAL_TOP_OUTDIR')
-    if top_outdir is not None:
-        return top_outdir
-    else:
-        if os.path.exists(options.isamp):
-            top_outdir = os.path.dirname(options.isamp)
-        else:
-            raise ValueError(
-                'input from -i is not a file and '
-                'no LOCAL_TOP_OUTDIR parameter found in {0}'.format(
-                    options.config_file))
-    return top_outdir
-
-
-def get_rsem_outdir(config, options):
-    """get the output directory for rsem, it's top_outdir/rsem_output by default"""
-    top_outdir = get_top_outdir(config, options)
-    return os.path.join(top_outdir, 'rsem_output')
-
 
 def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
     """
@@ -123,6 +98,32 @@ def format_gsms_diff(diff):
     return os.linesep.join('{0}: {1}'.format(gse, ' '.join(gsms)) for gse, gsms in dd2.items())
 
 
+def get_top_outdir(config, options):
+    """
+    decides the top output dir, if specified in the configuration file, then
+    use the specified one, otherwise, use the directory where
+    GSE_species_GSM.csv is located
+    """
+    top_outdir = config.get('LOCAL_TOP_OUTDIR')
+    if top_outdir is not None:
+        return top_outdir
+    else:
+        if os.path.exists(options.isamp):
+            top_outdir = os.path.dirname(options.isamp)
+        else:
+            raise ValueError(
+                'input from -i is not a file and '
+                'no LOCAL_TOP_OUTDIR parameter found in {0}'.format(
+                    options.config_file))
+    return top_outdir
+
+
+def get_rsem_outdir(config, options):
+    """get the output directory for rsem, it's top_outdir/rsem_output by default"""
+    top_outdir = get_top_outdir(config, options)
+    return os.path.join(top_outdir, 'rsem_output')
+
+
 def init_sample_outdirs(samples, config, options):
     outdir = get_rsem_outdir(config, options)
     for sample in samples:
@@ -130,4 +131,3 @@ def init_sample_outdirs(samples, config, options):
         if not os.path.exists(sample.outdir):
             logger.info('creating directory: {0}'.format(sample.outdir))
             os.makedirs(sample.outdir)
-
