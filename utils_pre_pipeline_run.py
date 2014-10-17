@@ -49,7 +49,7 @@ def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
                         'Discrepancy for {0:12s}: '
                         '{1:4d} GSMs in isamp, '
                         'but {2:4d} left after '
-                        'intersection. (\# GSMs in soft: {3})'.format(
+                        'intersection. (# GSMs in soft: {3})'.format(
                             series.name, len(isamp_gse), len(ssamp_gse),
                             len(res_samp_gse)))
                 res_samp.extend(res_samp_gse)
