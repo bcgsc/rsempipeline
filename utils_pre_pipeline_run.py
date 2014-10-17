@@ -14,17 +14,19 @@ def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
     (e.g. GSE_species_GSM.csv) or isamp_str
     :type isamp: dict
     """
-    # Nomenclature:
-    #     soft_files: soft_files downloaded with tools/download_soft.py
-    #     isamp: interested samples extracted from (e.g. GSE_species_GSM.csv)
+    # IMPORTANT NOTE: for historical reason, soft files parsed does not return
+    # dict as get_isamp
 
-    #     sample_data: data from the sample_data_file stored in a dict
-    #     series: a series instance constructed from information in a soft file
-
-    # for historical reason, soft files parsed does not return dict as
-    # get_isamp
+    # a dict with key and value as str, not Sample instances
     isamp = get_isamp(isamp_file_or_str)
-    samp_proc = []                # a list of Sample instances
+    num_isamp = sum(len(val) for val in isamp.values())
+    if os.path.exists(isamp_file_or_str): # then it's a file
+        logger.info('{0} samples found in {1}'.format(num_isamp, isamp_file_or_str))
+    else:
+        logger.info('{0} samples found from -i/--isamp input'.format(num_isamp))
+
+    # a list, of Sample instances resultant of intersection
+    res_samp = []
     for soft_file in soft_files:
         # e.g. soft_file: GSE51008_family.soft.subset
         gse = re.search('(GSE\d+)\_family\.soft\.subset', soft_file)
@@ -38,64 +40,33 @@ def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
                 # samples that are interested by the collaborator 
                 if not series.name in isamp:
                     continue
-                interested_samples = isamp[series.name]
-                # intersection among GSMs found in the soft file and
-                # sample_data_file
-                samp_proc.extend([_ for _ in series.passed_samples
-                                if _.name in interested_samples])
-    logger.info('After intersection among soft and data, '
-                '{0} samples remained'.format(len(samp_proc)))
-    sanity_check(samp_proc, isamp)
-    return samp_proc
+                isamp_gse = isamp[series.name]
+                ssamp_gse = series.passed_samples
+                # samples after intersection
+                res_samp_gse = [_ for _ in ssamp_gse if _.name in isamp_gse]
+                if len(isamp_gse) != len(res_samp_gse):
+                    logger.error(
+                        'Discrepancy for {0:12s}: '
+                        '{1:4d} GSMs in isamp, '
+                        'but {2:4d} left after '
+                        'intersection. (\# GSMs in soft: {3})'.format(
+                            series.name, len(isamp_gse), len(ssamp_gse),
+                            len(res_samp_gse)))
+                res_samp.extend(res_samp_gse)
+    num_res_samp = len(res_samp)
+    sanity_check(num_isamp, num_res_samp)
+    return res_samp
 
 
-def sanity_check(samp_proc, isamp):
-    # gsm ids of interested samples
-    gsms_isamp = ['{0}:{1}'.format(k, v) for k in isamp.keys() for v in isamp[k]]
-    # gsm ids of samples after intersection
-    gsms_proc = ['{0}:{1}'.format(_.series.name, _.name) for _ in samp_proc]
-
-    def unmatch(x, y):
-        raise ValueError('Unmatched numbers of samples interested ({0}) '
-                         'and to be processed ({1})'.format(x, y))
-
-    diff1 = sorted(list(set(gsms_isamp) - set(gsms_proc)))
-    if diff1:
-        logger.error('{0} samples in isamp (-i) but not to be processed:\n'
-                     # '{1}'.format(len(diff1), os.linesep.join(diff1)))
-                     '{1}'.format(len(diff1), format_gsms_diff(diff1)))
-        unmatch(len(gsms_isamp), len(gsms_proc))
-
-    diff2 = sorted(list(set(gsms_proc) - set(gsms_isamp)))
-    if diff2:
-        logger.error('{0} samples to be processed but not in isamples (-i):\n\t'
-                     '{1}'.format(len(diff2), format_gsms_diff(diff2)))
-        unmatch(len(gsms_isamp), len(gsms_proc))
-
-
-def format_gsms_diff(diff):
-    """format diff gsms for pretty output to the screen"""
-    # the code is horrible, don't look into it, just need to know the input is
-    # like:
-    # ['GSExxxxx:GSMxxxxxxx', 'GSExxxxx:GSMxxxxxxx', 'GSExxxxx:GSMxxxxxxx']
-    # and the output is like
-    # GSExxxxx (3): GSMxxxxxxx;GSMxxxxxxx;GSMxxxxxxx
-    # GSExxxxx (1): GSMxxxxxxx
-    # GSExxxxx (2): GSMxxxxxxx;GSMxxxxxxx
-    
-    dd = {}
-    current_gse = None
-    for _ in sorted(diff):
-        gse, gsm = _.split(':')
-        if current_gse is None or gse != current_gse:
-            current_gse = gse
-            dd[gse] = [gsm]
-        else:
-            dd[gse].append(gsm)
-    dd2 = {}
-    for gse in dd:
-        dd2['{0} ({1})'.format(gse, len(dd[gse]))] = dd[gse]
-    return os.linesep.join('{0}: {1}'.format(gse, ' '.join(gsms)) for gse, gsms in dd2.items())
+def sanity_check(num_isamp, num_res_samp):
+    if num_isamp != num_res_samp:
+        raise ValueError(
+            'Unmatched numbers of samples interested ({0}) and to be processed '
+            '({1}) after intersection. Please check ERROR in log '
+            'for details.'.format(num_isamp, num_res_samp))
+    else:
+        logger.info('No discrepancies detected after intersection, '
+                    'all {0} samples will be processed '.format(num_isamp))
 
 
 def get_top_outdir(config, options):
