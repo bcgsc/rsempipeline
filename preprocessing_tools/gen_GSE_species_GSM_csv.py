@@ -26,7 +26,8 @@ def mkdir(dir_):
 
 def write_csv(rows, out_csv):
     with open(out_csv, 'wb') as opf:
-        csv_writer = csv.writer(opf)
+        # lineterminator defaults to \r\n, which is odd for linux
+        csv_writer = csv.writer(opf, lineterminator='\n')
         for _ in sorted(rows):
             csv_writer.writerow(_)
 
