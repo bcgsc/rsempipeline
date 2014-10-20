@@ -137,6 +137,8 @@ def fetch_sras_info(samples, flag_recreate_sras_info):
     Fetch information (name & size) for sra files to be downloaded and save
     them to a sras_info.yaml file under the output dir of each sample.
     """
+    # e.g. of sample.url
+    # ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX029/SRX029242
     ftp_handler = None
     num_samples = len(samples)
     for k, sample in enumerate(samples):
@@ -151,6 +153,8 @@ def fetch_sras_info(samples, flag_recreate_sras_info):
             if sras_info:            # could be None due to Network problem
                 with open(yaml_file, 'wb') as opf:
                     yaml.dump(sras_info, stream=opf, default_flow_style=False)
+    if ftp_handler is not None:
+        ftp_handler.quit()
 
 
 def fetch_sras_info_per(sample, ftp_handler=None):
