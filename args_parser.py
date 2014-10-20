@@ -36,11 +36,11 @@ def parse():
             config_examp)))
 
     parser.add_argument(
-        '--recreate_pickle', action='store_true',
-        help=('if specified, it will recreate a pickle file per sample to store '
-              'a list of sra files as cache by fetching them from FTP server), '
-              'Rerun without this option is faster, and also useful '
-              'when there is no Internet connection.'))
+        '--recreate_sras_info', action='store_true',
+        help=('if specified, it will recreate a yaml file per sample to store '
+              'a list of sra files as well as their sizes as cache by fetching '
+              'them from FTP server). Rerun without this option is faster, '
+              'and also useful when there is no Internet connection.'))
     parser.add_argument(
         '--debug', action='store_true',
         help='if debug, commands won\'t be executed, just printed out per task')
