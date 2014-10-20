@@ -52,13 +52,20 @@ logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
     {"config_file": os.path.join(os.path.dirname(__file__),
                                  'rsem_pipeline.logging.config')})
 
-logger.info('Preparing sample outdirs')
-init_sample_outdirs(samples, config, options)
-logger.info('Fetching sras info')
-fetch_sras_info(samples, options.recreate_sras_info)
-logger.info('Selecting samples to process based their usages, available disk '
-            'size and parameters specified in {0}'.format(options.config_file))
-samples = select_samples(samples, config)
+LOCKER_PATTERN = os.path.join(config['LOCAL_TOP_OUTDIR'], 'rsem_pipeline')
+
+@U.lockit(LOCKER_PATTERN)
+def prepare_pipeline_run():
+    logger.info('Preparing sample outdirs')
+    init_sample_outdirs(samples, config, options)
+    logger.info('Fetching sras info')
+    fetch_sras_info(samples, options.recreate_sras_info)
+    logger.info('Selecting samples to process based their usages, '
+                'available disk size and parameters specified '
+                'in {0}'.format(options.config_file))
+    return select_samples(samples, config)
+samples = prepare_pipeline_run()
+
 
 ##################################end of main##################################
 
@@ -239,8 +246,7 @@ def rsem(inputs, outputs):
 
 
 if __name__ == "__main__":
-    locker_pattern = os.path.join(config['LOCAL_TOP_OUTDIR'], 'rsem_pipeline')
-    pipeline_run = U.lockit(locker_pattern)(R.pipeline_run)
+    pipeline_run = U.lockit(LOCKER_PATTERN)(R.pipeline_run)
     pipeline_run(
         logger=logger,
         target_tasks=options.target_tasks,
@@ -248,3 +254,4 @@ if __name__ == "__main__":
         multiprocess=options.jobs,
         verbose=options.verbose,
         touch_files_only=options.touch_files_only)
+
