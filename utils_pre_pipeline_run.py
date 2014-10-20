@@ -1,12 +1,18 @@
 import os
 import re
+import urlparse
+from ftplib import FTP
+import logging
+logger = logging.getLogger(__name__)
+
+import yaml
 
 from soft_parser import parse
 from isamp_parser import get_isamp
 
-import logging
-logger = logging.getLogger(__name__)
+from utils import pretty_usage
 
+# about generating samples from soft and isamp inputs
 
 def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
     """
@@ -95,6 +101,7 @@ def get_rsem_outdir(config, options):
     return os.path.join(top_outdir, 'rsem_output')
 
 
+# about init sample outdirs
 def init_sample_outdirs(samples, config, options):
     outdir = get_rsem_outdir(config, options)
     for sample in samples:
@@ -102,3 +109,63 @@ def init_sample_outdirs(samples, config, options):
         if not os.path.exists(sample.outdir):
             logger.info('creating directory: {0}'.format(sample.outdir))
             os.makedirs(sample.outdir)
+
+
+# about fetch sras info
+def fetch_sras_info(samples, flag_recreate_sras_info):
+    ftp_handler = None
+    num_samples = len(samples)
+    for k, sample in enumerate(samples):
+        yaml_file = os.path.join(sample.outdir, 'sras_info.yaml')
+        if not os.path.exists(yaml_file) or flag_recreate_sras_info:
+            if ftp_handler is None:
+                ftp_handler = get_ftp_handler(samples[0])
+            logger.info('({0}/{1}), fetching sras info from FTP '
+                        'for {2}, saving to {3}'.format(k, num_samples,
+                                                        sample, yaml_file))
+            sras_info = fetch_sras_info_per(sample, ftp_handler)
+            if sras_info:            # could be None due to Network problem
+                with open(yaml_file, 'wb') as opf:
+                    yaml.dump(sras_info, stream=opf, default_flow_style=False)
+
+
+def fetch_sras_info_per(sample, ftp_handler=None):
+    if ftp_handler is None:
+        ftp_handler = get_ftp_handler(sample)
+    url_obj = urlparse.urlparse(sample.url)
+    # one level above SRX123456
+    # e.g. before_srx_dir: /sra/sra-instant/reads/ByExp/sra/SRX/SRX573
+    before_srx_dir = os.path.dirname(url_obj.path)
+    ftp_handler.cwd(before_srx_dir)
+    # e.g. srx: SRX573027
+    srx = os.path.basename(url_obj.path)
+    try:
+        srrs =  ftp_handler.nlst(srx)
+        # cool trick for flatten 2D list:
+        # http://stackoverflow.com/questions/2961983/convert-multi-dimensional-list-to-a-1d-list-in-python
+        sras = [_ for srr in srrs for _ in ftp_handler.nlst(srr)]
+
+        # to get size,
+        # http://stackoverflow.com/questions/3231910/python-ftplib-cant-get-size-of-file-before-download
+        ftp_handler.sendcmd('TYPE i')
+        # sizes returned are in unit of byte
+        sizes = [ftp_handler.size(_) for _ in sras]
+
+        sras_info = [{i: {'size': j, 'readable_size': pretty_usage(j)}}
+                     for (i, j) in zip(sras, sizes)]
+        # e.g. [{sra1: {'size': 123}}), {sra2: {'size': 456}}, ...]
+        return sras_info
+    except Exception, e:
+        logger.exception(e)
+
+
+def get_ftp_handler(sample):
+    hostname = urlparse.urlparse(sample.url).hostname
+    logger.info('connecting to ftp://{0}'.format(hostname))
+    ftp_handler = FTP(hostname)
+    ftp_handler.login()
+    return ftp_handler
+
+# about filtering samples based on their sizes
+def filter_samples():
+    pass
