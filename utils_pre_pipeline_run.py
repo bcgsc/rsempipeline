@@ -1,19 +1,29 @@
+# -*- coding: utf-8 -*
+
+"""
+This module contains utilities functions used before the pipeline actually
+gets run, e.g. Generating a list of Sample instances based on inputs,
+initiating directories for all samples, downloading sras_info.yaml files and
+selecting a subset of Sample instances for further process based on free-space
+availabilities (a combined rule based on availale free space on the file system
+and parameters from rsem_pipeline_config.yaml
+"""
+
 import os
 import re
+import yaml
 import urlparse
+import subprocess
 from ftplib import FTP
 import logging
 logger = logging.getLogger(__name__)
 
-import yaml
-
 from soft_parser import parse
 from isamp_parser import get_isamp
 
-from utils import pretty_usage
+from utils import pretty_usage, ugly_usage
 
 # about generating samples from soft and isamp inputs
-
 def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
     """
     :param isamp: e.g. mannually prepared interested sample file
@@ -27,7 +37,8 @@ def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
     isamp = get_isamp(isamp_file_or_str)
     num_isamp = sum(len(val) for val in isamp.values())
     if os.path.exists(isamp_file_or_str): # then it's a file
-        logger.info('{0} samples found in {1}'.format(num_isamp, isamp_file_or_str))
+        logger.info(
+            '{0} samples found in {1}'.format(num_isamp, isamp_file_or_str))
     else:
         logger.info('{0} samples found from -i/--isamp input'.format(num_isamp))
 
@@ -35,7 +46,7 @@ def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
     res_samp = []
     for soft_file in soft_files:
         # e.g. soft_file: GSE51008_family.soft.subset
-        gse = re.search('(GSE\d+)\_family\.soft\.subset', soft_file)
+        gse = re.search(r'(GSE\d+)\_family\.soft\.subset', soft_file)
         if not gse:
             logger.error(
                 'unrecognized soft file: {0} '
@@ -43,7 +54,7 @@ def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
         else:
             if gse.group(1) in isamp:
                 series = parse(soft_file, config['INTERESTED_ORGANISMS'])
-                # samples that are interested by the collaborator 
+                # samples that are interested by the collaborator
                 if not series.name in isamp:
                     continue
                 isamp_gse = isamp[series.name]
@@ -65,6 +76,10 @@ def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
 
 
 def sanity_check(num_isamp, num_res_samp):
+    """
+    sanity check to see if the number of isamples equal the number of samples
+    that are to be processed
+    """
     if num_isamp != num_res_samp:
         raise ValueError(
             'Unmatched numbers of samples interested ({0}) and to be processed '
@@ -77,7 +92,7 @@ def sanity_check(num_isamp, num_res_samp):
 
 def get_top_outdir(config, options):
     """
-    decides the top output dir, if specified in the configuration file, then
+    Decides the top output dir, if specified in the configuration file, then
     use the specified one, otherwise, use the directory where
     GSE_species_GSM.csv is located
     """
@@ -96,13 +111,18 @@ def get_top_outdir(config, options):
 
 
 def get_rsem_outdir(config, options):
-    """get the output directory for rsem, it's top_outdir/rsem_output by default"""
+    """
+    get the output directory for rsem, it's top_outdir/rsem_output by default.
+    """
     top_outdir = get_top_outdir(config, options)
     return os.path.join(top_outdir, 'rsem_output')
 
 
 # about init sample outdirs
 def init_sample_outdirs(samples, config, options):
+    """
+    Initiate the output directories for samples.
+    """
     outdir = get_rsem_outdir(config, options)
     for sample in samples:
         sample.gen_outdir(outdir)
@@ -113,6 +133,10 @@ def init_sample_outdirs(samples, config, options):
 
 # about fetch sras info
 def fetch_sras_info(samples, flag_recreate_sras_info):
+    """
+    Fetch information (name & size) for sra files to be downloaded and save
+    them to a sras_info.yaml file under the output dir of each sample.
+    """
     ftp_handler = None
     num_samples = len(samples)
     for k, sample in enumerate(samples):
@@ -121,7 +145,7 @@ def fetch_sras_info(samples, flag_recreate_sras_info):
             if ftp_handler is None:
                 ftp_handler = get_ftp_handler(samples[0])
             logger.info('({0}/{1}), fetching sras info from FTP '
-                        'for {2}, saving to {3}'.format(k, num_samples,
+                        'for {2}, saving to {3}'.format(k+1, num_samples,
                                                         sample, yaml_file))
             sras_info = fetch_sras_info_per(sample, ftp_handler)
             if sras_info:            # could be None due to Network problem
@@ -130,6 +154,9 @@ def fetch_sras_info(samples, flag_recreate_sras_info):
 
 
 def fetch_sras_info_per(sample, ftp_handler=None):
+    """
+    fetch information of sra files for one sample.
+    """
     if ftp_handler is None:
         ftp_handler = get_ftp_handler(sample)
     url_obj = urlparse.urlparse(sample.url)
@@ -140,7 +167,7 @@ def fetch_sras_info_per(sample, ftp_handler=None):
     # e.g. srx: SRX573027
     srx = os.path.basename(url_obj.path)
     try:
-        srrs =  ftp_handler.nlst(srx)
+        srrs = ftp_handler.nlst(srx)
         # cool trick for flatten 2D list:
         # http://stackoverflow.com/questions/2961983/convert-multi-dimensional-list-to-a-1d-list-in-python
         sras = [_ for srr in srrs for _ in ftp_handler.nlst(srr)]
@@ -155,17 +182,157 @@ def fetch_sras_info_per(sample, ftp_handler=None):
                      for (i, j) in zip(sras, sizes)]
         # e.g. [{sra1: {'size': 123}}), {sra2: {'size': 456}}, ...]
         return sras_info
-    except Exception, e:
-        logger.exception(e)
+    except Exception, err:
+        logger.exception(err)
 
 
 def get_ftp_handler(sample):
+    """Get a FTP hander from sample url"""
     hostname = urlparse.urlparse(sample.url).hostname
     logger.info('connecting to ftp://{0}'.format(hostname))
     ftp_handler = FTP(hostname)
     ftp_handler.login()
     return ftp_handler
 
+
 # about filtering samples based on their sizes
-def filter_samples():
-    pass
+def select_samples(samples, config):
+    """
+    Select a subset of samples based on a combined rule based on availale free
+    space on the file system and parameters from rsem_pipeline_config.yaml
+    """
+
+    l_top_outdir = config['LOCAL_TOP_OUTDIR']
+    l_free_space = get_local_free_disk_space(config['LOCAL_CMD_DF'])
+    logger.info(
+        'local free space avaialbe: {0}'.format(pretty_usage(l_free_space)))
+    l_max_usage = min(ugly_usage(config['LOCAL_MAX_USAGE']), l_free_space)
+    logger.info(
+        'local max usage: {0}'.format(pretty_usage(l_max_usage)))
+    logger.info('Estimating current usage')
+    l_estimated_current_usage = estimate_current_local_usage(l_top_outdir)
+    logger.info(
+        'local estimated current usage: {0}'.format(
+            pretty_usage(l_estimated_current_usage)))
+    l_free_to_use = max(0, l_max_usage - l_estimated_current_usage)
+    logger.info(
+        'local free space to use: {0}'.format(pretty_usage(l_free_to_use)))
+    l_min_free = ugly_usage(config['LOCAL_MIN_FREE'])
+    if l_free_to_use < l_min_free:
+        logger.info('free to use space ({0}) < min free ({1}) on localhost, '
+                    'Nothing gets done'.format(pretty_usage(l_free_to_use),
+                                               pretty_usage(l_min_free)))
+    else:
+        # gsms are a list of Sample instances
+        gsms = find_gsms_to_process(samples, l_top_outdir,
+                                    l_free_to_use, l_min_free)
+        return gsms
+
+
+def find_gsms_to_process(samples, l_top_outdir, l_free_to_use, l_min_free):
+    """
+    Find samples that are to be processed, the selecting rule is implemented
+    here
+    """
+    gsms_to_process = []
+    info_file = 'sras_info.yaml'
+    for sample in samples:
+        gsm_dir = sample.outdir
+        gsm_id = os.path.relpath(gsm_dir, l_top_outdir)
+        info_file_p = os.path.join(gsm_dir, info_file) # _p: with full path
+        processed = check_processing_status(info_file_p)
+        if processed:
+            logger.debug('{0} has already been processed successfully, '
+                         'pass'.format(gsm_id))
+            continue
+        usage = estimate_process_usage(info_file_p)
+        if usage < l_free_to_use:
+            logger.info('{0} ({1}) fits local free_to_use ({2})'.format(
+                gsm_id, pretty_usage(usage), pretty_usage(l_free_to_use)))
+            gsms_to_process.append(sample)
+            l_free_to_use -= usage
+            if l_free_to_use < l_min_free:
+                logger.info('not enough free-to-use space ({0} < min_free: '
+                            '{1}) is available anymore, break the '
+                            'loop'.format(pretty_usage(l_free_to_use),
+                                          pretty_usage(l_min_free)))
+                break
+    return gsms_to_process
+
+
+def estimate_process_usage(info_file):
+    """
+    Estimated the disk usage needed for processing a sample based on the size
+    of sra files, the information of which is contained in the info_file 
+    """
+    sra2fastq_size_ratio = 1.5  # rough estimate, based on statistics
+    with open(info_file) as inf:
+        yaml_data = yaml.load(inf.read())
+        usage = sum(d[k]['size'] for d in yaml_data for k in d.keys())
+        usage = usage * sra2fastq_size_ratio
+        return usage
+
+
+def check_processing_status(info_file):
+    """
+    Checking the processing status, whether completed or not based the
+    existence of COMPLETE flags
+    """
+    dirname = os.path.dirname(info_file)
+    with open(info_file) as inf:
+        yaml_data = yaml.load(inf.read())
+        sra_files = [i for j in yaml_data for i in j.keys()]
+        download_flags = [
+            os.path.join(dirname, '{0}.download.COMPLETE'.format(_))
+            for _ in sra_files]
+        sra2fastq_flags = [
+            os.path.join(dirname, '{0}.sra2fastq.COMPLETE'.format(_))
+            for _ in sra_files]
+        return all(map(os.path.exists, download_flags + sra2fastq_flags))
+
+
+def get_recorded_gsms(record_file):
+    """
+    fetch the list of GSMs that have already been recorded in the record_file
+    (e.g. transferred_GSMs.txt, sra2fastqed_GSMs.txt)
+    """
+    if not os.path.exists(record_file):
+        return []
+    else:
+        with open(record_file) as inf:
+            return [_.strip() for _ in inf if not _.strip().startswith('#')]
+
+
+def estimate_current_local_usage(l_top_outdir):
+    """
+    may not need to estimate at all, just use the real usage for now,
+    2014-10-20
+    """
+    return get_real_local_usage(l_top_outdir)
+
+
+def get_real_local_usage(l_top_outdir):
+    """Get the real local usage, equivalent to du -s l_top_outdir"""
+    # proc = subprocess.Popen(
+    #     'du -s {0}'.format(l_top_outdir), stdout=subprocess.PIPE, shell=True)
+    # output = proc.communicate()[0]
+    # return int(output[0].split('\t')[0]) * 1024 # in KB => byte
+    # surprisingly, os.walk is of similar speed to du
+    total_size = 0
+    for dirpath, _, filenames in os.walk(l_top_outdir):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            total_size += os.path.getsize(fp)
+    return total_size
+
+
+def get_local_free_disk_space(cmd_df):
+    """
+    Get the local free disk space with cmd_df specified in the
+    rsem_pipeline_config.yaml
+    """
+    proc = subprocess.Popen(cmd_df, stdout=subprocess.PIPE, shell=True)
+    output = proc.communicate()[0]
+    # e.g. output:
+    # 'Filesystem     1024-blocks       Used  Available Capacity Mounted on\nisaac:/btl2    10200547328 1267127584 8933419744      13% /projects/btl2\n'
+    return int(output.split(os.linesep)[1].split()[3]) * 1024
