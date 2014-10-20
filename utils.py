@@ -248,3 +248,28 @@ def pretty_usage(num):
             return "%3.1f %s" % (num, x)
         num /= 1024.0
     return "%3.1f %s" % (num, 'TB')
+
+
+def ugly_usage(val):
+    """convert human readable disk space to byte"""
+    def err(val):
+        raise ValueError(
+            "Unreadable size: '{0}', make sure it's in the format "
+            "of e.g. 1024 Byte|KB|MB|GB|TB (case insensitive)".format(val))
+    sv = str(val).split()
+    if len(sv) != 2:
+        err(val)
+    size = float(sv[0])
+    unit = sv[1].lower()
+    if unit == 'byte':
+        return size
+    elif unit == 'kb':
+        return size * 2 ** 10
+    elif unit == 'mb':
+        return size * 2 ** 20
+    elif unit == 'gb':
+        return size * 2 ** 30
+    elif unit == 'tb':
+        return size * 2 ** 40
+    else:
+        err(val)
