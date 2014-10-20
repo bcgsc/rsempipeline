@@ -1,4 +1,5 @@
 import os
+import time
 import logging
 import select
 import subprocess
@@ -50,6 +51,25 @@ def lockit(locker_pattern):
                 return res
         return decorated
     return decorator
+
+
+def decorator(d):
+    "Make function d a decorator: d wraps a function fn."
+    def _d(fn):
+        return update_wrapper(d(fn), fn)
+    update_wrapper(_d, d)
+    return _d
+
+
+@decorator
+def timeit(f):
+    def new_f(*args, **kwargs):
+        bt = time.time()
+        r = f(*args, **kwargs)
+        et = time.time()
+        logger.info("time spent on {0}: {1:.2f}s".format(f.func_name, et - bt))
+        return r
+    return new_f
 
 
 def backup_file(f):
