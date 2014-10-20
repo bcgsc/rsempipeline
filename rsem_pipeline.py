@@ -85,9 +85,10 @@ def originate_params():
 
     This function gets called twice, once before entering the queue, once after
     """
-    logger.info('preparing originate_params '
-                'for {0} samples'.format(len(samples)))
-    orig_params_sets = gen_orig_params(samples, options.recreate_pickle)
+    num_samples = len(samples)
+    logger.info(
+        'preparing originate_params for {0} samples'.format(num_samples))
+    orig_params_sets = gen_orig_params(samples)
     logger.info(
         '{0} sets of orig_params generated'.format(len(orig_params_sets)))
     for _ in orig_params_sets:
@@ -96,7 +97,7 @@ def originate_params():
 
 @R.files(originate_params)
 def download(_, outputs, sample):
-    """inputs is None"""
+    """inputs (_) is None"""
     msg_id = U.gen_sample_msg_id(sample)
     # e.g. sra
     # test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602557/SRX029242/SRR070177/SRR070177.sra
