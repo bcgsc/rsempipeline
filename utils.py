@@ -1,3 +1,7 @@
+# -*- coding: utf-8 -*
+
+"""utility functions"""
+
 import os
 import time
 import logging
@@ -6,21 +10,24 @@ import subprocess
 import pickle
 import glob
 from datetime import datetime
-from functools import wraps, update_wrapper
+from functools import update_wrapper
 logger = logging.getLogger(__name__)
 
 
 def get_lockers(locker_pattern):
+    """get a locker(s)"""
     # e.g. transfer script: transfer.14-08-18_12-17-55.sh.locker
     return glob.glob(locker_pattern)
 
 
 def create_locker(locker):
+    """create a locker"""
     logger.info('creating {0}'.format(locker))
     touch(locker)
 
 
 def remove_locker(locker):
+    """remove a locker"""
     logger.info('removing {0}'.format(locker))
     os.remove(locker)
 
@@ -29,8 +36,8 @@ def lockit(locker_pattern):
     """
     It creates a locker and prevent the same function from being run again
     before the previous one finishes
-    
-    locker_pattern should be composed of locker_path/locker_prefix, an example could be 
+
+    locker_pattern should be composed of locker_path/locker_prefix, an example:
         locker_path/locker_prefix.%y-%m-%d_%H-%M-%S.locker
     """
     def decorator(func):
@@ -63,6 +70,7 @@ def decorator(d):
 
 @decorator
 def timeit(f):
+    """time a function, used as decorator"""
     def new_f(*args, **kwargs):
         bt = time.time()
         r = f(*args, **kwargs)
@@ -73,6 +81,10 @@ def timeit(f):
 
 
 def backup_file(f):
+    """
+    Back up a file, old_file will be renamed to #old_file.n#, where n is a
+    number incremented each time a backup takes place
+    """
     if os.path.exists(f):
         dirname = os.path.dirname(f)
         basename = os.path.basename(f)
@@ -86,17 +98,22 @@ def backup_file(f):
         logger.info("BACKING UP {0} to {1}".format(f, rn_to))
         os.rename(f, rn_to)
         return rn_to
-        logger.info("BACKUP FINISHED")
 
 
 def touch(fname, times=None):
+    """
+    Similar to nix command, touch, to create an empty file, but also added some
+    meta data to the touched file
+    """
     with open(fname, 'a') as opf:
         opf.write('created: {0}\n'.format(unicode(datetime.now())))
-        opf.write('location of code execution: {0}\n'.format(os.path.abspath('.')))
+        opf.write('location of code execution: {0}\n'.format(
+            os.path.abspath('.')))
         os.utime(fname, times)
 
-    
+
 def cache_usable(cache_file, *ref_files):
+    """check if cache is still usable"""
     f_cache_usable = True
     if os.path.exists(cache_file):
         logger.info('{0} exists'.format(cache_file))
@@ -113,10 +130,11 @@ def cache_usable(cache_file, *ref_files):
 
 
 def cache_up_to_date(cache_file, *ref_files):
+    """check if cache is up-to-date"""
+    # ctime: e.g. when renaming test.bk to test changes information in
+    # inode
     for _ in ref_files:
         if (os.path.getmtime(cache_file) < os.path.getmtime(_) or
-            # ctime: e.g. when renaming test.bk to test changes information in
-            # inode
             os.path.getctime(cache_file) < os.path.getctime(_)):
             return False
     return True
@@ -127,7 +145,7 @@ def gen_sample_msg_id(sample):
     used as an id to identify a particular sample for each logging message
     """
     return '{0} ({2}/{3}) of {1}'.format(
-        sample.name, sample.series.name, 
+        sample.name, sample.series.name,
         sample.index, sample.series.num_passed_samples())
 
 
@@ -135,7 +153,7 @@ def gen_sample_msg_id(sample):
 #     sample = sra.sample
 #     series = sample.series
 #     return '{0} ({1}/{2}) of {3} ({4}/{5}) of {6}'.format(
-#         sra.name, sra.index, sample.num_sras(), 
+#         sra.name, sra.index, sample.num_sras(),
 #         sample.name, sample.index, series.num_passed_samples(),
 #         series.name)
 
@@ -242,8 +260,9 @@ def decide_num_jobs(sample_outdir, j_rsem=None):
 
 
 def pretty_usage(num):
+    """convert file size to a pretty human readable format"""
     # http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
-    for x in ['bytes','KB','MB','GB']:
+    for x in ['bytes', 'KB', 'MB', 'GB']:
         if num < 1024.0 and num > -1024.0:
             return "%3.1f %s" % (num, x)
         num /= 1024.0
