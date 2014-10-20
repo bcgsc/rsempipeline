@@ -7,7 +7,6 @@ on them, either on local system or on remote cluster.
 """
 
 import os
-import sys
 import re
 import logging.config
 
@@ -21,7 +20,9 @@ from jinja2 import Environment, FileSystemLoader
 import utils as U
 
 import args_parser
-from utils_pre_pipeline_run import gen_samples_from_soft_and_isamp, init_sample_outdirs
+from utils_pre_pipeline_run import \
+    gen_samples_from_soft_and_isamp, init_sample_outdirs, \
+    fetch_sras_info, select_samples
 from utils_download import gen_orig_params
 from utils_rsem import gen_fastq_gz_input
 
@@ -51,7 +52,13 @@ logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
     {"config_file": os.path.join(os.path.dirname(__file__),
                                  'rsem_pipeline.logging.config')})
 
+logger.info('Preparing sample outdirs')
 init_sample_outdirs(samples, config, options)
+logger.info('Fetching sras info')
+fetch_sras_info(samples, options.recreate_sras_info)
+logger.info('Selecting samples to process based their usages, available disk '
+            'size and parameters specified in {0}'.format(options.config_file))
+samples = select_samples(samples, config)
 
 ##################################end of main##################################
 
@@ -63,12 +70,13 @@ init_sample_outdirs(samples, config, options)
 #     with logger_mutex:
 #         returncode = U.execute(cmd, msg_id, flag_file, debug)
 #     return returncode
-    
+
+
 def originate_params():
     """
     Generate a list of sras to download for each sample
 
-    This function gets called twice, once before entering the queue, once after 
+    This function gets called twice, once before entering the queue, once after
     """
     logger.info('preparing originate_params '
                 'for {0} samples'.format(len(samples)))
@@ -80,8 +88,8 @@ def originate_params():
 
 
 @R.files(originate_params)
-def download(inputs, outputs, sample):
-    """inputs is None""" 
+def download(_, outputs, sample):
+    """inputs is None"""
     msg_id = U.gen_sample_msg_id(sample)
     # e.g. sra
     # test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602557/SRX029242/SRR070177/SRR070177.sra
@@ -142,6 +150,7 @@ def sra2fastq(inputs, outputs):
     R.formatter(PATH_RE),
     '{subpath[0][0]}/0_submit.sh')
 def gen_qsub_script(inputs, outputs):
+    """generate qsub script, usually named 0_submit.sh"""
     inputs = [_ for _ in inputs if not _.endswith('.sra2fastq.COMPLETE')]
     outdir = os.path.dirname(inputs[0])
 
@@ -155,7 +164,7 @@ def gen_qsub_script(inputs, outputs):
     gsm = res.group('GSM')
     reference_name = config['REMOTE_REFERENCE_NAMES'][species]
     sample_name = '{gsm}'.format(gsm=gsm)
-    n_jobs=U.decide_num_jobs(outdir, options.j_rsem) 
+    n_jobs = U.decide_num_jobs(outdir, options.j_rsem)
 
     qsub_script = os.path.join(outdir, '0_submit.sh')
     template = env.get_template(options.qsub_template)
@@ -205,7 +214,7 @@ def rsem(inputs, outputs):
      '/path/to/rsem_output/homo_sapiens/GSE50599/GSM1224499/SRR968078_2.fastq.gz')
     """
     inputs = [_ for _ in inputs if not _.endswith('.sra2fastq.COMPLETE')]
-    # this is equivalent to the sample.outdir or GSM dir 
+    # this is equivalent to the sample.outdir or GSM dir
     outdir = os.path.dirname(inputs[0])
 
     # the names of parameters are the same as that in gen_qsub_script, but
@@ -217,7 +226,7 @@ def rsem(inputs, outputs):
     gsm = res.group('GSM')
     reference_name = config['LOCAL_REFERENCE_NAMES'][species]
     sample_name = '{outdir}/{gsm}'.format(**locals())
-    n_jobs=U.decide_num_jobs(outdir, options.j_rsem)
+    n_jobs = U.decide_num_jobs(outdir, options.j_rsem)
 
     flag_file = outputs[-1]
     cmd = config['CMD_RSEM'].format(
@@ -228,12 +237,14 @@ def rsem(inputs, outputs):
         output_dir=outdir)
     U.execute_log_stdout_stderr(cmd, flag_file=flag_file, debug=options.debug)
 
+
 if __name__ == "__main__":
-    R.pipeline_run(
+    locker_pattern = os.path.join(config['LOCAL_TOP_OUTDIR'], 'rsem_pipeline')
+    pipeline_run = U.lockit(locker_pattern)(R.pipeline_run)
+    pipeline_run(
         logger=logger,
         target_tasks=options.target_tasks,
         forcedtorun_tasks=options.forced_tasks,
         multiprocess=options.jobs,
         verbose=options.verbose,
         touch_files_only=options.touch_files_only)
-
