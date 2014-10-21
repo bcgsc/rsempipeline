@@ -1,3 +1,9 @@
+"""
+An incomplete parser for parsing the soft file downloaded from NCBI GEO. By
+incomplete, it means not all information is considered. Instead, only the
+information that is relevant to rsem analysis is checked
+"""
+
 import os
 import re
 
@@ -58,6 +64,7 @@ def update(current_sample, label, value, interested_organisms):
 
 
 def parse(soft_file, interested_organisms):
+    """Parse the soft file"""
     def append_passed_sample(current_sample, series, index):
         if current_sample:
             if current_sample.is_info_complete():
@@ -68,14 +75,14 @@ def parse(soft_file, interested_organisms):
                 logger.warn(
                     'info incomplete for current sample, '
                     'name: {0}; organism: {1}; url: {2}'.format(
-                        current_sample.name, current_sample.organism, 
+                        current_sample.name, current_sample.organism,
                         current_sample.url))
         return index
 
     logger.info("Parsing file: {0} ...".format(soft_file))
 
     # try to extract the series name from the soft filename
-    series_name_search = re.search('GSE\d+', soft_file)
+    series_name_search = re.search(r'GSE\d+', soft_file)
     if series_name_search is not None:
         series_name_from_file = series_name_search.group()
 
@@ -96,7 +103,7 @@ def parse(soft_file, interested_organisms):
                 index = append_passed_sample(current_sample, series, index)
                 current_sample = Sample(name=value, series=series)
                 series.samples.append(current_sample)
-    
+
             if current_sample:
                 current_sample = update(current_sample, label, value,
                                         interested_organisms)
