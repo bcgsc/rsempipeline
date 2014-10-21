@@ -52,7 +52,7 @@ logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
     {"config_file": os.path.join(os.path.dirname(__file__),
                                  'rsem_pipeline.logging.config')})
 
-LOCKER_PATTERN = os.path.join(config['LOCAL_TOP_OUTDIR'], 'rsem_pipeline')
+LOCKER_PATTERN = os.path.join(config['LOCAL_TOP_OUTDIR'], '.rsem_pipeline')
 
 @U.lockit(LOCKER_PATTERN)
 def prepare_pipeline_run():
@@ -65,7 +65,6 @@ def prepare_pipeline_run():
                 'in {0}'.format(options.config_file))
     return select_samples(samples, config)
 samples = prepare_pipeline_run()
-
 
 ##################################end of main##################################
 
@@ -247,12 +246,14 @@ def rsem(inputs, outputs):
 
 
 if __name__ == "__main__":
-    pipeline_run = U.lockit(LOCKER_PATTERN)(R.pipeline_run)
-    pipeline_run(
-        logger=logger,
-        target_tasks=options.target_tasks,
-        forcedtorun_tasks=options.forced_tasks,
-        multiprocess=options.jobs,
-        verbose=options.verbose,
-        touch_files_only=options.touch_files_only)
-
+    if samples:                 # meaning if samples != []
+        pipeline_run = U.lockit(LOCKER_PATTERN)(R.pipeline_run)
+        pipeline_run(
+            logger=logger,
+            target_tasks=options.target_tasks,
+            forcedtorun_tasks=options.forced_tasks,
+            multiprocess=options.jobs,
+            verbose=options.verbose,
+            touch_files_only=options.touch_files_only)
+    else:
+        logger.info('Cannot find a GSM that fits the disk usage rule')
