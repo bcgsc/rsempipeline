@@ -1,11 +1,14 @@
+"""utilities for rsem task"""
+
 import re
 
 def gen_fastq_gz_input(fastq_gzs):
-    gz1_RE = re.compile('[SED]RR\d+\_1\.fastq\.gz')
-    gz2_RE = re.compile('[SED]RR\d+\_2\.fastq\.gz')
-    fastq_gz1 = sorted([_ for _ in fastq_gzs if gz1_RE.search(_)])
-    fastq_gz2 = sorted([_ for _ in fastq_gzs if gz2_RE.search(_)])
-    
+    """Generate input arguments from fastq.gz files for rsem analysis"""
+    re_gz1 = re.compile(r'[SED]RR\d+\_1\.fastq\.gz')
+    re_gz2 = re.compile(r'[SED]RR\d+\_2\.fastq\.gz')
+    fastq_gz1 = sorted([_ for _ in fastq_gzs if re_gz1.search(_)])
+    fastq_gz2 = sorted([_ for _ in fastq_gzs if re_gz2.search(_)])
+
     if fastq_gz1 and fastq_gz2:
         fastq_gz_input = (
             "--paired-end <(/bin/zcat {0}) <(/bin/zcat {1})".format(
