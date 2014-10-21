@@ -24,9 +24,9 @@ def update(current_sample, label, value, interested_organisms):
         if value in interested_organisms:
             sample.organism = value
         else:
-            logger.info('discarding sample {0} of {1} for '
-                        '!Sample_organism: {2}'.format(
-                            sample.name, sample.series.name, value))
+            logger.debug('discarding sample {0} of {1} for '
+                         '!Sample_organism: {2}'.format(
+                             sample.name, sample.series.name, value))
             return None
     elif label.startswith('!Sample_supplementary_file_'):
         if value.startswith(
@@ -35,30 +35,30 @@ def update(current_sample, label, value, interested_organisms):
             # cannot discard specific to how soft file is formatted
     elif label == '!Sample_type':
         if value != 'SRA':
-            logger.info('discarding sample {0} of {1} for '
-                        '!Sample_type: {2}'.format(
-                            sample.name, sample.series.name, value))
+            logger.debug('discarding sample {0} of {1} for '
+                         '!Sample_type: {2}'.format(
+                             sample.name, sample.series.name, value))
             return None
     elif label == '!Sample_library_strategy':
         # some RNA-Seq data may still be labeled as OTHER, e.g. GSMs in
         # GSE52043
         if value not in ['RNA-Seq', 'OTHER']:
-            logger.info('discarding sample {0} of {1} for '
-                        '!Sample_library_stragegy: {2}'.format(
-                            sample.name, sample.series.name, value))
+            logger.debug('discarding sample {0} of {1} for '
+                         '!Sample_library_stragegy: {2}'.format(
+                             sample.name, sample.series.name, value))
             return None
     elif label == '!Sample_instrument_model':
         if any(map(lambda x: x in value, [
                 '454 GS', 'AB SOLiD', 'AB 5500xl Genetic Analyzer'])):
-            logger.info('discarding sample {0} of {1} for '
-                        '!Sample_instrument_model: {2}'.format(
-                            sample.name, sample.series.name, value))
+            logger.debug('discarding sample {0} of {1} for '
+                         '!Sample_instrument_model: {2}'.format(
+                             sample.name, sample.series.name, value))
             return None
     elif label == '!Sample_library_source':
         if value.lower() != 'transcriptomic':
-            logger.info('discarding sample {0} of {1} for '
-                        '!Sample_library_source: {2}'.format(
-                            sample.name, sample.series.name, value))
+            logger.debug('discarding sample {0} of {1} for '
+                         '!Sample_library_source: {2}'.format(
+                             sample.name, sample.series.name, value))
             return None
     return current_sample
 
