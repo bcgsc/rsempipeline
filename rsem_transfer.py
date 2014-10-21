@@ -131,7 +131,8 @@ def find_sras(gsm_dir):
     if os.path.exists(info_file):
         with open(info_file) as inf:
             info = yaml.load(inf.read())
-            sra_files = [i for j in info for i in j.keys()]
+            sra_files = [i for j in info for i in j.keys()
+                         if os.path.exists(i)]
         return sorted(sra_files)
     
 
