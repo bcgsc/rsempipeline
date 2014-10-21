@@ -1,28 +1,12 @@
+"""Lists objects used in rsem_pipeline.py"""
+
 import os
 from utils import gen_sample_msg_id
 
-class GEORecord(object):
-    '''
-    A GEORecord correspond to one line in the xlsx/csv file provided by the
-    collaborator
-    '''
-    def __init__(self, GEO_number, sample_number, 
-                 samples, species, platform, title):
-        self.GSE = self.GEO_number = GEO_number
-        self.num_used_samples, self.num_total_samples = [
-            int(_.strip()) for _ in sample_number.split('/')]
-        self.GSMs = self.samples = [
-            # .strip gets rid of the ';' at the ends
-            _.strip() for _ in samples.strip(';').split(';')]
-        self.species = species.split(';')
-        self.platform = platform.split()
-        self.title = title
-
-    def __repr__(self):
-        return '{0} {1}'.format(self.GSE, ', '.join(self.species))
-
 
 class Series(object):
+    """The object that corresponds to a GSE/Series"""
+
     def __init__(self, name, soft_file=''):
         # name: e.g. GSE46224
         self.name = name
@@ -32,11 +16,16 @@ class Series(object):
         self.samples = []       # all samples
         # this soft_file where this series belongs
         self.soft_file = soft_file
-        
+
     def num_passed_samples(self):
+        """
+        return the number of passed (i.e. qualified after checking in
+        soft_parser.py) samples
+        """
         return len(self.passed_samples)
 
     def num_samples(self):
+        """return the number of total samples for this Series"""
         return len(self.samples)
 
     def __str__(self):
@@ -48,6 +37,8 @@ class Series(object):
 
 
 class Sample(object):
+    """The object that corresponds to a GSM/Sample"""
+
     def __init__(self, name, series, index=0, organism=None, url=None):
         """
         @params index: index of passed sample, 1-based, 0 means not indexed
@@ -60,8 +51,12 @@ class Sample(object):
         # self.sras = []
 
     def is_info_complete(self):
+        """
+        see if the is information of this sample is complete, by which it means
+        its name, organism and url all exist
+        """
         return self.name and self.organism and self.url
-    
+
     def gen_outdir(self, outdir):
         """
         Generate the output directory where all downloads and analysis
@@ -84,6 +79,7 @@ class Sample(object):
     def __repr__(self):
         return self.__str__()
 
+# KEPT FOR REFERENCE ONLY 2014-10-21
 # class SRA(object):
 #     def __init__(self, name, path, sample, index=0):
 #         self.name, self.path = name, path
