@@ -15,15 +15,30 @@ import glob
 import stat
 import yaml
 import datetime
-import subprocess
 import logging.config
-import argparse
 
 import paramiko
 from jinja2 import Template
 
 from args_parser import parse_args_for_rsem_transfer
-from utils import execute_log_stdout_stderr, pretty_usage, touch
+from utils import execute_log_stdout_stderr, lockit, is_empty_dir, \
+    pretty_usage, ugly_usage
+
+sys.stdout.flush()          #flush print outputs to screen
+
+# global variables: options, config, logger
+options = parse_args_for_rsem_transfer()
+try:
+    with open(options.config_file) as inf:
+        config = yaml.load(inf.read())
+except IOError, _:
+    print 'configuration file: {0} not found'.format(options.config_file)
+    sys.exit(1)
+
+logging.config.fileConfig(os.path.join(
+    os.path.dirname(__file__), 'rsem_transfer.logging.config'))
+
+logger = logging.getLogger('rsem_cron_transfer')
 
 
 def sshexec(cmd, host, username, private_key_file='~/.ssh/id_rsa'):
@@ -101,14 +116,6 @@ def estimate_current_remote_usage(remote, username, r_dir, l_dir):
     return usage
 
 
-def is_empty_dir(dir_, output):
-    """
-    test if dir_ is an empty dir based on output. If it's an empty dir, then
-    there should be only one item is the list (output)
-    """
-    return len([_ for _ in output if dir_ in _]) == 1
-
-
 def get_real_current_usage(remote, username, r_dir):
     """this will return real space consumed currently by rsem analysis"""
     output = sshexec('du -s {0}'.format(r_dir), remote, username)
@@ -119,9 +126,9 @@ def get_real_current_usage(remote, username, r_dir):
 
 
 def find_sras(gsm_dir):
-    return sorted(glob.glob(
-        os.path.join(gsm_dir,
-        '[SED]RX[0-9]*[0-9]/[SED]RR[0-9]*[0-9]/[SED]RR[0-9]*[0-9].sra')))
+    """glob sra files in the gsm_dir"""
+    pattern = '[SED]RX[0-9]*[0-9]/[SED]RR[0-9]*[0-9]/[SED]RR[0-9]*[0-9].sra'
+    return sorted(glob.glob(os.path.join(gsm_dir, pattern)))
 
 
 def find_fq_gzs(gsm_dir):
@@ -139,15 +146,15 @@ def find_fq_gzs(gsm_dir):
 
     if nonexistent_flags:       # meaning sra2fastq not completed yet
         logger.debug('sra2fastq not completed in {0}, '
-                    'no fastq.gz files are returned. The following sra2fastq '
-                    'flags are missing'.format(gsm_dir))
-        for f in nonexistent_flags:
-            logger.debug('\t{0}'.format(f))
+                     'no fastq.gz files are returned. The following sra2fastq '
+                     'flags are missing'.format(gsm_dir))
+        for _ in nonexistent_flags:
+            logger.debug('\t{0}'.format(_))
     else:
         fq_gzs = []
         files = os.listdir(gsm_dir)
-        for f in files:
-            match = re.search(r'([SER]RR\d+)_[12]\.fastq\.gz', f, re.IGNORECASE)
+        for _ in files:
+            match = re.search(r'([SER]RR\d+)_[12]\.fastq\.gz', _, re.IGNORECASE)
             if match:
                 fq_gzs.append(os.path.join(gsm_dir, match.group(0)))
         # e.g. fq_gzs:
@@ -233,8 +240,76 @@ def get_gse_species_gsm_from_path(path):
     return gse, species, gsm
 
 
-def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
-                          r_free_to_use, r_min_free):
+def get_fq_gz_sizes(gsm_dir):
+    """
+    get sizes from <gsm_dir>/fq_gz_sizes.txt, if it doesn't exist, then create
+    it
+    """
+    fq_gzs_info = os.path.join(gsm_dir, 'fq_gzs_info.yaml')
+    if not os.path.exists(fq_gzs_info):
+        create(fq_gzs_info, gsm_dir)
+    with open(fq_gzs_info) as inf:
+        info = yaml.load(inf.read())
+        return sum(info[fq_gz]['size'] for fq_gz in info)
+
+
+def create(fq_gzs_info, gsm_dir):
+    """create <gsm_dir>/fq_gz_sizes.txt"""
+    fq_gzs = glob.glob(os.path.join(gsm_dir, '*.fastq.gz'))
+
+    info = {}
+    with open(fq_gzs_info, 'wb') as opf:
+        for f in fq_gzs:
+            info[f] = {}
+            size = os.path.getsize(f)
+            info[f]['size'] = size
+            info[f]['readable_size'] = pretty_usage(size)
+        yaml.dump(info, stream=opf, default_flow_style=False)
+    logger.info('written {0}'.format(fq_gzs_info))
+
+
+def select_samples_to_transfer(l_top_outdir, r_top_outdir,
+                               r_host, r_username, gsms_transfer_record):
+    """
+    select samples to transfer (different from select_samples_to_process in
+    utils_pre_pipeline.py, which are to process)
+    """
+    # r_: means relevant to remote host, l_: to local host
+
+    r_free_space = get_remote_free_disk_space(config['REMOTE_CMD_DF'],
+                                              r_host, r_username)
+    logger.info(
+        'r_free_space: {0}: {1}'.format(r_host, pretty_usage(r_free_space)))
+
+    # r_real_current_usage is just for giving an idea of real usage on remote,
+    # this variable is not utilized by following calculations, but the
+    # corresponding current local usage is always real since there's no point
+    # to estimate because only one process would be writing to the disk
+    # simultaneously.
+    r_real_current_usage = get_real_current_usage(
+        r_host, r_username, r_top_outdir)
+    logger.info('real current usage on {0} by {1}: {2}'.format(
+        r_host, r_top_outdir, pretty_usage(r_real_current_usage)))
+
+    r_est_current_usage = estimate_current_remote_usage(
+        r_host, r_username, r_top_outdir, l_top_outdir)
+    logger.info('estimated current usage (excluding samples with '
+                'rsem.COMPLETE) on {0} by {1}: {2}'.format(
+                    r_host, r_top_outdir, pretty_usage(r_est_current_usage)))
+    r_max_usage = min(ugly_usage(config['REMOTE_MAX_USAGE']), r_free_space)
+    logger.info('r_max_usage: {0}'.format(pretty_usage(r_max_usage)))
+    r_min_free = ugly_usage(config['REMOTE_MIN_FREE'])
+    logger.info('r_min_free: {0}'.format(pretty_usage(r_min_free)))
+    r_free_to_use = min(r_max_usage - r_est_current_usage,
+                        r_free_space - r_min_free)
+    logger.info('r_free_to_use: {0}'.format(pretty_usage(r_free_to_use)))
+
+    gsms = find_gsms_to_transfer(l_top_outdir, gsms_transfer_record, 
+                                 r_free_to_use)
+    return gsms
+
+
+def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record, r_free_to_use):
     """
     Walk through local top outdir, and for each GSMs, estimate its usage, and
     if it fits free_to_use space on remote host, count it as an element
@@ -258,186 +333,62 @@ def find_gsms_to_transfer(l_top_outdir, gsms_transfer_record,
 
         sub_sh = os.path.relpath(
             os.path.join(gsm_dir, '0_submit.sh'), l_top_outdir)
-        if not os.path.exists(sub_sh):
-            logger.debug(
-                '{0} doesn\'t exist, so skip {1}'.format(sub_sh, transfer_id))
-            continue
-
         fq_gzs = find_fq_gzs(gsm_dir)
         # fq_gzs could be [] in cases when sra2fastq hasn't been completed yet
         if fq_gzs:
+            if not os.path.exists(sub_sh):
+                logger.warning('{0} doesn\'t exist, so skip {1}'.format(
+                    sub_sh, transfer_id))
+                continue
             fq_gz_sizes = get_fq_gz_sizes(gsm_dir)
             rsem_usage = estimate_rsem_usage(fq_gz_sizes)
             if rsem_usage < r_free_to_use:
-                logger.info(
-                    '{0} ({1}) fit remote free_to_use ({2})'.format(
-                        transfer_id, pretty_usage(rsem_usage),
-                        pretty_usage(r_free_to_use)))
+                logger.info('{0} ({1}) fit remote free_to_use ({2})'.format(
+                    transfer_id, pretty_usage(rsem_usage), 
+                    pretty_usage(r_free_to_use)))
                 gsms_to_transfer.append(transfer_id)
                 r_free_to_use -= rsem_usage
-                if r_free_to_use < r_min_free:
-                    break
         else:
             logger.debug('no fastq.gz files found in {0}'.format(gsm_dir))
     return gsms_to_transfer
 
 
-def get_fq_gz_sizes(gsm_dir):
-    """
-    get sizes from <gsm_dir>/fq_gz_sizes.txt, if it doesn't exist, then create
-    it
-    """
-    sizes_file = os.path.join(gsm_dir, 'fq_gz_sizes.txt')
-    if not os.path.exists(sizes_file):
-        create(sizes_file, gsm_dir)
-    with open(sizes_file) as inf:
-        # e.g lines:
-        # rsem_output/GSE48321/rattus_norvegicus/GSM1174815/SRR922253_1.fastq.gz    1027293853
-        return sum([int(_.split()[1]) for _ in inf.readlines()
-                    if not _.strip().startswith('#')])
-
-
-def create(sizes_file, gsm_dir):
-    """create <gsm_dir>/fq_gz_sizes.txt"""
-    fq_gzs = glob.glob(os.path.join(gsm_dir, '*.fastq.gz'))
-
-    sizes = []
-    with open(sizes_file, 'wb') as opf:
-        for f in fq_gzs:
-            size = os.path.getsize(f)
-            opf.write('{0}\t{1}\n'.format(f, size))
-            opf.write('# {0}\t{1}\n'.format(f, pretty_usage(size)))
-            sizes.append(size)
-
-        opf.write('# Total\t{0}\n'.format(pretty_usage(sum(sizes))))
-    logger.info('written {0}'.format(sizes_file))
-
-
-def convert_disk_space(val):
-    """convert human readable disk space to byte"""
-    def err(val):
-        raise ValueError(
-            "Unreadable size: '{0}', make sure it's in the format "
-            "of e.g. 1024 Byte|KB|MB|GB|TB (case insensitive)".format(val))
-    sv = str(val).split()
-    if len(sv) != 2:
-        err(val)
-    size = float(sv[0])
-    unit = sv[1].lower()
-    if unit == 'byte':
-        return size
-    elif unit == 'kb':
-        return size * 2 ** 10
-    elif unit == 'mb':
-        return size * 2 ** 20
-    elif unit == 'gb':
-        return size * 2 ** 30
-    elif unit == 'tb':
-        return size * 2 ** 40
-    else:
-        err(val)
-
-
-def get_lockers(l_top_outdir):
-    # e.g. transfer script: transfer.14-08-18_12-17-55.sh.locker
-    lockers = glob.glob(os.path.join(l_top_outdir, '.transfer.*sh.locker'))
-    return lockers
-
-
-def create_locker(locker):
-    logger.info('creating {0}'.format(locker))
-    touch(locker)
-
-
-def remove_locker(locker):
-    logger.info('removing {0}'.format(locker))
-    os.remove(locker)
-
-
+@lockit(os.path.join(config['LOCAL_TOP_OUTDIR'], '.rsem_transfer'))
 def main():
     """the main function"""
-    # r_: means relevant to remote host, l_: to local host
-    r_host, r_username = config['REMOTE_HOST'], config['USERNAME']
     l_top_outdir = config['LOCAL_TOP_OUTDIR']
     r_top_outdir = config['REMOTE_TOP_OUTDIR']
-
-    lockers = get_lockers(l_top_outdir)
-    if len(lockers) >= 1:
-        logger.info(
-            'The previous transfer hasn\'t completed yet ({0}), stop current '
-            'session of rsem_cron_transfer.py'.format(' '.join(lockers)))
-        return
-
-    # create locker before estimate free space remotely
-    job_name = 'transfer.{0}'.format(
-        datetime.datetime.now().strftime('%y-%m-%d_%H-%M-%S'))
-    transfer_scripts_dir = os.path.join(l_top_outdir, 'transfer_scripts')
-    if not os.path.exists(transfer_scripts_dir):
-        os.mkdir(transfer_scripts_dir)
-    locker = os.path.join(l_top_outdir, '.{0}.sh.locker'.format(job_name))
-    create_locker(locker)
-
-    # now calculating different types of space
-    r_free_space = get_remote_free_disk_space(
-        config['REMOTE_CMD_DF'], r_host, r_username)
-    logger.info('free space available on {0}: {1}'.format(
-        r_host, pretty_usage(r_free_space)))
-
-    r_estimated_current_usage = estimate_current_remote_usage(
-        r_host, r_username, r_top_outdir, l_top_outdir)
-    logger.info(
-        'estimated current usage (excluding samples with '
-        'rsem.COMPLETE) on {0} by {1}: {2}'.format(
-            r_host, r_top_outdir, pretty_usage(r_estimated_current_usage)))
-
-    # this is just for giving an idea of real usage on remote, this variable is
-    # not utilized by following calculations
-    r_real_current_usage = get_real_current_usage(
-        r_host, r_username, r_top_outdir)
-    logger.info('real current usage on {0} by {1}: {2}'.format(
-        r_host, r_top_outdir, pretty_usage(r_real_current_usage)))
-
-    r_max_usage = min(convert_disk_space(config['REMOTE_MAX_USAGE']),
-                      r_free_space)
-    logger.info('r_max_usage: {0}'.format(pretty_usage(r_max_usage)))
-    r_min_free = convert_disk_space(config['REMOTE_MIN_FREE'])
-    logger.info('r_min_free: {0}'.format(pretty_usage(r_min_free)))
-    r_free_to_use = max(0, r_max_usage - r_estimated_current_usage)
-    logger.info('free to use: {0}'.format(pretty_usage(r_free_to_use)))
-
-    if r_free_to_use < r_min_free:
-        logger.info(
-            'free to use space ({0}) < min free ({1}) on {2}, '
-            'no transfer is happening'.format(
-                pretty_usage(r_free_to_use), pretty_usage(r_min_free), r_host))
-        remove_locker(locker)
-        return
-
+    r_host, r_username = config['REMOTE_HOST'], config['USERNAME']
+    # different from processing in rsem_pipeline.py, here the completion is
+    # marked by .COMPLETE flags, but by writting the completed GSMs to
+    # gsms_transfer_record
     gsms_transfer_record = os.path.join(l_top_outdir, 'transferred_GSMs.txt')
-    gsms_to_transfer = find_gsms_to_transfer(
-        l_top_outdir, gsms_transfer_record, r_free_to_use, r_min_free)
 
-    if not gsms_to_transfer:
-        logger.info('no GSMs fit the current r_free_to_use ({0}), '
-                    'no transferring will happen'.format(
-                        pretty_usage(r_free_to_use)))
-        remove_locker(locker)
+    gsms = select_samples_to_transfer(l_top_outdir, r_top_outdir, r_host,
+                                      r_username, gsms_transfer_record)
+    if not gsms:
+        logger.info('Cannot find a GSM that fits the current disk usage rule')
         return
 
     logger.info('GSMs to transfer:')
-    for gsm in gsms_to_transfer:
+    for gsm in gsms:
         logger.info('\t{0}'.format(gsm))
+
+    job_name = 'transfer.{0}'.format(
+        datetime.datetime.now().strftime('%y-%m-%d_%H:%M:%S'))
+    transfer_scripts_dir = os.path.join(l_top_outdir, 'transfer_scripts')
+    if not os.path.exists(transfer_scripts_dir):
+        os.mkdir(transfer_scripts_dir)
 
     # create transfer script
     transfer_script = os.path.join(
         transfer_scripts_dir, '{0}.sh'.format(job_name))
-    # locker is used to prevent the next session of transfer from starting
-    # before the current session of transfer finishes
+
     write(transfer_script, options.rsync_template,
           job_name=job_name,
           username=r_username,
           hostname=r_host,
-          gsms_to_transfer=gsms_to_transfer,
+          gsms_to_transfer=gsms,
           local_top_outdir=l_top_outdir,
           remote_top_outdir=r_top_outdir)
 
@@ -445,24 +396,8 @@ def main():
     rcode = execute_log_stdout_stderr(transfer_script)
 
     if rcode == 0:
-        append_transfer_record(gsms_to_transfer, gsms_transfer_record)
-        remove_locker(locker)
+        append_transfer_record(gsms, gsms_transfer_record)
 
 
 if __name__ == "__main__":
-    sys.stdout.flush()          #flush print outputs to screen
-
-    # global variables: options, config
-    options = parse_args_for_rsem_transfer()
-    try:
-        with open(options.config_file) as inf:
-            config = yaml.load(inf.read())
-    except IOError, _:
-        print 'configuration file: {0} not found'.format(options.config_file)
-        sys.exit(1)
-
-    logging.config.fileConfig(os.path.join(
-        os.path.dirname(__file__), 'rsem_cron_transfer.logging.config'))
-
-    logger = logging.getLogger('rsem_cron_transfer')
     main()
