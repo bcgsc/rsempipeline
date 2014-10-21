@@ -34,6 +34,8 @@ PATH_RE = r'(.*)/(?P<GSE>GSE\d+)/(?P<species>\S+)/(?P<GSM>GSM\d+)'
 options = parse_args_for_rsem_pipeline()
 with open(options.config_file) as inf:
     config = yaml.load(inf.read())
+if not os.path.exists('log'):
+    os.mkdir('log')
 logging.config.fileConfig(
     os.path.join(os.path.dirname(__file__), 'rsem_pipeline.logging.config'))
 
