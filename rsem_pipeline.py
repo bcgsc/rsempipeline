@@ -247,6 +247,9 @@ def rsem(inputs, outputs):
 
 if __name__ == "__main__":
     if samples:                 # meaning if samples != []
+        if 'gen_qsub_script' in options.target_tasks:
+            if not options.qsub_template:
+                raise IOError('-t/--qsub_template required when running gen_qsub_script')
         pipeline_run = U.lockit(LOCKER_PATTERN)(R.pipeline_run)
         pipeline_run(
             logger=logger,
