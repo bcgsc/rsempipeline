@@ -20,9 +20,7 @@ from jinja2 import Environment, FileSystemLoader
 import utils as U
 
 from args_parser import parse_args_for_rsem_pipeline
-from utils_pre_pipeline_run import \
-    gen_samples_from_soft_and_isamp, init_sample_outdirs, \
-    fetch_sras_info, select_samples
+import utils_pre_pipeline_run as UP
 from utils_download import gen_orig_params
 from utils_rsem import gen_fastq_gz_input
 
@@ -39,7 +37,7 @@ if not os.path.exists('log'):
 logging.config.fileConfig(
     os.path.join(os.path.dirname(__file__), 'rsem_pipeline.logging.config'))
 
-samples = gen_samples_from_soft_and_isamp(
+samples = UP.gen_samples_from_soft_and_isamp(
     options.soft_files, options.isamp, config)
 
 env = Environment(loader=FileSystemLoader([
@@ -59,13 +57,13 @@ LOCKER_PATTERN = os.path.join(config['LOCAL_TOP_OUTDIR'], '.rsem_pipeline')
 @U.lockit(LOCKER_PATTERN)
 def prepare_pipeline_run():
     logger.info('Preparing sample outdirs')
-    init_sample_outdirs(samples, config, options)
+    UP.init_sample_outdirs(samples, config, options)
     logger.info('Fetching sras info')
-    fetch_sras_info(samples, options.recreate_sras_info)
+    UP.fetch_sras_info(samples, options.recreate_sras_info)
     logger.info('Selecting samples to process based their usages, '
                 'available disk size and parameters specified '
                 'in {0}'.format(options.config_file))
-    return select_samples(samples, config)
+    return UP.select_samples_to_process(samples, config, options)
 samples = prepare_pipeline_run()
 
 ##################################end of main##################################
