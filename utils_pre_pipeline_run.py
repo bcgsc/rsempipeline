@@ -226,6 +226,7 @@ def select_samples(samples, config):
         logger.info('free to use space ({0}) < min free ({1}) on localhost, '
                     'Nothing gets done'.format(pretty_usage(l_free_to_use),
                                                pretty_usage(l_min_free)))
+        gsms = []               # to make api consistent
     else:
         # gsms are a list of Sample instances
         gsms = find_gsms_to_process(samples, l_top_outdir,
