@@ -22,6 +22,7 @@ import argparse
 import paramiko
 from jinja2 import Template
 
+from args_parser import parse_args_for_rsem_transfer
 from utils import execute_log_stdout_stderr, pretty_usage, touch
 
 
@@ -448,35 +449,11 @@ def main():
         remove_locker(locker)
 
 
-def parse_args():
-    """parse command line arguments and return options"""
-    parser = argparse.ArgumentParser(
-        description='rsem_cron_transfer.py',
-        usage='require python-2.7.x',
-        version='0.1')
-
-    base_dir = os.path.abspath(os.path.dirname(__file__))
-    default_rsync_template = os.path.join(base_dir, 'templates/rsync.sh')
-    parser.add_argument(
-        '-t', '--rsync_template', default=default_rsync_template,
-        help=('template for transferring GSMs from localhost to remote host, '
-              'refer to {0} (default template) for an example.'.format(
-                  default_rsync_template)))
-
-    config_examp = os.path.join(base_dir, 'rsem_pipeline_config.yaml.example')
-    parser.add_argument(
-        '-c', '--config_file', default='rsem_pipeline_config.yaml',
-        help=('a YAML configuration file, refer to {0} for an example.'.format(
-            config_examp)))
-
-    return parser.parse_args()
-
-
 if __name__ == "__main__":
     sys.stdout.flush()          #flush print outputs to screen
 
     # global variables: options, config
-    options = parse_args()
+    options = parse_args_for_rsem_transfer()
     try:
         with open(options.config_file) as inf:
             config = yaml.load(inf.read())

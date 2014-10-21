@@ -19,7 +19,7 @@ from jinja2 import Environment, FileSystemLoader
 
 import utils as U
 
-import args_parser
+from args_parser import parse_args_for_rsem_pipeline
 from utils_pre_pipeline_run import \
     gen_samples_from_soft_and_isamp, init_sample_outdirs, \
     fetch_sras_info, select_samples
@@ -31,7 +31,7 @@ PATH_RE = r'(.*)/(?P<GSE>GSE\d+)/(?P<species>\S+)/(?P<GSM>GSM\d+)'
 # because of ruffus, have to use some global variables
 # global variables: options, config, samples, env, logger, logger_mutex
 # minimize the number of global variables as much as possible
-options = args_parser.parse()
+options = parse_args_for_rsem_pipeline()
 with open(options.config_file) as inf:
     config = yaml.load(inf.read())
 logging.config.fileConfig(

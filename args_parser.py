@@ -1,9 +1,11 @@
 """parser for command line arguments"""
 
 import os
+import argparse
+
 import ruffus as R
 
-def parse():
+def parse_args_for_rsem_pipeline():
     """parse the command line arguments"""
     parser = R.cmdline.get_argparse(
         description="rsem_pipeline",
@@ -49,3 +51,27 @@ def parse():
         help='if debug, commands won\'t be executed, just printed out per task')
     args = parser.parse_args()
     return args
+
+
+def parse_args_for_rsem_transfer():
+    """parse command line arguments and return options"""
+    parser = argparse.ArgumentParser(
+        description='rsem_cron_transfer.py',
+        usage='require python-2.7.x',
+        version='0.1')
+
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    default_rsync_template = os.path.join(base_dir, 'templates/rsync.sh')
+    parser.add_argument(
+        '-t', '--rsync_template', default=default_rsync_template,
+        help=('template for transferring GSMs from localhost to remote host, '
+              'refer to {0} (default template) for an example.'.format(
+                  default_rsync_template)))
+
+    config_examp = os.path.join(base_dir, 'rsem_pipeline_config.yaml.example')
+    parser.add_argument(
+        '-c', '--config_file', default='rsem_pipeline_config.yaml',
+        help=('a YAML configuration file, refer to {0} for an example.'.format(
+            config_examp)))
+
+    return parser.parse_args()
