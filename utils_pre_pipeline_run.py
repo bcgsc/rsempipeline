@@ -10,6 +10,7 @@ and parameters from rsem_pipeline_config.yaml
 """
 
 import os
+import sys
 import re
 import yaml
 import urlparse
@@ -200,7 +201,7 @@ def get_ftp_handler(sample):
 
 
 # about filtering samples based on their sizes
-def select_samples(samples, config):
+def select_samples_to_process(samples, config, options):
     """
     Select a subset of samples based on a combined rule based on availale free
     space on the file system and parameters from rsem_pipeline_config.yaml
@@ -210,31 +211,25 @@ def select_samples(samples, config):
     l_free_space = get_local_free_disk_space(config['LOCAL_CMD_DF'])
     logger.info(
         'local free space avaialbe: {0}'.format(pretty_usage(l_free_space)))
+    l_current_usage = get_current_local_usage(l_top_outdir)
+    logger.info('local current usage by {0}: {1}'.format(
+        l_top_outdir, pretty_usage(l_current_usage)))
     l_max_usage = min(ugly_usage(config['LOCAL_MAX_USAGE']), l_free_space)
-    logger.info(
-        'local max usage: {0}'.format(pretty_usage(l_max_usage)))
-    logger.info('Estimating current usage')
-    l_estimated_current_usage = estimate_current_local_usage(l_top_outdir)
-    logger.info(
-        'local estimated current usage: {0}'.format(
-            pretty_usage(l_estimated_current_usage)))
-    l_free_to_use = max(0, l_max_usage - l_estimated_current_usage)
-    logger.info(
-        'local free space to use: {0}'.format(pretty_usage(l_free_to_use)))
+    logger.info('l_max_usage: {0}'.format(pretty_usage(l_max_usage)))
     l_min_free = ugly_usage(config['LOCAL_MIN_FREE'])
-    if l_free_to_use < l_min_free:
-        logger.info('free to use space ({0}) < min free ({1}) on localhost, '
-                    'Nothing gets done'.format(pretty_usage(l_free_to_use),
-                                               pretty_usage(l_min_free)))
-        gsms = []               # to make api consistent
-    else:
-        # gsms are a list of Sample instances
-        gsms = find_gsms_to_process(samples, l_top_outdir,
-                                    l_free_to_use, l_min_free)
-        return gsms
+    logger.info('l_min_free: {0}'.format(pretty_usage(l_min_free)))
+    l_free_to_use = min(l_max_usage - l_current_usage,
+                        l_free_space - l_min_free)
+    logger.info('free to use: {0}'.format(pretty_usage(l_free_to_use)))
+
+    # gsms are a list of Sample instances
+    gsms = find_gsms_to_process(samples, l_top_outdir,
+                                l_free_to_use, options.ignore_disk_usage_rule)
+    return gsms
 
 
-def find_gsms_to_process(samples, l_top_outdir, l_free_to_use, l_min_free):
+def find_gsms_to_process(samples, l_top_outdir, l_free_to_use,
+                         flag_ignore_disk_usage_rule):
     """
     Find samples that are to be processed, the selecting rule is implemented
     here
@@ -251,17 +246,14 @@ def find_gsms_to_process(samples, l_top_outdir, l_free_to_use, l_min_free):
                          'pass'.format(gsm_id))
             continue
         usage = estimate_process_usage(info_file_p)
-        if usage < l_free_to_use:
-            logger.info('{0} ({1}) fits local free_to_use ({2})'.format(
-                gsm_id, pretty_usage(usage), pretty_usage(l_free_to_use)))
+        if flag_ignore_disk_usage_rule:
             gsms_to_process.append(sample)
-            l_free_to_use -= usage
-            if l_free_to_use < l_min_free:
-                logger.info('not enough free-to-use space ({0} < min_free: '
-                            '{1}) is available anymore, break the '
-                            'loop'.format(pretty_usage(l_free_to_use),
-                                          pretty_usage(l_min_free)))
-                break
+        else:
+            if usage < l_free_to_use:
+                logger.info('{0} ({1}) fits local free_to_use ({2})'.format(
+                    gsm_id, pretty_usage(usage), pretty_usage(l_free_to_use)))
+                l_free_to_use -= usage
+                gsms_to_process.append(sample)
     return gsms_to_process
 
 
@@ -308,15 +300,7 @@ def get_recorded_gsms(record_file):
             return [_.strip() for _ in inf if not _.strip().startswith('#')]
 
 
-def estimate_current_local_usage(l_top_outdir):
-    """
-    may not need to estimate at all, just use the real usage for now,
-    2014-10-20
-    """
-    return get_real_local_usage(l_top_outdir)
-
-
-def get_real_local_usage(l_top_outdir):
+def get_current_local_usage(l_top_outdir):
     """Get the real local usage, equivalent to du -s l_top_outdir"""
     # proc = subprocess.Popen(
     #     'du -s {0}'.format(l_top_outdir), stdout=subprocess.PIPE, shell=True)
