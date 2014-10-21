@@ -35,7 +35,7 @@ def read_csv_gse_as_key(infile):
             if row and not row[0].startswith('#'):
                 res = process(k+1, row)
                 if res is not None:
-                    gse, species, gsm = res
+                    gse, _, gsm = res
                     if gse in sample_data:
                         sample_data[gse].append(gsm)
                     else:
@@ -44,8 +44,9 @@ def read_csv_gse_as_key(infile):
 
 
 def process(k, row):
+    """Process one row of GSE_species_GSM.csv"""
     def err():
-        print ('Ignored invalid row ({0}): {1}'.format(k, row))
+        logger.error('Ignored invalid row ({0}): {1}'.format(k, row))
 
     # check if there are only two columns
     if len(row) != 3:
@@ -54,11 +55,11 @@ def process(k, row):
 
     gse, species, gsm = row
     # check if GSE is properly named
-    if not re.search('^GSE\d+$', gse):
+    if not re.search(r'^GSE\d+$', gse):
         err()
         return
     # check if GSMs are properly named
-    if not re.search('^GSM\d+$', gsm):
+    if not re.search(r'^GSM\d+$', gsm):
         err()
         return
     return gse, species, gsm
@@ -66,14 +67,15 @@ def process(k, row):
 
 def gen_isamp_from_csv(input_csv):
     """
-    Generate input data with the specified data structure as shown below
+    Generate input data from GSE_species_GSM.csv with the specified data
+    structure as shown below
     """
-
-    dirname, basename = os.path.split(input_csv)
     sample_data = read_csv_gse_as_key(input_csv)
     return sample_data
 
+
 def gen_isamp_from_str(data_str):
+    """Generate input data from command line argument"""
     sample_data = {}
     for _ in data_str.split(';'):
         stuffs = _.strip().split()
@@ -98,8 +100,8 @@ def get_isamp(isamp_file_or_str):
         if os.path.splitext(V)[-1] == '.csv': # then it's a csv file
             res = gen_isamp_from_csv(V)
         else:
-            raise ValueError(
-                "uncognized file type of {0} as input_file for isamples".format(V))
+            raise ValueError("uncognized file type of {0} as input_file for "
+                             "isamples".format(V))
     else:                       # it's a string
         res = gen_isamp_from_str(V)
     return res
