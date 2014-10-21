@@ -47,6 +47,12 @@ def parse_args_for_rsem_pipeline():
               'them from FTP server). Rerun without this option is faster, '
               'and also useful when there is no Internet connection.'))
     parser.add_argument(
+        '--ignore_disk_usage_rule', action='store_true',
+        help=('DANGEROUS, when specified, it will ignore the disk usage rule, '
+              'and process as many GSMs as available. Better used when an '
+              'small number of GSMs are explicitly set via -i/--isamp argument '
+              'on the commandline.'))
+    parser.add_argument(
         '--debug', action='store_true',
         help='if debug, commands won\'t be executed, just printed out per task')
     args = parser.parse_args()
