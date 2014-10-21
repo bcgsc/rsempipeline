@@ -292,3 +292,11 @@ def ugly_usage(val):
         return size * 2 ** 40
     else:
         err(val)
+
+
+def is_empty_dir(dir_, output):
+    """
+    test if dir_ is an empty dir based on output. If it's an empty dir, then
+    there should be only one item is the list (output)
+    """
+    return len([_ for _ in output if dir_ in _]) == 1
