@@ -127,8 +127,11 @@ def get_real_current_usage(remote, username, r_dir):
 
 def find_sras(gsm_dir):
     """glob sra files in the gsm_dir"""
-    pattern = '[SED]RX[0-9]*[0-9]/[SED]RR[0-9]*[0-9]/[SED]RR[0-9]*[0-9].sra'
-    return sorted(glob.glob(os.path.join(gsm_dir, pattern)))
+    info_file = os.path.join(gsm_dir, 'sras_info.yaml')
+    with open(info_file) as inf:
+        info = yaml.load(inf.read())
+        sra_files = [i for j in info for i in j.keys()]
+    return sorted(sra_files)
 
 
 def find_fq_gzs(gsm_dir):
