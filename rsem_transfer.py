@@ -250,20 +250,16 @@ def get_fq_gz_sizes(gsm_dir):
         create(fq_gzs_info, gsm_dir)
     with open(fq_gzs_info) as inf:
         info = yaml.load(inf.read())
-        return sum(info[fq_gz]['size'] for fq_gz in info)
+        return sum(d[k]['size'] for d in info for k in d.keys())
 
 
 def create(fq_gzs_info, gsm_dir):
     """create <gsm_dir>/fq_gz_sizes.txt"""
     fq_gzs = glob.glob(os.path.join(gsm_dir, '*.fastq.gz'))
-
-    info = {}
+    sizes = [os.path.getsize(_) for _ in fq_gzs]
+    info = [{i: {'size': j, 'readable_size': pretty_usage(j)}}
+            for (i, j) in zip(fq_gzs, sizes)]
     with open(fq_gzs_info, 'wb') as opf:
-        for f in fq_gzs:
-            info[f] = {}
-            size = os.path.getsize(f)
-            info[f]['size'] = size
-            info[f]['readable_size'] = pretty_usage(size)
         yaml.dump(info, stream=opf, default_flow_style=False)
     logger.info('written {0}'.format(fq_gzs_info))
 
