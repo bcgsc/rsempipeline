@@ -257,6 +257,9 @@ if __name__ == "__main__":
             forcedtorun_tasks=options.forced_tasks,
             multiprocess=options.jobs,
             verbose=options.verbose,
-            touch_files_only=options.touch_files_only)
+            touch_files_only=options.touch_files_only,
+            history_file=os.path.join('log', '.{0}.sqlite'.format(
+                '_'.join([_.name for _ in sorted(samples, key=lambda x: x.name)])))
+        )
     else:
         logger.info('Cannot find a GSM that fits the disk usage rule')
