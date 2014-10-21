@@ -1,7 +1,10 @@
+"""parser for command line arguments"""
+
 import os
 import ruffus as R
 
 def parse():
+    """parse the command line arguments"""
     parser = R.cmdline.get_argparse(
         description="rsem_pipeline",
         usage='require python-2.7.x',
@@ -29,7 +32,7 @@ def parse():
         help=('used when -T is gen_qsub_script, '
               'see a list of templates in templates directory'))
 
-    config_examp = os.path.join(base_dir,'rsem_pipeline_config.yaml.example')
+    config_examp = os.path.join(base_dir, 'rsem_pipeline_config.yaml.example')
     parser.add_argument(
         '-c', '--config_file', default='rsem_pipeline_config.yaml',
         help=('a YAML configuration file, refer to {0} for an example.'.format(
