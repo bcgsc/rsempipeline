@@ -53,9 +53,15 @@ def lockit(locker_pattern):
                 now = datetime.now().strftime('%y-%m-%d_%H:%M:%S')
                 locker = '{0}.{1}.locker'.format(locker_pattern, now)
                 create_locker(locker)
-                res = func(*args, **kwargs)
-                remove_locker(locker)
-                return res
+                try:
+                    res = func(*args, **kwargs)
+                    return res
+                except Exception, err:
+                    logger.exception(err)
+                finally:
+                    # TIP: finally guarantees that even when sys.exit(1), the
+                    # following block gets run
+                    remove_locker(locker)
         return decorated
     return decorator
 
