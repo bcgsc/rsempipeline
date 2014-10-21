@@ -266,7 +266,7 @@ def estimate_process_usage(info_file):
     with open(info_file) as inf:
         yaml_data = yaml.load(inf.read())
         usage = sum(d[k]['size'] for d in yaml_data for k in d.keys())
-        usage = usage * sra2fastq_size_ratio
+        usage = usage * (sra2fastq_size_ratio + 1)
         return usage
 
 
