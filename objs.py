@@ -44,8 +44,11 @@ class Sample(object):
         @params index: index of passed sample, 1-based, 0 means not indexed
         """
         self.name = name
-        self.series = series  # the series in which the sample is in
-        self.index = index    # index of all samples in the self.series.passed_samples
+        # the series in which the sample is in
+        self.series = series
+        # index of all samples in the self.series.passed_samples
+        self.index = index
+        # organism defaults to None due to the format of soft file
         self.organism = organism
         self.url = url
         # self.sras = []
