@@ -5,17 +5,11 @@ import argparse
 
 import ruffus as R
 
-def parse_args_for_rsem_pipeline():
-    """parse the command line arguments"""
-    parser = R.cmdline.get_argparse(
-        description="rsem_pipeline",
-        usage='require python-2.7.x',
-        version='0.1')
-
-    base_dir = os.path.abspath(os.path.dirname(__file__))
+def add_common_arguments(parser):
     parser.add_argument(
         '-s', '--soft_files', nargs='+', required=True,
         help='a list of soft files')
+
     parser.add_argument(
         '-i', '--isamp',
         help=('interested samples, could be in a file (e.g. '
@@ -26,6 +20,18 @@ def parse_args_for_rsem_pipeline():
               'in the soft files to extract only those are of interest.'
               'The pipeline will check data is a file and exists, or '
               'it assumes it\'s a data string'))
+
+
+def parse_args_for_rsem_pipeline():
+    """parse the command line arguments"""
+    parser = R.cmdline.get_argparse(
+        description="rsem_pipeline",
+        usage='require python-2.7.x',
+        version='0.1')
+
+    add_common_arguments(parser)
+
+    base_dir = os.path.abspath(os.path.dirname(__file__))
     parser.add_argument(
         '--j_rsem', type=int,
         help="the number of jobs to run when running rsem (-j)")
@@ -66,7 +72,9 @@ def parse_args_for_rsem_transfer():
         usage='require python-2.7.x',
         version='0.1')
 
+    add_common_arguments(parser)
     base_dir = os.path.abspath(os.path.dirname(__file__))
+
     default_rsync_template = os.path.join(base_dir, 'templates/rsync.sh')
     parser.add_argument(
         '-t', '--rsync_template', default=default_rsync_template,
