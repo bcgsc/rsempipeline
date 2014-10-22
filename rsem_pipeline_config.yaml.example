@@ -5,9 +5,11 @@ REMOTE_HOST: <remote hostname, e.g. genesis.bcgsc.ca>
 USERNAME: <username>
 
 ########################rsem_cron_transfer.py specific#########################
+# REMOTE_ and LOCAL_ correspond to configuration for remote host and local host
 
 # the consumed disk space remotely should not exceed REMOTE_MAX_USAGE (KB)
 REMOTE_MAX_USAGE: 1 TB
+LOCAL_MAX_USAGE: 50 GB
 
 # The ratio for estimating the usage by a particular GSM based on its size of
 # fastq.gz files. This ratio is a very rough estimation, further work is
@@ -16,15 +18,16 @@ FASTQ2USAGE_RATIO: 5
 
 # if the remote disk space is less than REMOTE_MIN_FREE, no transfer happens
 REMOTE_MIN_FREE: 100 GB
+LOCAL_MIN_FREE: 10 GB
 
 # absolute path of top output directory on remote host
 REMOTE_TOP_OUTDIR: /remote/path/to/batchx
-
 # absolute path of top output directory on local host
 LOCAL_TOP_OUTDIR: /remote/path/to/batchx
 
 # command executed on remote host to get the free size of disk space
 REMOTE_CMD_DF: df -k -P /path
+LOCAL_CMD_DF: df -k -P /projects/btl2
 
 
 ###########################rsem_pipeline.py specific###########################
