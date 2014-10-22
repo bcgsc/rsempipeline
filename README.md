@@ -124,7 +124,7 @@ pip install -r requirements.txt
 	*/20 * * * *  . path/to/venv/bin/activate; cd path/to/top_outdir; python path/to/rsem_transfer.py -s soft/* -i GSE_species_GSM.csv
 	```
 	
-3. ***Reference for running the pipeline mannually***
+3. **Reference for running the pipeline mannually**
 	* Download sra files and convert them to fastq.gz files:
 
 	```
