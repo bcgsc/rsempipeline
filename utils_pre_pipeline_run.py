@@ -284,7 +284,6 @@ def processed(gsm_dir):
 def is_download_complete(gsm_dir, sra_files):
     flags = [os.path.join(gsm_dir, '{0}.download.COMPLETE'.format(_))
              for _ in map(os.path.basename, sra_files)]
-    logger.debug(flags)
     return all(map(os.path.exists, flags))
     
 
