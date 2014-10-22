@@ -91,40 +91,19 @@ def sanity_check(num_isamp, num_res_samp):
                     'all {0} samples will be processed '.format(num_isamp))
 
 
-def get_top_outdir(config, options):
-    """
-    Decides the top output dir, if specified in the configuration file, then
-    use the specified one, otherwise, use the directory where
-    GSE_species_GSM.csv is located
-    """
-    top_outdir = config.get('LOCAL_TOP_OUTDIR')
-    if top_outdir is not None:
-        return top_outdir
-    else:
-        if os.path.exists(options.isamp):
-            top_outdir = os.path.dirname(options.isamp)
-        else:
-            raise ValueError(
-                'input from -i is not a file and '
-                'no LOCAL_TOP_OUTDIR parameter found in {0}'.format(
-                    options.config_file))
-    return top_outdir
-
-
-def get_rsem_outdir(config, options):
+def get_rsem_outdir(top_outdir):
     """
     get the output directory for rsem, it's top_outdir/rsem_output by default.
     """
-    top_outdir = get_top_outdir(config, options)
     return os.path.join(top_outdir, 'rsem_output')
 
 
 # about init sample outdirs
-def init_sample_outdirs(samples, config, options):
+def init_sample_outdirs(samples, top_outdir):
     """
     Initiate the output directories for samples.
     """
-    outdir = get_rsem_outdir(config, options)
+    outdir = get_rsem_outdir(top_outdir)
     for sample in samples:
         sample.gen_outdir(outdir)
         if not os.path.exists(sample.outdir):
@@ -235,57 +214,88 @@ def find_gsms_to_process(samples, l_top_outdir, l_free_to_use,
     here
     """
     gsms_to_process = []
-    info_file = 'sras_info.yaml'
-    for sample in samples:
-        gsm_dir = sample.outdir
-        gsm_id = os.path.relpath(gsm_dir, l_top_outdir)
-        info_file_p = os.path.join(gsm_dir, info_file) # _p: with full path
-        processed = check_processing_status(info_file_p)
-        if processed:
+    for gsm in samples:
+        gsm_id = os.path.relpath(gsm.outdir, l_top_outdir)
+        if processed(gsm.outdir):
             logger.debug('{0} has already been processed successfully, '
                          'pass'.format(gsm_id))
             continue
-        usage = estimate_process_usage(info_file_p)
+
         if flag_ignore_disk_usage_rule:
-            gsms_to_process.append(sample)
-        else:
-            if usage < l_free_to_use:
-                logger.info('{0} ({1}) fits local free_to_use ({2})'.format(
+            gsms_to_process.append(gsm)
+            continue
+
+        usage = est_proc_usage(gsm.outdir)
+        if usage > l_free_to_use:
+            logger.debug(
+                '{0} ({1}) doesn\'t fit current local free_to_use ({2})'.format(
                     gsm_id, pretty_usage(usage), pretty_usage(l_free_to_use)))
-                l_free_to_use -= usage
-                gsms_to_process.append(sample)
+            continue
+
+        logger.info(
+            '{0} ({1}) fits local free_to_use ({2})'.format(
+                gsm_id, pretty_usage(usage), pretty_usage(l_free_to_use)))
+        l_free_to_use -= usage
+        gsms_to_process.append(gsm)
+
     return gsms_to_process
 
 
-def estimate_process_usage(info_file):
+def get_sras_info(gsm_dir):
+    info_file = os.path.join(gsm_dir, 'sras_info.yaml')
+    with open(info_file) as inf:
+        return yaml.load(inf.read())
+
+
+def est_proc_usage(gsm_dir):
     """
     Estimated the disk usage needed for processing a sample based on the size
     of sra files, the information of which is contained in the info_file 
     """
     sra2fastq_size_ratio = 1.5  # rough estimate, based on statistics
-    with open(info_file) as inf:
-        yaml_data = yaml.load(inf.read())
-        usage = sum(d[k]['size'] for d in yaml_data for k in d.keys())
-        usage = usage * (sra2fastq_size_ratio + 1)
-        return usage
+    sras_info = get_sras_info(gsm_dir)
+    usage = sum(d[k]['size'] for d in sras_info for k in d.keys())
+    usage = usage * (sra2fastq_size_ratio + 1)
+    return usage
 
 
-def check_processing_status(info_file):
+def processed(gsm_dir):
     """
     Checking the processing status, whether completed or not based the
     existence of COMPLETE flags
     """
-    dirname = os.path.dirname(info_file)
-    with open(info_file) as inf:
-        yaml_data = yaml.load(inf.read())
-        sra_files = [i for j in yaml_data for i in j.keys()]
-        download_flags = [
-            os.path.join(dirname, '{0}.download.COMPLETE'.format(_))
-            for _ in sra_files]
-        sra2fastq_flags = [
-            os.path.join(dirname, '{0}.sra2fastq.COMPLETE'.format(_))
-            for _ in sra_files]
-        return all(map(os.path.exists, download_flags + sra2fastq_flags))
+    sras_info = get_sras_info(gsm_dir)
+    # e.g. SRXxxxxxx/SRRxxxxxxx/SRRxxxxxxx.sra
+    sra_files = [i for j in sras_info for i in j.keys()]
+    # e.g. /path/to/rsem_output/GSExxxxx/homo_sapiens/GSMxxxxxx
+    sra_files = [os.path.join(gsm_dir, _) for _ in sra_files]
+    if is_download_complete(gsm_dir, sra_files):
+        if is_sra2fastq_complete(gsm_dir, sra_files):
+            if is_gen_qsub_script_complete(gsm_dir):
+                return True
+            else:
+                logger.debug('{0}: gen_qsub_script incomplete'.format(gsm_dir))
+        else:
+            logger.debug('{0}: sra2fastq incomplete'.format(gsm_dir))
+    else:
+        logger.debug('{0}: download incomplete'.format(gsm_dir))
+
+    
+def is_download_complete(gsm_dir, sra_files):
+    flags = [os.path.join(gsm_dir, '{0}.download.COMPLETE'.format(_))
+             for _ in map(os.path.basename, sra_files)]
+    logger.debug(flags)
+    return all(map(os.path.exists, flags))
+    
+
+def is_sra2fastq_complete(gsm_dir, sra_files):
+    flags = [os.path.join(gsm_dir, '{0}.sra2fastq.COMPLETE'.format(_))
+             for _ in map(os.path.basename, sra_files)]
+    return all(map(os.path.exists, flags))
+
+
+def is_gen_qsub_script_complete(gsm_dir):
+    return os.path.exists(os.path.join(gsm_dir, '0_submit.sh'))
 
 
 def get_recorded_gsms(record_file):
