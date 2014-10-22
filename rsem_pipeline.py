@@ -57,11 +57,12 @@ LOCKER_PATTERN = os.path.join(config['LOCAL_TOP_OUTDIR'], '.rsem_pipeline')
 @U.lockit(LOCKER_PATTERN)
 def prepare_pipeline_run():
     logger.info('Preparing sample outdirs')
-    UP.init_sample_outdirs(samples, config, options)
+    UP.init_sample_outdirs(samples, config['LOCAL_TOP_OUTDIR'])
     logger.info('Fetching sras info')
     UP.fetch_sras_info(samples, options.recreate_sras_info)
     logger.info('Selecting samples to process based their usages, '
                 'available disk size and parameters specified '
+
                 'in {0}'.format(options.config_file))
     return UP.select_samples_to_process(samples, config, options)
 samples = prepare_pipeline_run()
@@ -249,6 +250,9 @@ if __name__ == "__main__":
     if samples is None:
         pass                    # meaning it's locked.
     elif samples:
+        logger.info('GSMs to process:')
+        for k, gsm in enumerate(samples):
+            logger.info('\t{0:3d} {1:30s} {2}'.format(k+1, gsm, gsm.outdir))
         if 'gen_qsub_script' in options.target_tasks:
             if not options.qsub_template:
                 raise IOError('-t/--qsub_template required when running gen_qsub_script')
@@ -260,8 +264,8 @@ if __name__ == "__main__":
             multiprocess=options.jobs,
             verbose=options.verbose,
             touch_files_only=options.touch_files_only,
-            history_file=os.path.join('log', '.{0}.sqlite'.format(
-                '_'.join([_.name for _ in sorted(samples, key=lambda x: x.name)])))
+            # history_file=os.path.join('log', '.{0}.sqlite'.format(
+            #     '_'.join([_.name for _ in sorted(samples, key=lambda x: x.name)])))
         )
     else:                       # meaning if samples != []
         logger.info('Cannot find a GSM that fits the disk usage rule')
