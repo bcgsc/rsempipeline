@@ -14,6 +14,14 @@ from functools import update_wrapper
 logger = logging.getLogger(__name__)
 
 
+def decorator(d):
+    "Make function d a decorator: d wraps a function fn."
+    def _d(fn):
+        return update_wrapper(d(fn), fn)
+    update_wrapper(_d, d)
+    return _d
+
+
 def get_lockers(locker_pattern):
     """get a locker(s)"""
     # e.g. transfer script: transfer.14-08-18_12-17-55.sh.locker
@@ -40,8 +48,9 @@ def lockit(locker_pattern):
     locker_pattern should be composed of locker_path/locker_prefix, an example:
         locker_path/locker_prefix.%y-%m-%d_%H-%M-%S.locker
     """
-    def decorator(func):
-        def decorated(*args, **kwargs):
+    @decorator
+    def dec(func):
+        def deced(*args, **kwargs):
             lockers = get_lockers('{0}*.locker'.format(locker_pattern))
             if len(lockers) >= 1:
                 logger.info('The previous {0} run hasn\'t completed yet with '
@@ -62,16 +71,8 @@ def lockit(locker_pattern):
                     # TIP: finally guarantees that even when sys.exit(1), the
                     # following block gets run
                     remove_locker(locker)
-        return decorated
-    return decorator
-
-
-def decorator(d):
-    "Make function d a decorator: d wraps a function fn."
-    def _d(fn):
-        return update_wrapper(d(fn), fn)
-    update_wrapper(_d, d)
-    return _d
+        return deced
+    return dec
 
 
 @decorator
