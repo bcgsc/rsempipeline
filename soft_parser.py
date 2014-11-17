@@ -49,7 +49,9 @@ def update(current_sample, label, value, interested_organisms):
             return None
     elif label == '!Sample_instrument_model':
         if any(map(lambda x: x in value, [
-                '454 GS', 'AB SOLiD', 'AB 5500xl Genetic Analyzer'])):
+                '454 GS', 'AB SOLiD', 'AB 5500xl Genetic Analyzer',
+                'AB 5500 Genetic Analyzer',
+        ])):
             logger.debug('discarding sample {0} of {1} for '
                          '!Sample_instrument_model: {2}'.format(
                              sample.name, sample.series.name, value))
