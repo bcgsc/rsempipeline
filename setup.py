@@ -52,5 +52,7 @@ setup(
     license="GPLv3",
     keywords="GEO rsem pipeline",
     url="https://github.com/bcgsc/rsem_pipeline.git",
+
+    include_package_data=True,
 )
 
