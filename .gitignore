@@ -6,3 +6,5 @@ venv*
 lele*
 .ruffus_history.sqlite
 non-vc
+dist
+fq_gz_temp_stats
