@@ -19,6 +19,8 @@ setup(
         'Programming Language :: Python :: 2.7',
     ],
 
+    scripts=['rsem_pipeline/bin/rsem_pipeline.py',
+             'rsem_pipeline/bin/rsem_transfer.py'],
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
     # packages=setuptools.find_packages(exclude=['venv*', 'fq_gz_temp_stats', 'non-vc']),
