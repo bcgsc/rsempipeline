@@ -19,10 +19,9 @@ from ftplib import FTP
 import logging
 logger = logging.getLogger(__name__)
 
-from soft_parser import parse
-from isamp_parser import get_isamp
-
-from utils import pretty_usage, ugly_usage
+from rsem_pipeline.parsers.soft_parser import parse
+from rsem_pipeline.parsers.isamp_parser import get_isamp
+from rsem_pipeline.utils.misc import pretty_usage, ugly_usage
 
 # about generating samples from soft and isamp inputs
 def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
