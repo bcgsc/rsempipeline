@@ -25,15 +25,14 @@ remote cluster and do rsem analysis there. transferred GSMs will be saved to
 # INSTALLATION:
 
 required softwares,
-ascp, wget, fastq-dump
+python-2.7, virtualenv, pip, ascp, wget, fastq-dump
 
-git clone `git@github.com:bcgsc/rsem_pipeline.git`
-
-cd rsem_pipeline
-virtualenv venv
-. venv/bin/activate
-pip install -r requirements.txt
-
+```
+$cd rsem_pipeline
+$virtualenv venv
+$. venv/bin/activate
+$pip install git+https://github.com/bcgsc/rsem_pipeline.git@setuptools#egg=rsem_pipeline
+```
 
 # Preprocessing Steps:
 
