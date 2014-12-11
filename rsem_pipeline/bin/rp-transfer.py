@@ -20,10 +20,10 @@ import logging.config
 import paramiko
 from jinja2 import Template
 
-from args_parser import parse_args_for_rsem_transfer
-from utils import execute_log_stdout_stderr, lockit, is_empty_dir, \
-    pretty_usage, ugly_usage
-import utils_pre_pipeline_run as UP
+import rsem_pipeline.utils.pre_pipeline_run as PPR
+from rsem_pipeline.parsers.args_parser import parse_args_for_rsem_transfer
+from rsem_pipeline.utils.misc import (
+    execute_log_stdout_stderr, lockit, is_empty_dir, pretty_usage, ugly_usage)
 
 sys.stdout.flush()          #flush print outputs to screen
 
@@ -146,7 +146,7 @@ def est_rsem_usage(gsm_dir):
 
     # estimate the size of uncompressed fastq
     # res = fq_gz_size / (1 - gzip_compression_ratio)
-    res = UP.est_proc_usage(gsm_dir)
+    res = PPR.est_proc_usage(gsm_dir)
     # overestimate
     res = res * fastq2usage_ratio
     return res
@@ -230,8 +230,8 @@ def find_gsms_to_transfer(samples, l_top_outdir, r_free_to_use):
             logger.debug('{0}: already transferred'.format(gsm_id))
             continue
 
-        if not UP.processed(gsm.outdir):
-            # debug info will be logged by UP.processed
+        if not PPR.processed(gsm.outdir):
+            # debug info will be logged by PPR.processed
             continue
 
         rsem_usage = est_rsem_usage(gsm.outdir)
@@ -301,9 +301,9 @@ def main():
     # gsms_transfer_record
     gsms_transfer_record = os.path.join(l_top_outdir, 'transferred_GSMs.txt')
     gsms_transferred = get_gsms_transferred(gsms_transfer_record)
-    samples = UP.gen_samples_from_soft_and_isamp(
+    samples = PPR.gen_samples_from_soft_and_isamp(
         options.soft_files, options.isamp, config)
-    UP.init_sample_outdirs(samples, config['LOCAL_TOP_OUTDIR'])
+    PPR.init_sample_outdirs(samples, config['LOCAL_TOP_OUTDIR'])
     samples = [_ for _  in samples
                if _.name not in map(os.path.basename, gsms_transferred)]
 

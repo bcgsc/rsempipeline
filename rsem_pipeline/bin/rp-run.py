@@ -17,12 +17,11 @@ import ruffus as R
 
 from jinja2 import Environment, FileSystemLoader
 
-import utils as U
-
-from args_parser import parse_args_for_rsem_pipeline
-import utils_pre_pipeline_run as UP
-from utils_download import gen_orig_params
-from utils_rsem import gen_fastq_gz_input
+from rsem_pipeline.utils import misc
+from rsem_pipeline.utils import pre_pipeline_run as PPR
+from rsem_pipeline.utils.download import gen_orig_params
+from rsem_pipeline.utils.rsem import gen_fastq_gz_input
+from rsem_pipeline.parsers.args_parser import parse_args_for_rsem_pipeline
 
 PATH_RE = r'(.*)/(?P<GSE>GSE\d+)/(?P<species>\S+)/(?P<GSM>GSM\d+)'
 
@@ -37,7 +36,7 @@ if not os.path.exists('log'):
 logging.config.fileConfig(
     os.path.join(os.path.dirname(__file__), 'rsem_pipeline.logging.config'))
 
-samples = UP.gen_samples_from_soft_and_isamp(
+samples = PPR.gen_samples_from_soft_and_isamp(
     options.soft_files, options.isamp, config)
 
 env = Environment(loader=FileSystemLoader([
@@ -54,17 +53,17 @@ logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
 
 LOCKER_PATTERN = os.path.join(config['LOCAL_TOP_OUTDIR'], '.rsem_pipeline')
 
-@U.lockit(LOCKER_PATTERN)
+@misc.lockit(LOCKER_PATTERN)
 def prepare_pipeline_run():
     logger.info('Preparing sample outdirs')
-    UP.init_sample_outdirs(samples, config['LOCAL_TOP_OUTDIR'])
+    PPR.init_sample_outdirs(samples, config['LOCAL_TOP_OUTDIR'])
     logger.info('Fetching sras info')
-    UP.fetch_sras_info(samples, options.recreate_sras_info)
+    PPR.fetch_sras_info(samples, options.recreate_sras_info)
     logger.info('Selecting samples to process based their usages, '
                 'available disk size and parameters specified '
 
                 'in {0}'.format(options.config_file))
-    return UP.select_samples_to_process(samples, config, options)
+    return PPR.select_samples_to_process(samples, config, options)
 samples = prepare_pipeline_run()
 
 ##################################end of main##################################
@@ -75,7 +74,7 @@ samples = prepare_pipeline_run()
 #     processing
 #     """
 #     with logger_mutex:
-#         returncode = U.execute(cmd, msg_id, flag_file, debug)
+#         returncode = misc.execute(cmd, msg_id, flag_file, debug)
 #     return returncode
 
 
@@ -98,7 +97,7 @@ def originate_params():
 @R.files(originate_params)
 def download(_, outputs, sample):
     """inputs (_) is None"""
-    msg_id = U.gen_sample_msg_id(sample)
+    msg_id = misc.gen_sample_msg_id(sample)
     # e.g. sra
     # test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602557/SRX029242/SRR070177/SRR070177.sra
     sra, flag_file = outputs    # the others are sra files
@@ -121,14 +120,14 @@ def download(_, outputs, sample):
     # anonftp@ftp-trace.ncbi.nlm.nih.gov:{url_path} {output_dir}
     cmd = config['CMD_ASCP'].format(
         log_dir=sra_outdir, url_path=sra_url_path, output_dir=sra_outdir)
-    returncode = U.execute(cmd, msg_id, flag_file, options.debug)
+    returncode = misc.execute(cmd, msg_id, flag_file, options.debug)
     if returncode != 0 or returncode is None:
         # try wget
         # cmd template looks like this:
         # wget ftp://ftp-trace.ncbi.nlm.nih.gov{url_path} -P {output_dir} -N
         cmd = config['CMD_WGET'].format(
             url_path=sra_url_path, output_dir=sra_outdir)
-        U.execute(cmd, msg_id, flag_file, options.debug)
+        misc.execute(cmd, msg_id, flag_file, options.debug)
 
                
 @R.subdivide(
@@ -150,7 +149,7 @@ def sra2fastq(inputs, outputs):
     flag_file = outputs[-1]
     outdir = os.path.dirname(os.path.dirname(os.path.dirname(sra)))
     cmd = config['CMD_FASTQ_DUMP'].format(output_dir=outdir, accession=sra)
-    U.execute_log_stdout_stderr(cmd, flag_file=flag_file, debug=options.debug)
+    misc.execute_log_stdout_stderr(cmd, flag_file=flag_file, debug=options.debug)
 
 
 @R.collate(
@@ -172,7 +171,7 @@ def gen_qsub_script(inputs, outputs):
     gsm = res.group('GSM')
     reference_name = config['REMOTE_REFERENCE_NAMES'][species]
     sample_name = '{gsm}'.format(gsm=gsm)
-    n_jobs = U.decide_num_jobs(outdir, options.j_rsem)
+    n_jobs = misc.decide_num_jobs(outdir, options.j_rsem)
 
     qsub_script = os.path.join(outdir, '0_submit.sh')
     template = env.get_template(options.qsub_template)
@@ -234,7 +233,7 @@ def rsem(inputs, outputs):
     gsm = res.group('GSM')
     reference_name = config['LOCAL_REFERENCE_NAMES'][species]
     sample_name = '{outdir}/{gsm}'.format(**locals())
-    n_jobs = U.decide_num_jobs(outdir, options.j_rsem)
+    n_jobs = misc.decide_num_jobs(outdir, options.j_rsem)
 
     flag_file = outputs[-1]
     cmd = config['CMD_RSEM'].format(
@@ -243,7 +242,7 @@ def rsem(inputs, outputs):
         reference_name=reference_name,
         sample_name=sample_name,
         output_dir=outdir)
-    U.execute_log_stdout_stderr(cmd, flag_file=flag_file, debug=options.debug)
+    misc.execute_log_stdout_stderr(cmd, flag_file=flag_file, debug=options.debug)
 
 
 if __name__ == "__main__":
@@ -256,7 +255,7 @@ if __name__ == "__main__":
         if 'gen_qsub_script' in options.target_tasks:
             if not options.qsub_template:
                 raise IOError('-t/--qsub_template required when running gen_qsub_script')
-        pipeline_run = U.lockit(LOCKER_PATTERN)(R.pipeline_run)
+        pipeline_run = misc.lockit(LOCKER_PATTERN)(R.pipeline_run)
         pipeline_run(
             logger=logger,
             target_tasks=options.target_tasks,
