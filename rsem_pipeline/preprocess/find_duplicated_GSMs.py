@@ -7,12 +7,10 @@ Please remove duplicates mannually (if practical) and save the file to a new
 GSE_GSM.csv file
 """
 
-import argparse
+import sys
+from .utils import read
 
-from utils import read
-
-def main():
-    options = parse_args()
+def main(options):
     input_csv = options.input_csv
 
     flag = True
@@ -30,15 +28,4 @@ def main():
         print 'No duplication detected within any GSE. :)'
     else:
         print 'please check the duplicated GSMs. :('
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='detect duplicated GSMs in GSE_GSM.csv')
-    parser.add_argument(
-        '-f', '--input_csv', type=str,
-        help='input GSE_GSM.csv, check check example_GSE_GSM.csv for format ')
-    options = parser.parse_args()
-    return options
-
-
-if __name__ == "__main__":
-    main()
+        sys.exit(1)

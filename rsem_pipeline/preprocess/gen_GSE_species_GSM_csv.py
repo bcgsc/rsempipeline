@@ -17,7 +17,7 @@ import Queue
 from bs4 import BeautifulSoup
 import requests
 
-from utils import read
+from .utils import read
 
 def mkdir(dir_):
     if not os.path.exists(dir_):
@@ -85,23 +85,22 @@ def backup_file(f):
         print "BACKUP FINISHED"
 
 
-def main():
+def main(options):
     """
     :param n_threads: number of threads to run simultaneously
 
-    :param out_dir: the directory where all outputs are to located, default to
+    :param outdir: the directory where all outputs are to located, default to
     the directory where input_csv is located
 
     """
-    options = parse_args()
     input_csv = options.input_csv
     n_threads = options.nt
-    out_dir = options.out_dir
+    outdir = options.outdir
 
-    if out_dir is None:
-        out_dir = os.path.dirname(input_csv)
+    if outdir is None:
+        outdir = os.path.dirname(input_csv)
 
-    out_html_dir = os.path.join(out_dir, 'html')
+    out_html_dir = os.path.join(outdir, 'html')
     mkdir(out_html_dir)
 
     # Sometimes GSM data could be private, so no species information will be
@@ -131,31 +130,14 @@ def main():
     queue.join()
 
     # write output
-    out_csv = os.path.join(out_dir, 'GSE_species_GSM.csv')
+    out_csv = os.path.join(outdir, 'GSE_species_GSM.csv')
     backup_file(out_csv)
     write_csv(res, out_csv)
 
     if res_no_species:
-        no_species_csv = os.path.join(out_dir, 'GSE_no_species_GSM.csv')
+        no_species_csv = os.path.join(outdir, 'GSE_no_species_GSM.csv')
         backup_file(no_species_csv)
         write_csv(res_no_species, no_species_csv)
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='generate GSE_species_GSM.csv')
-    parser.add_argument(
-        '-f', '--input_csv', type=str,
-        help='input GSE_GSM.csv, check check example_GSE_GSM.csv for format ')
-    parser.add_argument(
-        '--nt', type=int, default=1,
-        help='number of threads')
-    parser.add_argument(
-        '--out_dir', type=str,
-        help=('directory for output default to where GSE_GSM.csv is located, '
-              'default to be the location of input_csv.'))
-    options = parser.parse_args()
-    return options
-
 
 if __name__ == "__main__":
     main()

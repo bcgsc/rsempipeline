@@ -101,19 +101,18 @@ class SOFTDownloader(object):
         return soft_subset
 
 
-def main():
+def main(options):
     """
     @param input_csv: e.g. GSE_species_GSM.csv
     """
-    options = parse_args()
     input_csv = options.input_csv
-    out_dir = options.out_dir
+    outdir = options.outdir
 
-    if out_dir is None:
-        out_dir = os.path.dirname(input_csv)
+    if outdir is None:
+        outdir = os.path.dirname(input_csv)
 
-    out_dir = os.path.dirname(input_csv)
-    soft_dir = os.path.join(out_dir, 'soft')
+    outdir = os.path.dirname(input_csv)
+    soft_dir = os.path.join(outdir, 'soft')
     if not os.path.exists(soft_dir):
         os.mkdir(soft_dir)
 
@@ -123,19 +122,6 @@ def main():
         if current_gse is None or gse != current_gse:
             ftp.gen_soft_subset(gse, soft_dir)
             current_gse = gse
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='detect duplicated GSMs in GSE_GSM.csv')
-    parser.add_argument(
-        '-f', '--input_csv', type=str, required=True,
-        help='input GSE_GSM.csv, check check example_GSE_GSM.csv for format ')
-    parser.add_argument(
-        '--out_dir', type=str,
-        help=('directory for output default to where GSE_GSM.csv is located, '
-              'default to the location of --input_csv'))
-    options = parser.parse_args()
-    return options
 
 
 if __name__ == '__main__':
