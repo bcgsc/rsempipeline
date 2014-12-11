@@ -245,7 +245,7 @@ def rsem(inputs, outputs):
     misc.execute_log_stdout_stderr(cmd, flag_file=flag_file, debug=options.debug)
 
 
-if __name__ == "__main__":
+def main():
     if samples is None:
         pass                    # meaning it's locked.
     elif samples:
@@ -268,3 +268,7 @@ if __name__ == "__main__":
         )
     else:                       # meaning if samples != []
         logger.info('Cannot find a GSM that fits the disk usage rule')
+
+
+if __name__ == "__main__":
+    main()
