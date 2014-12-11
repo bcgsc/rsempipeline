@@ -20,10 +20,11 @@ import logging.config
 import paramiko
 from jinja2 import Template
 
-import rsem_pipeline.utils.pre_pipeline_run as PPR
-from rsem_pipeline.parsers.args_parser import parse_args_for_rsem_transfer
+from rsem_pipeline.utils import pre_pipeline_run as PPR
 from rsem_pipeline.utils.misc import (
-    execute_log_stdout_stderr, lockit, is_empty_dir, pretty_usage, ugly_usage)
+    execute_log_stdout_stderr, is_empty_dir, lockit, pretty_usage, ugly_usage)
+from rsem_pipeline.conf.settings import RP_TRANSFER_LOGGING_CONFIG
+from rsem_pipeline.parsers.args_parser import parse_args_for_rsem_transfer
 
 sys.stdout.flush()          #flush print outputs to screen
 
@@ -36,8 +37,7 @@ except IOError, _:
     print 'configuration file: {0} not found'.format(options.config_file)
     sys.exit(1)
 
-logging.config.fileConfig(os.path.join(
-    os.path.dirname(__file__), 'rsem_transfer.logging.config'))
+logging.config.fileConfig(RP_TRANSFER_LOGGING_CONFIG)
 
 logger = logging.getLogger('rsem_transfer')
 
@@ -290,7 +290,7 @@ def write(transfer_script, template, **params):
         opf.write(template.render(**params))
 
 
-@lockit(os.path.join(config['LOCAL_TOP_OUTDIR'], '.rsem_transfer'))
+@lockit(os.path.join(config['LOCAL_TOP_OUTDIR'], '.rp-transfer'))
 def main():
     """the main function"""
     l_top_outdir = config['LOCAL_TOP_OUTDIR']

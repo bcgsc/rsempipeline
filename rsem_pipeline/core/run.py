@@ -21,6 +21,7 @@ from rsem_pipeline.utils import misc
 from rsem_pipeline.utils import pre_pipeline_run as PPR
 from rsem_pipeline.utils.download import gen_orig_params
 from rsem_pipeline.utils.rsem import gen_fastq_gz_input
+from rsem_pipeline.conf.settings import RP_RUN_LOGGING_CONFIG
 from rsem_pipeline.parsers.args_parser import parse_args_for_rsem_pipeline
 
 PATH_RE = r'(.*)/(?P<GSE>GSE\d+)/(?P<species>\S+)/(?P<GSM>GSM\d+)'
@@ -31,10 +32,10 @@ PATH_RE = r'(.*)/(?P<GSE>GSE\d+)/(?P<species>\S+)/(?P<GSM>GSM\d+)'
 options = parse_args_for_rsem_pipeline()
 with open(options.config_file) as inf:
     config = yaml.load(inf.read())
+
 if not os.path.exists('log'):
     os.mkdir('log')
-logging.config.fileConfig(
-    os.path.join(os.path.dirname(__file__), 'rsem_pipeline.logging.config'))
+logging.config.fileConfig(RP_RUN_LOGGING_CONFIG)
 
 samples = PPR.gen_samples_from_soft_and_isamp(
     options.soft_files, options.isamp, config)
@@ -48,10 +49,9 @@ env = Environment(loader=FileSystemLoader([
 logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
     R.proxy_logger.setup_std_shared_logger,
     "rsem_pipeline",
-    {"config_file": os.path.join(os.path.dirname(__file__),
-                                 'rsem_pipeline.logging.config')})
+    {"config_file": os.path.join(RP_RUN_LOGGING_CONFIG)})
 
-LOCKER_PATTERN = os.path.join(config['LOCAL_TOP_OUTDIR'], '.rsem_pipeline')
+LOCKER_PATTERN = os.path.join(config['LOCAL_TOP_OUTDIR'], '.rp-run')
 
 @misc.lockit(LOCKER_PATTERN)
 def prepare_pipeline_run():
