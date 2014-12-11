@@ -19,8 +19,6 @@ setup(
         'Programming Language :: Python :: 2.7',
     ],
 
-    scripts=['rsem_pipeline/bin/rp-run.py',
-             'rsem_pipeline/bin/rp-transfer.py'],
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
     # packages=setuptools.find_packages(exclude=['venv*', 'fq_gz_temp_stats', 'non-vc']),
@@ -36,14 +34,17 @@ setup(
         'requests>=2.3.0',
     ],
 
+    scripts=['rsem_pipeline/bin/rp-run.py',
+             'rsem_pipeline/bin/rp-transfer.py'],
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
-    # entry_points={
-    #     'console_scripts': [
-    #         'sample=sample:main',
-    #     ],
-    # },
+    entry_points={
+        'console_scripts': [
+            'rp-run = rsem_pipeline.core.run:main',
+            'rp-transfer = rsem_pipeline.core.transfer:main',
+        ],
+    },
 
 
     # metadata for upload to PyPI
