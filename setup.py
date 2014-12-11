@@ -34,13 +34,16 @@ setup(
         'requests>=2.3.0',
     ],
 
-    scripts=['rsem_pipeline/bin/rp-run.py',
-             'rsem_pipeline/bin/rp-transfer.py'],
+    scripts=[
+        'rsem_pipeline/bin/rp-preprocess.py',
+        'rsem_pipeline/bin/rp-run.py',
+        'rsem_pipeline/bin/rp-transfer.py'],
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         'console_scripts': [
+            'rp-preprocess = rsem_pipeline.preprocess.preprocess:main',
             'rp-run = rsem_pipeline.core.run:main',
             'rp-transfer = rsem_pipeline.core.transfer:main',
         ],
