@@ -1,7 +1,7 @@
 include README*
 include MANIFEST.in
 include requirements.txt
-recursive-include preprocessing_tools *
+recursive-include preprocessing_scripts *
 recursive-include rsem_pipeline/bin *
 recursive-include rsem_pipeline/conf *
 recursive-include rsem_pipeline/templates *
