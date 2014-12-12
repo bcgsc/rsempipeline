@@ -30,6 +30,5 @@ On remote cluster
 Please install the following packages
 
 - `bowtie <http://bowtie-bio.sourceforge.net/index.shtml>`_ (dependency of
-  RSEM) and `RSEM <http://deweylab.biostat.wisc.edu/rsem/>`_ 
-
-
+  RSEM)
+- `RSEM <http://deweylab.biostat.wisc.edu/rsem/>`_ 
