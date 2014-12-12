@@ -22,10 +22,7 @@ Then install the pipeline,
     $ pip install virtualenv
     $ virtualenv <DIR>
     $ source <DIR>/bin/activate
-    $ # current
-    $ pip install pip install git+https://github.com/bcgsc/rsem-pipeline.git@setuptools#egg=rsem-pipeline
-    $ # future
-    $ # pip install pip install git+https://github.com/bcgsc/rsem-pipeline.git#egg=rsem-pipeline
+    $ pip install pip install git+https://github.com/bcgsc/rsem-pipeline.git#egg=rsem-pipeline
 
 On remote cluster
 ^^^^^^^^^^^^^^^^^^^^
