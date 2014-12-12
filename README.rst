@@ -66,5 +66,5 @@ command ``rp-transfer``.
 For installation and usage instructions, please refer to ``INSTALL.rst`` and
 ``USAGE.rst``.
 
-If you have any have found any bugs, questions, comments, please contact Zhuyi
-Xue (zxue@bcgsc.ca).
+If you have found any bugs, questions, comments, please contact Zhuyi Xue
+(zxue@bcgsc.ca).
