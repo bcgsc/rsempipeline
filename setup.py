@@ -35,7 +35,7 @@ setup(
     ],
 
     # scripts=[
-    #     'rsem_pipeline/bin/rp-preprocess.py',
+    #     'rsem_pipeline/bin/rp-prep.py',
     #     'rsem_pipeline/bin/rp-run.py',
     #     'rsem_pipeline/bin/rp-transfer.py'],
 
@@ -44,7 +44,7 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         'console_scripts': [
-            'rp-preprocess = rsem_pipeline.preprocess.preprocess:main',
+            'rp-prep = rsem_pipeline.preprocess.prep:main',
             'rp-run = rsem_pipeline.core.run:main',
             'rp-transfer = rsem_pipeline.core.transfer:main',
         ],
