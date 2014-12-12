@@ -1,4 +1,6 @@
-include README*
+include README.rst
+include INSTALL.rst
+include USAGE.rst
 include MANIFEST.in
 include requirements.txt
 recursive-include rsem_pipeline/bin *
