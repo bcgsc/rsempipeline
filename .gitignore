@@ -9,3 +9,8 @@ non-vc
 dist
 fq_gz_temp_stats
 *egg-info
+
+.coverage
+coverage.xml
+nosetests.xml
+pylint.out
