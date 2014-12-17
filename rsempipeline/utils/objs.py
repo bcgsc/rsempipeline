@@ -1,4 +1,4 @@
-"""Lists objects used in rsem_pipeline.py"""
+"""Lists objects used in rsempipeline.py"""
 
 import os
 from .misc import gen_sample_msg_id

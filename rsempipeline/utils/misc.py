@@ -164,7 +164,7 @@ def gen_sample_msg_id(sample):
 #         sample.name, sample.index, series.num_passed_samples(),
 #         series.name)
 
-# used a better version of execute as defined in rsem_pipeline.py --2014-08-13
+# used a better version of execute as defined in rsempipeline.py --2014-08-13
 def execute(cmd, msg_id='', flag_file=None, debug=False):
     """
     This execute doesn't log all stdout, which could look funny, especially

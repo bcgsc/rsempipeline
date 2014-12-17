@@ -1,10 +1,10 @@
-rsem-pipeline
+rsempipeline
 ========================
 
 (The pipeline is currently being packaged and buggy, and will be fixed in 2015,
 Jan).
 
-rsem-pipeline is a pipeline for analyzing GEO data using `RSEM
+rsempipeline is a pipeline for analyzing GEO data using `RSEM
 <http://deweylab.biostat.wisc.edu/rsem/>`_. Typical analysis process is as
 follows:
 

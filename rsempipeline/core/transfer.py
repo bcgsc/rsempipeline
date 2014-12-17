@@ -20,11 +20,11 @@ import logging.config
 import paramiko
 from jinja2 import Template
 
-from rsem_pipeline.utils import pre_pipeline_run as PPR
-from rsem_pipeline.utils.misc import (
+from rsempipeline.utils import pre_pipeline_run as PPR
+from rsempipeline.utils.misc import (
     execute_log_stdout_stderr, is_empty_dir, lockit, pretty_usage, ugly_usage)
-from rsem_pipeline.conf.settings import RP_TRANSFER_LOGGING_CONFIG
-from rsem_pipeline.parsers.args_parser import parse_args_for_rsem_transfer
+from rsempipeline.conf.settings import RP_TRANSFER_LOGGING_CONFIG
+from rsempipeline.parsers.args_parser import parse_args_for_rsem_transfer
 
 sys.stdout.flush()          #flush print outputs to screen
 
@@ -296,7 +296,7 @@ def main():
     l_top_outdir = config['LOCAL_TOP_OUTDIR']
     r_top_outdir = config['REMOTE_TOP_OUTDIR']
     r_host, r_username = config['REMOTE_HOST'], config['USERNAME']
-    # different from processing in rsem_pipeline.py, where the completion is
+    # different from processing in rsempipeline.py, where the completion is
     # marked by .COMPLETE flags, but by writting the completed GSMs to
     # gsms_transfer_record
     gsms_transfer_record = os.path.join(l_top_outdir, 'transferred_GSMs.txt')

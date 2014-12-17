@@ -17,19 +17,19 @@ import ruffus as R
 
 from jinja2 import Environment, FileSystemLoader
 
-from rsem_pipeline.utils import misc
-from rsem_pipeline.utils import pre_pipeline_run as PPR
-from rsem_pipeline.utils.download import gen_orig_params
-from rsem_pipeline.utils.rsem import gen_fastq_gz_input
-from rsem_pipeline.conf.settings import RP_RUN_LOGGING_CONFIG
-from rsem_pipeline.parsers.args_parser import parse_args_for_rsem_pipeline
+from rsempipeline.utils import misc
+from rsempipeline.utils import pre_pipeline_run as PPR
+from rsempipeline.utils.download import gen_orig_params
+from rsempipeline.utils.rsem import gen_fastq_gz_input
+from rsempipeline.conf.settings import RP_RUN_LOGGING_CONFIG
+from rsempipeline.parsers.args_parser import parse_args_for_rsempipeline
 
 PATH_RE = r'(.*)/(?P<GSE>GSE\d+)/(?P<species>\S+)/(?P<GSM>GSM\d+)'
 
 # because of ruffus, have to use some global variables
 # global variables: options, config, samples, env, logger, logger_mutex
 # minimize the number of global variables as much as possible
-options = parse_args_for_rsem_pipeline()
+options = parse_args_for_rsempipeline()
 with open(options.config_file) as inf:
     config = yaml.load(inf.read())
 
@@ -48,7 +48,7 @@ env = Environment(loader=FileSystemLoader([
 
 logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
     R.proxy_logger.setup_std_shared_logger,
-    "rsem_pipeline",
+    "rsempipeline",
     {"config_file": os.path.join(RP_RUN_LOGGING_CONFIG)})
 
 LOCKER_PATTERN = os.path.join(config['LOCAL_TOP_OUTDIR'], '.rp-run')

@@ -6,7 +6,7 @@ gets run, e.g. Generating a list of Sample instances based on inputs,
 initiating directories for all samples, downloading sras_info.yaml files and
 selecting a subset of Sample instances for further process based on free-space
 availabilities (a combined rule based on availale free space on the file system
-and parameters from rsem_pipeline_config.yaml
+and parameters from rsempipeline_config.yaml
 """
 
 import os
@@ -19,9 +19,9 @@ from ftplib import FTP
 import logging
 logger = logging.getLogger(__name__)
 
-from rsem_pipeline.parsers.soft_parser import parse
-from rsem_pipeline.parsers.isamp_parser import get_isamp
-from rsem_pipeline.utils.misc import pretty_usage, ugly_usage
+from rsempipeline.parsers.soft_parser import parse
+from rsempipeline.parsers.isamp_parser import get_isamp
+from rsempipeline.utils.misc import pretty_usage, ugly_usage
 
 # about generating samples from soft and isamp inputs
 def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
@@ -182,7 +182,7 @@ def get_ftp_handler(sample):
 def select_samples_to_process(samples, config, options):
     """
     Select a subset of samples based on a combined rule based on availale free
-    space on the file system and parameters from rsem_pipeline_config.yaml
+    space on the file system and parameters from rsempipeline_config.yaml
     """
 
     l_top_outdir = config['LOCAL_TOP_OUTDIR']
@@ -326,7 +326,7 @@ def get_current_local_usage(l_top_outdir):
 def get_local_free_disk_space(cmd_df):
     """
     Get the local free disk space with cmd_df specified in the
-    rsem_pipeline_config.yaml
+    rsempipeline_config.yaml
     """
     proc = subprocess.Popen(cmd_df, stdout=subprocess.PIPE, shell=True)
     output = proc.communicate()[0]

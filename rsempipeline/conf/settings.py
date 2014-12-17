@@ -1,7 +1,7 @@
 import os
 
 PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-BASE_DIR = os.path.join(PROJECT_DIR, 'rsem_pipeline')
+BASE_DIR = os.path.join(PROJECT_DIR, 'rsempipeline')
 CONF_DIR = os.path.join(BASE_DIR, 'conf')
 SHARE_DIR = os.path.join(CONF_DIR, 'share')
 

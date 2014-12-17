@@ -3,7 +3,7 @@ import argparse
 
 from . import find_duplicated_GSMs, gen_GSE_species_GSM_csv, download_soft
 
-from rsem_pipeline.conf.settings import SHARE_DIR
+from rsempipeline.conf.settings import SHARE_DIR
 
 INPUT_FILE = 'GSE_GSM.csv'
 OUTPUT_FILE = 'GSE_species_GSM.csv'

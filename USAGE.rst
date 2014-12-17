@@ -69,7 +69,7 @@ Pipeline Setup:
 ------------------------
 
 1. Prepare the ``rp_config.yml``, an example cofig file can be found in
-   ``rsem_pipeline/conf/share``.
+   ``rsempipeline/conf/share``.
 
 
 2. Automate the pipeline run with two cron jobs (``rp-run``, ``rp-transfer``,

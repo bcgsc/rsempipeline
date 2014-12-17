@@ -3,7 +3,7 @@ include INSTALL.rst
 include USAGE.rst
 include MANIFEST.in
 include requirements.txt
-recursive-include rsem_pipeline/bin *
-recursive-include rsem_pipeline/conf *
-recursive-include rsem_pipeline/templates *
+recursive-include rsempipeline/bin *
+recursive-include rsempipeline/conf *
+recursive-include rsempipeline/templates *
 recursive-exclude * *.py[co]

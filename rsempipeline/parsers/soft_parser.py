@@ -10,7 +10,7 @@ import re
 import logging
 logger = logging.getLogger('soft_parser')
 
-from rsem_pipeline.utils.objs import Series, Sample
+from rsempipeline.utils.objs import Series, Sample
 
 def update(current_sample, label, value, interested_organisms):
     """

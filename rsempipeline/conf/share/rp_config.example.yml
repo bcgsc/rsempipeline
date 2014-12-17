@@ -1,6 +1,6 @@
 # All configurations are required
 
-############Common to both rsem_pipeline.py & rsem_cron_transfer.py############
+############Common to both rsempipeline.py & rsem_cron_transfer.py############
 REMOTE_HOST: <remote hostname, e.g. genesis.bcgsc.ca>
 USERNAME: <username>
 
@@ -30,7 +30,7 @@ REMOTE_CMD_DF: df -k -P /path
 LOCAL_CMD_DF: df -k -P /projects/btl2
 
 
-###########################rsem_pipeline.py specific###########################
+###########################rsempipeline.py specific###########################
 # -Q Fair transfer policy, -T Disable encryption
 # -L log dir
 CMD_ASCP: >-

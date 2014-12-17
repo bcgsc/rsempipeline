@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 
 setup(
-    name='rsem-pipeline',
+    name='rsempipeline',
     version='1.0',
 
     zip_safe=True,
@@ -35,18 +35,18 @@ setup(
     ],
 
     # scripts=[
-    #     'rsem_pipeline/bin/rp-prep.py',
-    #     'rsem_pipeline/bin/rp-run.py',
-    #     'rsem_pipeline/bin/rp-transfer.py'],
+    #     'rsempipeline/bin/rp-prep.py',
+    #     'rsempipeline/bin/rp-run.py',
+    #     'rsempipeline/bin/rp-transfer.py'],
 
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         'console_scripts': [
-            'rp-prep = rsem_pipeline.preprocess.prep:main',
-            'rp-run = rsem_pipeline.core.run:main',
-            'rp-transfer = rsem_pipeline.core.transfer:main',
+            'rp-prep = rsempipeline.preprocess.prep:main',
+            'rp-run = rsempipeline.core.run:main',
+            'rp-transfer = rsempipeline.core.transfer:main',
         ],
     },
 
@@ -58,7 +58,7 @@ setup(
     long_description="rsem as in http://deweylab.biostat.wisc.edu/rsem/README.html (more to be written)",
     license="GPLv3",
     keywords="GEO rsem pipeline",
-    url="https://github.com/bcgsc/rsem_pipeline.git",
+    url="https://github.com/bcgsc/rsempipeline.git",
 
     include_package_data=True,
 )
