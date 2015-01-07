@@ -34,21 +34,24 @@ setup(
         'requests>=2.3.0',
     ],
 
-    # scripts=[
-    #     'rsempipeline/bin/rp-prep.py',
-    #     'rsempipeline/bin/rp-run.py',
-    #     'rsempipeline/bin/rp-transfer.py'],
+    scripts=[
+        'rsempipeline/bin/rp-prep',
+        'rsempipeline/bin/rp-run',
+        'rsempipeline/bin/rp-transfer'],
 
-    # To provide executable scripts, use entry points in preference to the
-    # "scripts" keyword. Entry points provide cross-platform support and allow
-    # pip to create the appropriate form of executable for the target platform.
-    entry_points={
-        'console_scripts': [
-            'rp-prep = rsempipeline.preprocess.prep:main',
-            'rp-run = rsempipeline.core.run:main',
-            'rp-transfer = rsempipeline.core.transfer:main',
-        ],
-    },
+    # using entry_points would cause problem for ruffus to recoganize decorated
+    # tasks
+
+    # # To provide executable scripts, use entry points in preference to the
+    # # "scripts" keyword. Entry points provide cross-platform support and allow
+    # # pip to create the appropriate form of executable for the target platform.
+    # entry_points={
+    #     'console_scripts': [
+    #         'rp-prep = rsempipeline.preprocess.prep:main',
+    #         'rp-run = rsempipeline.core.run:main',
+    #         'rp-transfer = rsempipeline.core.transfer:main',
+    #     ],
+    # },
 
 
     # metadata for upload to PyPI
