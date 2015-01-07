@@ -22,7 +22,7 @@ def add_common_arguments(parser):
               'it assumes it\'s a data string'))
 
 
-def parse_args_for_rsempipeline():
+def parse_args_for_rp_run():
     """parse the command line arguments"""
     parser = R.cmdline.get_argparse(
         description="rsempipeline",
@@ -40,9 +40,9 @@ def parse_args_for_rsempipeline():
         help=('used when -T is gen_qsub_script, '
               'see a list of templates in templates directory'))
 
-    config_examp = os.path.join(base_dir, 'rsempipeline_config.yaml.example')
+    config_examp = os.path.join(base_dir, 'rp_config.example.yml')
     parser.add_argument(
-        '-c', '--config_file', default='rsempipeline_config.yaml',
+        '-c', '--config_file', default='rp_config.yml',
         help=('a YAML configuration file, refer to {0} for an example.'.format(
             config_examp)))
 
@@ -65,7 +65,7 @@ def parse_args_for_rsempipeline():
     return args
 
 
-def parse_args_for_rsem_transfer():
+def parse_args_for_rp_transfer():
     """parse command line arguments and return options"""
     parser = argparse.ArgumentParser(
         description='rsem_cron_transfer.py',
