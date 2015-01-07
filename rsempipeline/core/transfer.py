@@ -11,7 +11,6 @@ and execute it
 import os
 import sys
 import re
-import glob
 import stat
 import yaml
 import datetime
@@ -21,15 +20,14 @@ import paramiko
 from jinja2 import Template
 
 from rsempipeline.utils import pre_pipeline_run as PPR
-from rsempipeline.utils.misc import (
-    execute_log_stdout_stderr, is_empty_dir, lockit, pretty_usage, ugly_usage)
+from rsempipeline.utils import misc 
 from rsempipeline.conf.settings import RP_TRANSFER_LOGGING_CONFIG
-from rsempipeline.parsers.args_parser import parse_args_for_rsem_transfer
+from rsempipeline.parsers.args_parser import parse_args_for_rp_transfer
 
-sys.stdout.flush()          #flush print outputs to screen
+sys.stdout.flush()              #flush print outputs to screen
 
 # global variables: options, config, logger
-options = parse_args_for_rsem_transfer()
+options = parse_args_for_rp_transfer()
 try:
     with open(options.config_file) as inf:
         config = yaml.load(inf.read())
@@ -39,8 +37,7 @@ except IOError, _:
 
 logging.config.fileConfig(RP_TRANSFER_LOGGING_CONFIG)
 
-logger = logging.getLogger('rsem_transfer')
-
+logger = logging.getLogger('rp_transfer')
 
 def sshexec(cmd, host, username, private_key_file='~/.ssh/id_rsa'):
     """
@@ -108,7 +105,7 @@ def est_current_remote_usage(remote, username, r_dir, l_dir):
         match = re.search(r'(GSM\d+$)', os.path.basename(dir_))
         if match:
             rsem_comp = os.path.join(dir_, 'rsem.COMPLETE')
-            if (not rsem_comp in output) and (not is_empty_dir(dir_, output)):
+            if (not rsem_comp in output) and (not misc.is_empty_dir(dir_, output)):
                 # only count the disk spaces used by those GSMs that are
                 # finished or processed successfully
                 gsm_dir = dir_.replace(r_dir, l_dir)
@@ -186,7 +183,7 @@ def select_samples_to_transfer(samples, l_top_outdir, r_top_outdir,
     r_free_space = get_remote_free_disk_space(
         config['REMOTE_CMD_DF'], r_host, r_username)
     logger.info(
-        'r_free_space: {0}: {1}'.format(r_host, pretty_usage(r_free_space)))
+        'r_free_space: {0}: {1}'.format(r_host, misc.pretty_usage(r_free_space)))
 
     # r_real_current_usage is just for giving an idea of real usage on remote,
     # this variable is not utilized by following calculations, but the
@@ -196,20 +193,20 @@ def select_samples_to_transfer(samples, l_top_outdir, r_top_outdir,
     r_real_current_usage = get_real_current_usage(
         r_host, r_username, r_top_outdir)
     logger.info('real current usage on {0} by {1}: {2}'.format(
-        r_host, r_top_outdir, pretty_usage(r_real_current_usage)))
+        r_host, r_top_outdir, misc.pretty_usage(r_real_current_usage)))
 
     r_est_current_usage = est_current_remote_usage(
         r_host, r_username, r_top_outdir, l_top_outdir)
     logger.info('estimated current usage (excluding samples with '
                 'rsem.COMPLETE) on {0} by {1}: {2}'.format(
-                    r_host, r_top_outdir, pretty_usage(r_est_current_usage)))
-    r_max_usage = min(ugly_usage(config['REMOTE_MAX_USAGE']), r_free_space)
-    logger.info('r_max_usage: {0}'.format(pretty_usage(r_max_usage)))
-    r_min_free = ugly_usage(config['REMOTE_MIN_FREE'])
-    logger.info('r_min_free: {0}'.format(pretty_usage(r_min_free)))
+                    r_host, r_top_outdir, misc.pretty_usage(r_est_current_usage)))
+    r_max_usage = min(misc.ugly_usage(config['REMOTE_MAX_USAGE']), r_free_space)
+    logger.info('r_max_usage: {0}'.format(misc.pretty_usage(r_max_usage)))
+    r_min_free = misc.ugly_usage(config['REMOTE_MIN_FREE'])
+    logger.info('r_min_free: {0}'.format(misc.pretty_usage(r_min_free)))
     r_free_to_use = min(r_max_usage - r_est_current_usage,
                         r_free_space - r_min_free)
-    logger.info('r_free_to_use: {0}'.format(pretty_usage(r_free_to_use)))
+    logger.info('r_free_to_use: {0}'.format(misc.pretty_usage(r_free_to_use)))
 
     gsms = find_gsms_to_transfer(samples, l_top_outdir, r_free_to_use)
     return gsms
@@ -239,11 +236,11 @@ def find_gsms_to_transfer(samples, l_top_outdir, r_free_to_use):
         if rsem_usage > r_free_to_use:
             logger.debug(
                 '{0} ({1}) doesn\'t fit current remote free_to_use ({2})'.format(
-                    gsm_id, pretty_usage(rsem_usage), pretty_usage(r_free_to_use)))
+                    gsm_id, misc.pretty_usage(rsem_usage), misc.pretty_usage(r_free_to_use)))
             continue
 
         logger.info('{0} ({1}) fit remote free_to_use ({2})'.format(
-            gsm_id, pretty_usage(rsem_usage), pretty_usage(r_free_to_use)))
+            gsm_id, misc.pretty_usage(rsem_usage), misc.pretty_usage(r_free_to_use)))
         r_free_to_use -= rsem_usage
         gsms_to_transfer.append(gsm)
 
@@ -290,7 +287,7 @@ def write(transfer_script, template, **params):
         opf.write(template.render(**params))
 
 
-@lockit(os.path.join(config['LOCAL_TOP_OUTDIR'], '.rp-transfer'))
+@misc.lockit(os.path.join(config['LOCAL_TOP_OUTDIR'], '.rp-transfer'))
 def main():
     """the main function"""
     l_top_outdir = config['LOCAL_TOP_OUTDIR']
@@ -323,7 +320,7 @@ def main():
         r_username, r_host, r_top_outdir)
 
     os.chmod(tf_script, stat.S_IRUSR | stat.S_IWUSR| stat.S_IXUSR)
-    rcode = execute_log_stdout_stderr(tf_script)
+    rcode = misc.execute_log_stdout_stderr(tf_script)
 
     if rcode == 0:
         append_transfer_record(gsms_tf_ids, gsms_transfer_record)
