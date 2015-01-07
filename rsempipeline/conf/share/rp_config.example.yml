@@ -1,36 +1,13 @@
 # All configurations are required
 
-############Common to both rsempipeline.py & rsem_cron_transfer.py############
+# REMOTE_ and LOCAL_ correspond to configurations for remote host and local
+# host, respecitvely
+
+############Used by rp-run & rp-transfer############
 REMOTE_HOST: <remote hostname, e.g. genesis.bcgsc.ca>
 USERNAME: <username>
 
-########################rsem_cron_transfer.py specific#########################
-# REMOTE_ and LOCAL_ correspond to configuration for remote host and local host
-
-# the consumed disk space remotely should not exceed REMOTE_MAX_USAGE (KB)
-REMOTE_MAX_USAGE: 1 TB
-LOCAL_MAX_USAGE: 50 GB
-
-# The ratio for estimating the usage by a particular GSM based on its size of
-# fastq.gz files. This ratio is a very rough estimation, further work is
-# underway to come up with a better to estimate the size of usage
-FASTQ2USAGE_RATIO: 5
-
-# if the remote disk space is less than REMOTE_MIN_FREE, no transfer happens
-REMOTE_MIN_FREE: 100 GB
-LOCAL_MIN_FREE: 10 GB
-
-# absolute path of top output directory on remote host
-REMOTE_TOP_OUTDIR: /remote/path/to/batchx
-# absolute path of top output directory on local host
-LOCAL_TOP_OUTDIR: /remote/path/to/batchx
-
-# command executed on remote host to get the free size of disk space
-REMOTE_CMD_DF: df -k -P /path
-LOCAL_CMD_DF: df -k -P /projects/btl2
-
-
-###########################rsempipeline.py specific###########################
+###########################Specific to rp-run###########################
 # -Q Fair transfer policy, -T Disable encryption
 # -L log dir
 CMD_ASCP: >-
@@ -43,24 +20,47 @@ CMD_ASCP: >-
   -l 300m 
   anonftp@ftp-trace.ncbi.nlm.nih.gov:{url_path} {output_dir}
 
+# a fallback solution is CMD_ASCP doesn't succeed
 CMD_WGET: >-
   wget ftp://ftp-trace.ncbi.nlm.nih.gov{url_path} -P {output_dir} -N
 
 CMD_FASTQ_DUMP: >-
   fastq-dump --minReadLen 25 --gzip --split-files --outdir {output_dir} {accession}
 
-# rsem version: 1.2.5
-CMD_RSEM: >-
-  rsem-calculate-expression
-  -p {n_jobs}
-  --time
-  --no-bam-output
-  --bowtie-chunkmbs 256
-  {fastq_gz_input}
-  {reference_name}
-  {sample_name}
-  1>{output_dir}/rsem.log
-  2>{output_dir}/align.stats
+# # rsem version: 1.2.5
+# CMD_RSEM: >-
+#   rsem-calculate-expression
+#   -p {n_jobs}
+#   --time
+#   --no-bam-output
+#   --bowtie-chunkmbs 256
+#   {fastq_gz_input}
+#   {reference_name}
+#   {sample_name}
+#   1>{output_dir}/rsem.log
+#   2>{output_dir}/align.stats
+
+########################Specific to rp-transfer#########################
+# the consumed disk space remotely should not exceed REMOTE_MAX_USAGE (KB)
+REMOTE_MAX_USAGE: 1 TB
+LOCAL_MAX_USAGE: 50 GB
+
+# if the remote disk space is less than REMOTE_MIN_FREE, no transfer happens
+REMOTE_MIN_FREE: 100 GB
+LOCAL_MIN_FREE: 10 GB
+
+# top output directory
+REMOTE_TOP_OUTDIR: /remote/path/to/batchx
+LOCAL_TOP_OUTDIR: /remote/path/to/batchx
+
+# commands to get the free size of disk space
+REMOTE_CMD_DF: df -k -P /remote/path
+LOCAL_CMD_DF: df -k -P /local/path
+
+# The ratio for estimating the usage by a particular GSM based on its size of
+# fastq.gz files. This ratio is a very rough estimation, further work is
+# underway to come up with a better to estimate the size of usage
+FASTQ2USAGE_RATIO: 5
 
 # used when parsing soft files
 INTERESTED_ORGANISMS: 
@@ -68,6 +68,7 @@ INTERESTED_ORGANISMS:
   - Mus musculus
   - Rattus norvegicus
 
+####################################GENERAL####################################
 # location of reference files produced by rsem-build-read-index on remote host
 REMOTE_REFERENCE_NAMES:
   homo_sapiens: /remote/path/to/rsem_reference/hg19/hg19_ensembl_72
