@@ -1,9 +1,11 @@
 import os
 import argparse
+import logging.config
 
-from . import find_duplicated_GSMs, gen_GSE_species_GSM_csv, download_soft
+from rsempipeline.conf.settings import SHARE_DIR, RP_PREP_LOGGING_CONFIG
+from . import find_dup, gen_csv, get_soft
 
-from rsempipeline.conf.settings import SHARE_DIR
+logging.config.fileConfig(RP_PREP_LOGGING_CONFIG)
 
 INPUT_FILE = 'GSE_GSM.csv'
 OUTPUT_FILE = 'GSE_species_GSM.csv'
@@ -24,7 +26,7 @@ def get_dummy_parser():
 def parse_args():
     parser = argparse.ArgumentParser(
         description=('To preprocess {0}, and generate {1} for the use of '
-                     'rsem-pipeline run'.format(INPUT_FILE, OUTPUT_FILE)))
+                     'rp-run & rp-transfer'.format(INPUT_FILE, OUTPUT_FILE)))
     # metavar='': to supress the listing of sub-commands in {}
     subparsers = parser.add_subparsers(metavar='')
     dummy_parser = get_dummy_parser()
@@ -33,7 +35,7 @@ def parse_args():
     sp_find_dup = subparsers.add_parser(
         'find-dup', parents=[dummy_parser],
         help='Find duplicated GSMs in {0}'.format(INPUT_FILE))
-    sp_find_dup.set_defaults(func=find_duplicated_GSMs.main)
+    sp_find_dup.set_defaults(func=find_dup.main)
 
     sp_gen_csv = subparsers.add_parser(
         'gen-csv', parents=[dummy_parser],
@@ -46,7 +48,7 @@ def parse_args():
         '--outdir', type=str,
         help=('output directory, default to the location of '
               '{0}.'.format(INPUT_FILE)))
-    sp_gen_csv.set_defaults(func=gen_GSE_species_GSM_csv.main)
+    sp_gen_csv.set_defaults(func=gen_csv.main)
 
     sp_get_soft = subparsers.add_parser(
         'get-soft', parents=[dummy_parser],
@@ -55,7 +57,7 @@ def parse_args():
         '--outdir', type=str,
         help=('directory for downloaded htmls, default to '
               '{{location of {0}}}/soft, '.format(INPUT_FILE)))
-    sp_get_soft.set_defaults(func=download_soft.main)
+    sp_get_soft.set_defaults(func=get_soft.main)
 
     options = parser.parse_args()
     return options

@@ -8,16 +8,11 @@ where the input csv_file (e.g. GSE_GSM_species.csv) is located
 import os
 import urlparse
 import gzip
-import argparse
-import logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(levelname)s|%(asctime)s|%(name)s:%(message)s')    
-
 from ftplib import FTP
+import logging
+logger = logging.getLogger(__name__)
 
-from utils import read
-
+from .utils import read
 
 class SOFTDownloader(object):
     """
@@ -33,8 +28,6 @@ class SOFTDownloader(object):
         @param gse_id: GSE ID, e.g. GSE45284
         @param soft_dir: directory where soft is to be saved
         """
-        logger = logging.getLogger(__name__)
-
         soft_subset = os.path.join(soft_dir,
                                   '{0}_family.soft.subset'.format(gse_id))
         if os.path.exists(soft_subset):
@@ -49,8 +42,6 @@ class SOFTDownloader(object):
 
     def download_soft_gz(self, gse_id, soft_dir):
         """download soft.gzip file"""
-        logger = logging.getLogger(__name__)
-
         gse_mask = gse_id[0:-3] + 'nnn'
         base = 'ftp://ftp.ncbi.nlm.nih.gov'
         path = os.path.join('/', 'geo', 'series', gse_mask, gse_id, 'soft')
@@ -74,12 +65,10 @@ class SOFTDownloader(object):
                         'RETR {0}'.format(soft_gz), opf.write)
                     return local_soft_gz
             except Exception:
-                logger.error(Exception)
-                logger.error('error when downloading {0}'.format(url))
+                logger.exception('error when downloading {0}'.format(url))
 
     def gunzip_and_extract_soft(self, soft_gz):
         """gunzip soft.gzip and extract its content to generate soft.subset"""
-        logger = logging.getLogger(__name__)
         dirname, basename = os.path.split(soft_gz)
         soft_subset = os.path.join(
             dirname, basename.replace('.gz', '') + '.subset')

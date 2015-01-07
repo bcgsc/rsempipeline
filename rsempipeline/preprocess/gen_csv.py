@@ -10,9 +10,10 @@ GSMs. Duplicate GSMs can be found by detect_duplicate_GSMs.py
 import os
 import re
 import csv
-import argparse
 import threading
 import Queue
+import logging
+logger = logging.getLogger(__name__)
 
 from bs4 import BeautifulSoup
 import requests
@@ -51,10 +52,10 @@ def gen_soup(gse, gsm, html_dir):
     gsm_html_file = os.path.join(gse_dir, '{0}.html'.format(gsm))
 
     if not os.path.exists(gsm_html_file):
-        print 'downloading {0}'.format(gsm_html_file)
+        logger.info('downloading {0}'.format(gsm_html_file))
         download_html(gsm, gsm_html_file)
     else:
-        print '{0} already downloaded'.format(gsm_html_file)
+        logger.info('{0} already downloaded'.format(gsm_html_file))
     with open(gsm_html_file) as inf:
         soup = BeautifulSoup(inf)
     return soup
@@ -79,11 +80,9 @@ def backup_file(f):
             count += 1
             rn_to = os.path.join(
                 dirname, '#' + basename + '.{0}#'.format(count))
-        print "BACKING UP {0} to {1}".format(f, rn_to)
+        logger.info("backing up {0} to {1}".format(f, rn_to))
         os.rename(f, rn_to)
         return rn_to
-        print "BACKUP FINISHED"
-
 
 def main(options):
     """
@@ -139,5 +138,3 @@ def main(options):
         backup_file(no_species_csv)
         write_csv(res_no_species, no_species_csv)
 
-if __name__ == "__main__":
-    main()

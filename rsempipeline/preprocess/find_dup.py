@@ -8,6 +8,9 @@ GSE_GSM.csv file
 """
 
 import sys
+import logging
+logger = logging.getLogger(__name__)
+
 from .utils import read
 
 def main(options):
@@ -22,10 +25,10 @@ def main(options):
         if gsm not in all_gsm:
             all_gsm.append(gsm)
         else:
-            print 'duplicated GSM: {0} from {1}'.format(gsm, gse)
+            logger.warning('duplicated GSM: {0} from {1}'.format(gsm, gse))
             flag = False
     if flag:
-        print 'No duplication detected within any GSE. :)'
+        logger.info('No duplication detected within any GSE. :)')
     else:
-        print 'please check the duplicated GSMs. :('
+        logger.warning('please check the duplicated GSMs. :(')
         sys.exit(1)
