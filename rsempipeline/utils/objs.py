@@ -1,7 +1,7 @@
 """Lists objects used in rsempipeline.py"""
 
 import os
-from .misc import gen_sample_msg_id
+from rsempipeline.utils.misc import gen_sample_msg_id
 
 
 class Series(object):

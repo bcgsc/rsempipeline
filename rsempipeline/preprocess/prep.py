@@ -3,7 +3,7 @@ import argparse
 import logging.config
 
 from rsempipeline.conf.settings import SHARE_DIR, RP_PREP_LOGGING_CONFIG
-from . import find_dup, gen_csv, get_soft
+from rsempipeline.preprocess import find_dup, gen_csv, get_soft
 
 logging.config.fileConfig(RP_PREP_LOGGING_CONFIG)
 

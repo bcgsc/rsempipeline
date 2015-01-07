@@ -12,7 +12,7 @@ from ftplib import FTP
 import logging
 logger = logging.getLogger(__name__)
 
-from .utils import read
+from rsempipeline.preprocess.utils import read
 
 class SOFTDownloader(object):
     """

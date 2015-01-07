@@ -11,7 +11,7 @@ import sys
 import logging
 logger = logging.getLogger(__name__)
 
-from .utils import read
+from rsempipeline.preprocess.utils import read
 
 def main(options):
     input_csv = options.input_csv

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 from bs4 import BeautifulSoup
 import requests
 
-from .utils import read
+from rsempipeline.preprocess.utils import read
 
 def mkdir(dir_):
     if not os.path.exists(dir_):
