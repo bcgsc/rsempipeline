@@ -13,6 +13,7 @@ from datetime import datetime
 from functools import update_wrapper
 logger = logging.getLogger(__name__)
 
+import paramiko
 
 def decorator(d):
     "Make function d a decorator: d wraps a function fn."
@@ -307,3 +308,27 @@ def is_empty_dir(dir_, output):
     there should be only one item is the list (output)
     """
     return len([_ for _ in output if dir_ in _]) == 1
+
+
+def sshexec(cmd, host, username, private_key_file='~/.ssh/id_rsa'):
+    """
+    ssh to username@remote and execute cmd.
+
+    :param private_key_file: could be ~/.ssh/id_dsa, as well
+    """
+    private_key_file = os.path.expanduser(private_key_file)
+    rsa_key = paramiko.RSAKey.from_private_key_file(private_key_file)
+
+    # This step will timeout after about 75 seconds if cannot proceed
+    channel = paramiko.Transport((host, 22))
+
+    channel.connect(username=username, pkey=rsa_key)
+    session = channel.open_session()
+    # if exec_command fails, None will be returned
+    session.exec_command(cmd)
+
+    # not sure what -1 does? learned from ssh.py
+    output = session.makefile('rb', -1).readlines()
+    channel.close()
+    if output:
+        return output

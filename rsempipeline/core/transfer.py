@@ -16,11 +16,10 @@ import yaml
 import datetime
 import logging.config
 
-import paramiko
 from jinja2 import Template
 
 from rsempipeline.utils import pre_pipeline_run as PPR
-from rsempipeline.utils import misc 
+from rsempipeline.utils import misc
 from rsempipeline.conf.settings import RP_TRANSFER_LOGGING_CONFIG
 from rsempipeline.parsers.args_parser import parse_args_for_rp_transfer
 
@@ -39,30 +38,6 @@ logging.config.fileConfig(RP_TRANSFER_LOGGING_CONFIG)
 
 logger = logging.getLogger('rp_transfer')
 
-def sshexec(cmd, host, username, private_key_file='~/.ssh/id_rsa'):
-    """
-    ssh to username@remote and execute cmd.
-
-    :param private_key_file: could be ~/.ssh/id_dsa, as well
-    """
-
-    private_key_file = os.path.expanduser(private_key_file)
-    rsa_key = paramiko.RSAKey.from_private_key_file(private_key_file)
-
-    # This step will timeout after about 75 seconds if cannot proceed
-    channel = paramiko.Transport((host, 22))
-    channel.connect(username=username, pkey=rsa_key)
-    session = channel.open_session()
-
-    # if exec_command fails, None will be returned
-    session.exec_command(cmd)
-
-    # not sure what -1 does? learned from ssh.py
-    output = session.makefile('rb', -1).readlines()
-    channel.close()
-    if output:
-        return output
-
 
 def get_remote_free_disk_space(df_cmd, remote, username):
     """
@@ -70,7 +45,7 @@ def get_remote_free_disk_space(df_cmd, remote, username):
 
     :param df_cmd: should be in the form of df -k -P target_dir
     """
-    output = sshexec(df_cmd, remote, username)
+    output = misc.sshexec(df_cmd, remote, username)
     # e.g. output:
     # ['Filesystem         1024-blocks      Used Available Capacity Mounted on\n',
     #  '/dev/analysis        16106127360 12607690752 3498436608      79% /extscratch\n']
@@ -93,7 +68,7 @@ def est_current_remote_usage(remote, username, r_dir, l_dir):
 
     """
     find_cmd = 'find {0}'.format(r_dir)
-    output = sshexec(find_cmd, remote, username)
+    output = misc.sshexec(find_cmd, remote, username)
     if output is None:
         raise ValueError(
             'cannot estimate current usage on remote host. please check '
@@ -115,7 +90,7 @@ def est_current_remote_usage(remote, username, r_dir, l_dir):
 
 def get_real_current_usage(remote, username, r_dir):
     """this will return real space consumed currently by rsem analysis"""
-    output = sshexec('du -s {0}'.format(r_dir), remote, username)
+    output = misc.sshexec('du -s {0}'.format(r_dir), remote, username)
     # e.g. output:
     # ['3096\t/path/to/top_outdir\n']
     usage = int(output[0].split('\t')[0]) * 1024 # in KB => byte
@@ -179,7 +154,6 @@ def select_samples_to_transfer(samples, l_top_outdir, r_top_outdir,
     utils_pre_pipeline.py, which are to process)
     """
     # r_: means relevant to remote host, l_: to local host
-
     r_free_space = get_remote_free_disk_space(
         config['REMOTE_CMD_DF'], r_host, r_username)
     logger.info(
