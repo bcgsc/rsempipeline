@@ -8,7 +8,7 @@ import os
 import re
 
 import logging
-logger = logging.getLogger('soft_parser')
+logger = logging.getLogger(__name__)
 
 from rsempipeline.utils.objs import Series, Sample
 

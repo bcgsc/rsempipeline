@@ -5,7 +5,7 @@ import os
 import csv
 
 import logging
-logger = logging.getLogger('isamp_parser')
+logger = logging.getLogger(__name__)
 
 def read_csv_gse_as_key(infile):
     """

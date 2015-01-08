@@ -5,6 +5,8 @@ import argparse
 
 import ruffus as R
 
+from rsempipeline.conf.settings import BASE_DIR
+
 def add_common_arguments(parser):
     parser.add_argument(
         '-s', '--soft_files', nargs='+', required=True,
@@ -21,6 +23,13 @@ def add_common_arguments(parser):
               'The pipeline will check data is a file and exists, or '
               'it assumes it\'s a data string'))
 
+    base_dir = os.path.abspath(os.path.dirname(__file__))
+    config_examp = os.path.join(base_dir, 'rp_config.example.yml')
+    parser.add_argument(
+        '-c', '--config_file', default='rp_config.yml',
+        help=('a YAML configuration file, refer to {0} for an example.'.format(
+            config_examp)))
+
 
 def parse_args_for_rp_run():
     """parse the command line arguments"""
@@ -31,7 +40,6 @@ def parse_args_for_rp_run():
 
     add_common_arguments(parser)
 
-    base_dir = os.path.abspath(os.path.dirname(__file__))
     parser.add_argument(
         '--j_rsem', type=int,
         help="the number of jobs to run when running rsem (-j)")
@@ -39,12 +47,6 @@ def parse_args_for_rp_run():
         '-t', '--qsub_template',
         help=('used when -T is gen_qsub_script, '
               'see a list of templates in templates directory'))
-
-    config_examp = os.path.join(base_dir, 'rp_config.example.yml')
-    parser.add_argument(
-        '-c', '--config_file', default='rp_config.yml',
-        help=('a YAML configuration file, refer to {0} for an example.'.format(
-            config_examp)))
 
     parser.add_argument(
         '--recreate_sras_info', action='store_true',
@@ -73,19 +75,11 @@ def parse_args_for_rp_transfer():
         version='0.1')
 
     add_common_arguments(parser)
-    base_dir = os.path.abspath(os.path.dirname(__file__))
-
-    default_rsync_template = os.path.join(base_dir, 'templates/rsync.sh')
+    default_rsync_template = os.path.join(BASE_DIR, 'templates/rsync.sh')
     parser.add_argument(
         '-t', '--rsync_template', default=default_rsync_template,
         help=('template for transferring GSMs from localhost to remote host, '
               'refer to {0} (default template) for an example.'.format(
                   default_rsync_template)))
-
-    config_examp = os.path.join(base_dir, 'rsempipeline_config.yaml.example')
-    parser.add_argument(
-        '-c', '--config_file', default='rsempipeline_config.yaml',
-        help=('a YAML configuration file, refer to {0} for an example.'.format(
-            config_examp)))
 
     return parser.parse_args()

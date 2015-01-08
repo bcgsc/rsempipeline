@@ -21,7 +21,7 @@ from rsempipeline.utils import misc
 from rsempipeline.utils import pre_pipeline_run as PPR
 from rsempipeline.utils.download import gen_orig_params
 from rsempipeline.utils.rsem import gen_fastq_gz_input
-from rsempipeline.conf.settings import RP_RUN_LOGGING_CONFIG
+from rsempipeline.conf.settings import RP_RUN_LOGGING_CONFIG, TEMPLATES_DIR
 from rsempipeline.parsers.args_parser import parse_args_for_rp_run
 
 PATH_RE = r'(.*)/(?P<GSE>GSE\d+)/(?P<species>\S+)/(?P<GSM>GSM\d+)'
@@ -40,15 +40,13 @@ logging.config.fileConfig(RP_RUN_LOGGING_CONFIG)
 samples = PPR.gen_samples_from_soft_and_isamp(
     options.soft_files, options.isamp, config)
 
-env = Environment(loader=FileSystemLoader([
-    # the standard templates directory
-    os.path.join(os.path.dirname(__file__), 'templates'),
-    # the current working directory
-    os.getcwd()]))
+# the standard templates directory
+# the current working directory
+jinja2_env = Environment(loader=FileSystemLoader([TEMPLATES_DIR, os.getcwd()]))
 
 logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
     R.proxy_logger.setup_std_shared_logger,
-    "rsempipeline",
+    "rp_run",
     {"config_file": os.path.join(RP_RUN_LOGGING_CONFIG)})
 
 LOCKER_PATTERN = os.path.join(config['LOCAL_TOP_OUTDIR'], '.rp-run')
@@ -174,7 +172,7 @@ def gen_qsub_script(inputs, outputs):
     n_jobs = misc.decide_num_jobs(outdir, options.j_rsem)
 
     qsub_script = os.path.join(outdir, '0_submit.sh')
-    template = env.get_template(options.qsub_template)
+    template = jinja2_env.get_template(options.qsub_template)
     with open(qsub_script, 'wb') as opf:
         content = template.render(**locals())
         opf.write(content)
