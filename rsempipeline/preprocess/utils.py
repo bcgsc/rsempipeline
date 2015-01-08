@@ -2,6 +2,8 @@ import os
 import sys
 import re
 import csv
+import logging
+logger = logging.getLogger(__name__)
 
 def read(input_csv):
     """
@@ -21,10 +23,10 @@ def read(input_csv):
                     is_valid = False
 
     if not is_valid:
-        print 'Please correct the format of invalid entries in GSE_GSM.csv'
-        print ('Please check {0} for the correct format '
-               'and rerun the script'.format(os.path.join(
-                   os.path.dirname(__file__), 'example_GSE_GSM.csv')))
+        logger.info('Please correct the format of invalid entries in GSE_GSM.csv')
+        logger.info('Please check {0} for the correct format '
+                    'and rerun the script'.format(os.path.join(
+                        os.path.dirname(__file__), 'example_GSE_GSM.csv')))
         sys.exit(1)
 
     with open(input_csv, 'rb') as inf:
@@ -48,19 +50,20 @@ def process(k, row):
     """
     # check if there are only two columns
     if len(row) != 2:
-        print 'row {0} is not of len 2'.format(k)
+        logger.warning('row {0} is not of len 2'.format(k))
+        return
 
     gse, gsms = row
     gsms = [_.strip() for _ in gsms.strip().rstrip(';').split(';')]
 
     # check if GSE is properly named
     if not re.search('^GSE\d+', gse):
-        print 'row {0}: GSE in  is of invalid name'.format(k)
+        logger.warning('row {0}: invalid GSE name: {1}'.format(k, gse))
         return
 
     # check if GSMs are properly named
     if not all(re.search('^GSM\d+', _) for _ in gsms):
-        print ("row {0}: Not all GSMs are of valid names, do you have invalid "
-               "characters at the end of the line by mistake?".format(k))
+        logger.warning("row {0}: Not all GSMs are of valid names, do you have invalid "
+                       "characters at the end of the line by mistake?".format(k))
         return
     return gse, gsms
