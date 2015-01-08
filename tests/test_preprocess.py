@@ -1,10 +1,17 @@
+import os
+import re
 import unittest
+import types
+import logging
 import logging.config
 
-from testfixtures import LogCapture
+from testfixtures import LogCapture, log_capture
+# https://pythonhosted.org/testfixtures/logging.html
+# LogCapture and log_capture are used in different ways to achieve the same
+# results
 
 from rsempipeline.preprocess import utils
-from rsempipeline.conf.settings import RP_PREP_LOGGING_CONFIG
+from rsempipeline.conf.settings import SHARE_DIR, RP_PREP_LOGGING_CONFIG
 logging.config.fileConfig(RP_PREP_LOGGING_CONFIG)
 
 
@@ -45,6 +52,102 @@ class UtilsProcessTestCase(unittest.TestCase):
             self.assertIn('WARNING', s)
             self.assertIn('row 5: Not all GSMs are of valid names', s)
 
-        
+
+class UtilsReadTestCase(unittest.TestCase):
+    def setUp(self):
+        self.valid_input1 = '___valid1.csv'
+        self.valid_input2 = '___valid2.csv'
+        self.valid_input3 = '___valid3.csv'
+        self.invalid_input = '___invalid_GSE_GSM.csv'
+        with open(self.valid_input1, 'wb') as opf1:
+            opf1.write(
+"""
+GSE1,GSM10; GSM11
+GSE2,GSM20; GSM21; GSM22
+""")
+        with open(self.valid_input2, 'wb') as opf2:
+            opf2.write(
+"""
+GSE1,GSM10; GSM11
+GSE2,GSM20; GSM21; GSM22;
+""")
+        with open(self.valid_input3, 'wb') as opf3:
+            opf3.write(
+"""
+GSE1,GSM10; GSM11
+# GSE2,GSM20; GSM21; GSM22;
+""")
+
+        with open(self.invalid_input, 'wb') as opf3:
+            opf3.write(
+"""
+xGSE1,GSM10; GSM11
+GSE2,GSM20; GSM21; GSM22;
+""")
+
+        self.RE_GSE = re.compile('^GSE\d+')
+        self.RE_GSM = re.compile('^GSM\d+')
+
+    def tearDown(self):
+        for __ in [self.valid_input1, self.valid_input2, self.valid_input3,
+                  self.invalid_input]:
+            try:
+                os.remove(__)
+            except OSError as err:
+                print ("Error: {0} - {1}.".format(err.filename, err.strerror))
+                
+    def test_valid_input(self):
+        self.assertTrue(utils.is_valid(self.valid_input1))
+
+    def test_valid_input_with_appending_semicolon(self):    
+        self.assertTrue(utils.is_valid(self.valid_input2))
+
+    def test_valid_input_with_commented_line(self):
+        self.assertTrue(utils.is_valid(self.valid_input3))
+
+    def test_invalid_input(self):
+        self.assertFalse(utils.is_valid(self.invalid_input))
+
+    def check_yield_result(self, item):
+        self.assertEqual(2, len(item))
+        self.assertTrue(self.RE_GSE.match(item[0]))
+        self.assertTrue(self.RE_GSM.match(item[1]))
+
+    def test_yield_gse_gsm_from_valid_input(self):
+        for __ in utils.yield_gse_gsm(self.valid_input1):
+            self.check_yield_result(__)
+
+    def test_yield_gse_gsm_from_valid_input_with_appending_semicolon(self):
+        for __ in utils.read(self.valid_input2):
+            self.check_yield_result(__)
+
+    def test_yield_gse_gsm_from_valid_input_with_commented_line(self):
+        for __ in utils.read(self.valid_input3):
+            self.check_yield_result(__)
+
+    def test_read_valid_input(self):
+        self.assertIsInstance(utils.read(self.valid_input1), types.GeneratorType)
+
+    def test_read_valid_input_with_appending_semicolon(self):
+        self.assertIsInstance(utils.read(self.valid_input2), types.GeneratorType)
+
+    def test_read_valid_input_with_commented_line(self):
+        self.assertIsInstance(utils.read(self.valid_input3), types.GeneratorType)
+
+    @log_capture(level=logging.ERROR)
+    def test_read_invalid_input(self, L):
+        # cm: context_manager
+        # ref: http://stackoverflow.com/questions/15672151/is-it-possible-for-a-unit-test-to-assert-that-a-method-calls-sys-exit
+        # with LogCapture() as L:
+        with self.assertRaises(SystemExit) as cm:
+            utils.read(self.invalid_input)
+            self.assertEqual(cm.exception.code, 1)
+        L.check(
+            ('rsempipeline.preprocess.utils', 'ERROR',
+             'Please correct the invalid entries in {0}'.format(self.invalid_input)),
+            ('rsempipeline.preprocess.utils', 'ERROR',
+             'If unsure of the correct format, check {0}'.format(os.path.join(SHARE_DIR, 'GSE_GSM.example.csv'))),
+        )
+
 if __name__ == "__main__":
     unittest.main()
