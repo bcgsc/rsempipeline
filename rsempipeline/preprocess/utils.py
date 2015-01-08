@@ -5,6 +5,9 @@ import csv
 import logging
 logger = logging.getLogger(__name__)
 
+from rsempipeline.conf.settings import SHARE_DIR
+
+    
 def read(input_csv):
     """
     Read csv and yield gse and gsm in pair
@@ -13,30 +16,39 @@ def read(input_csv):
     per row, and GSMs are separated by semicolon
     check example_GSE_GSM.txt for example.
     """
-    is_valid = True # indicates if all entries in GSE_GSM.csv are of valid format
-    with open(input_csv, 'rb') as inf:
-        csv_reader = csv.reader(inf)
-        for k, row in enumerate(csv_reader):
-            if row and not row[0].startswith('#'):             # not a blank line
-                res = process(k+1, row)
-                if res is None:
-                    is_valid = False
-
-    if not is_valid:
-        logger.info('Please correct the format of invalid entries in GSE_GSM.csv')
-        logger.info('Please check {0} for the correct format '
-                    'and rerun the script'.format(os.path.join(
-                        os.path.dirname(__file__), 'example_GSE_GSM.csv')))
+    valid = is_valid(input_csv)
+    if not valid:
+        logger.error('Please correct the invalid entries in '
+                    '{0}'.format(input_csv))
+        logger.error('If unsure of the correct format, check {0}'.format(
+            os.path.join(SHARE_DIR, 'GSE_GSM.example.csv')))
         sys.exit(1)
+    else:
+        return yield_gse_gsm(input_csv)
 
+
+def stream(input_csv):
     with open(input_csv, 'rb') as inf:
         csv_reader = csv.reader(inf)
         for k, row in enumerate(csv_reader):
             if row and not row[0].startswith('#'):             # not a blank line
                 res = process(k+1, row)
-                gse, gsms = res
-                for gsm in gsms:
-                    yield gse, gsm
+                yield res
+
+
+def is_valid(input_csv):
+    """Check wheter the input_csv is valid or not"""
+    for res in stream(input_csv):
+        if res is None:
+            return False
+    return True
+
+
+def yield_gse_gsm(input_csv):
+    for res in stream(input_csv):
+        gse, gsms = res
+        for gsm in gsms:
+            yield gse, gsm
 
 
 def process(k, row):
