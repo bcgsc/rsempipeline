@@ -14,6 +14,8 @@ from rsempipeline.preprocess import utils
 from rsempipeline.conf.settings import SHARE_DIR, RP_PREP_LOGGING_CONFIG
 logging.config.fileConfig(RP_PREP_LOGGING_CONFIG)
 
+from utils import remove
+
 
 class UtilsProcessTestCase(unittest.TestCase):
     def setUp(self):
@@ -22,6 +24,7 @@ class UtilsProcessTestCase(unittest.TestCase):
         self.k3, self.row3 = 3, ['GSE0', 'GSM1; GSM2', 'some 3rd row']
         self.k4, self.row4 = 4, ['invalid_GSE_name', 'GSM1; GSM2']
         self.k5, self.row5 = 5, ['GSE0', 'invalid_GSM1_name; GSM2']
+        self.k6, self.row6 = 5, ['GSE0', 'GSM1; GSM1']
 
     def test_process_row_with_1_columns(self):
         with LogCapture() as L:
@@ -35,13 +38,11 @@ class UtilsProcessTestCase(unittest.TestCase):
     def test_process_row_with_3_columns(self):
         with LogCapture() as L:
             self.assertIsNone(utils.process(self.k3, self.row3))
-            # self.assertIn('WARNING', str(l))
             L.check(('rsempipeline.preprocess.utils', 'WARNING', 'row 3 is not of len 2'))
 
     def test_process_row_with_invalid_GSE_name(self):
         with LogCapture() as L:
             self.assertIsNone(utils.process(self.k4, self.row4))
-            # self.assertIn('WARNING', str(l))
             L.check(('rsempipeline.preprocess.utils', 'WARNING', 'row 4: invalid GSE name: invalid_GSE_name'))
 
     def test_process_row_with_invalid_GSM_name(self):
@@ -51,6 +52,12 @@ class UtilsProcessTestCase(unittest.TestCase):
             self.assertIn('rsempipeline.preprocess.utils', s)
             self.assertIn('WARNING', s)
             self.assertIn('row 5: Not all GSMs are of valid names', s)
+
+    def test_process_row_with_duplicated_GSMs(self):
+        with LogCapture() as L:
+            self.assertIsNone(utils.process(self.k6, self.row6))
+            L.check(('rsempipeline.preprocess.utils', 'WARNING',
+                     'Duplicated GSMs found in GSE0. of 2 GSMs, only 1 are unique'))
 
 
 class UtilsReadTestCase(unittest.TestCase):
@@ -89,13 +96,9 @@ GSE2,GSM20; GSM21; GSM22;
         self.RE_GSM = re.compile('^GSM\d+')
 
     def tearDown(self):
-        for __ in [self.valid_input1, self.valid_input2, self.valid_input3,
-                  self.invalid_input]:
-            try:
-                os.remove(__)
-            except OSError as err:
-                print ("Error: {0} - {1}.".format(err.filename, err.strerror))
-                
+        map(remove, [self.valid_input1, self.valid_input2, self.valid_input3,
+                     self.invalid_input])
+
     def test_valid_input(self):
         self.assertTrue(utils.is_valid(self.valid_input1))
 

@@ -3,7 +3,7 @@ import argparse
 import logging.config
 
 from rsempipeline.conf.settings import SHARE_DIR, RP_PREP_LOGGING_CONFIG
-from rsempipeline.preprocess import find_dup, gen_csv, get_soft
+from rsempipeline.preprocess import gen_csv, get_soft
 
 logging.config.fileConfig(RP_PREP_LOGGING_CONFIG)
 
@@ -23,19 +23,13 @@ def get_dummy_parser():
     return dp
 
 
-def parse_args():
+def get_parser():
     parser = argparse.ArgumentParser(
         description=('To preprocess {0}, and generate {1} for the use of '
                      'rp-run & rp-transfer'.format(INPUT_FILE, OUTPUT_FILE)))
     # metavar='': to supress the listing of sub-commands in {}
     subparsers = parser.add_subparsers(metavar='')
     dummy_parser = get_dummy_parser()
-
-    # sp: subparser
-    sp_find_dup = subparsers.add_parser(
-        'find-dup', parents=[dummy_parser],
-        help='Find duplicated GSMs in {0}'.format(INPUT_FILE))
-    sp_find_dup.set_defaults(func=find_dup.main)
 
     sp_gen_csv = subparsers.add_parser(
         'gen-csv', parents=[dummy_parser],
@@ -59,12 +53,10 @@ def parse_args():
               '{{location of {0}}}/soft, '.format(INPUT_FILE)))
     sp_get_soft.set_defaults(func=get_soft.main)
 
-    options = parser.parse_args()
-    return options
-
+    return parser
 
 def main():
-    options = parse_args()
+    options = get_parser().parse_args()
     options.func(options)
 
 

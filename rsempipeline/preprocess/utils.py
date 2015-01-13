@@ -78,4 +78,11 @@ def process(k, row):
         logger.warning("row {0}: Not all GSMs are of valid names, do you have invalid "
                        "characters at the end of the line by mistake?".format(k))
         return
+
+    num_gsms = len(gsms)
+    num_unique_gsms = len(set(gsms))
+    if num_gsms > num_unique_gsms:
+        logger.warning("Duplicated GSMs found in {0}. of {1} GSMs, only {2} "
+                       "are unique".format(gse, num_gsms, num_unique_gsms))
+        return
     return gse, gsms
