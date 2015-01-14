@@ -20,7 +20,9 @@ import requests
 
 from rsempipeline.preprocess.utils import read
 from rsempipeline.utils.misc import backup_file, mkdir
-
+from rsempipeline.conf.settings import (HTML_DIR_BASENAME,
+                                        SPECIES_CSV_BASENAME,
+                                        NO_SPECIES_CSV_BASENAME)
 
 def write_csv(rows, out_csv):
     with open(out_csv, 'wb') as opf:
@@ -56,7 +58,7 @@ def gen_outdir(options):
 
 
 def gen_html_outdir(outdir):
-    d = os.path.join(outdir, 'html')
+    d = os.path.join(outdir, HTML_DIR_BASENAME)
     mkdir(d)
     return d
 
@@ -85,19 +87,8 @@ def download_html(gsm, out_html):
     with open(out_html, 'wb') as opf:
         opf.write(response.text.encode('utf-8'))
 
-
-def main(options):
-    """
-    :param n_threads: number of threads to run simultaneously
-
-    :param outdir: the directory where all outputs are to located, default to
-    the directory where input_csv is located
-
-    """
-    input_csv = options.input_csv
-    n_threads = options.nt
-    outdir = gen_outdir(options)
-
+    
+def generate_csv(input_csv, outdir, num_threads):
     # Sometimes GSM data could be private, so no species information will be
     # extracted. e.g. GSE49366 GSM1198168
     res, res_no_species = [], []
@@ -115,7 +106,7 @@ def main(options):
                 res_no_species.append(row)
             queue.task_done()
 
-    for i in range(n_threads):
+    for i in range(num_threads):
         thrd = threading.Thread(target=worker)
         thrd.daemon = True
         thrd.start()
@@ -125,8 +116,8 @@ def main(options):
     queue.join()
 
     # write output
-    out_csv = os.path.join(outdir, 'GSE_species_GSM.csv')
-    no_species_csv = os.path.join(outdir, 'GSE_no_species_GSM.csv')
+    out_csv = os.path.join(outdir, SPECIES_CSV_BASENAME)
+    no_species_csv = os.path.join(outdir, NO_SPECIES_CSV_BASENAME)
     backup_file(out_csv)
     write_csv(res, out_csv)
 
@@ -134,3 +125,16 @@ def main(options):
         backup_file(no_species_csv)
         write_csv(res_no_species, no_species_csv)
 
+
+def main(options):
+    """
+    :param n_threads: number of threads to run simultaneously
+
+    :param outdir: the directory where all outputs are to located, default to
+    the directory where input_csv is located
+
+    """
+    input_csv = options.input_csv
+    num_threads = options.nt
+    outdir = gen_outdir(options)
+    generate_csv(input_csv, outdir, num_threads)
