@@ -15,6 +15,15 @@ logger = logging.getLogger(__name__)
 
 import paramiko
 
+def mkdir(d):
+    try:
+        # best than if else because of parallel execution, not atomic, often
+        # OSError is raised
+        os.mkdir(d)
+    except OSError:
+        pass
+
+
 def decorator(d):
     "Make function d a decorator: d wraps a function fn."
     def _d(fn):
