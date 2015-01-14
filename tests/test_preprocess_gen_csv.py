@@ -23,8 +23,8 @@ class GenCsvTestCase(unittest.TestCase):
         with open(self.input_csv, 'wb') as opf1:
             opf1.write(
 """
-GSE1,GSM10; GSM11
-GSE2,GSM20; GSM21; GSM22
+GSE59813,GSM1446812;
+GSE61491,GSM1506106; GSM1506107;
 """)
         parser = rp_prep.get_parser()
         self.temp_outdir = tempfile.mkdtemp() # mkdtemp returns abspath
@@ -105,6 +105,22 @@ GSE2,GSM20; GSM21; GSM22
     # def test_find_species_no_species_info(self):
     #     # write one after such a GSM is found
     #     pass
+
+    def test_generate_csv(self):
+        gen_csv.generate_csv(self.input_csv, self.temp_outdir, num_threads=2)
+        out_csv = os.path.join(self.temp_outdir, 'GSE_species_GSM.csv')
+        self.assertTrue(os.path.exists(out_csv))
+        with open(out_csv) as inf:
+            self.assertEqual(
+"""GSE59813,Mus musculus,GSM1446812
+GSE61491,Homo sapiens,GSM1506106
+GSE61491,Homo sapiens,GSM1506107
+""",
+                inf.read())
+
+    # def test_generate_csv_no_species_info(self):
+    #     pass
+        
 
 if __name__ == "__main__":
     unittest.main()
