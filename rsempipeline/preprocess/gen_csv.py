@@ -20,7 +20,7 @@ import requests
 
 from rsempipeline.preprocess.utils import read
 from rsempipeline.utils.misc import backup_file, mkdir
-from rsempipeline.conf.settings import (HTML_DIR_BASENAME,
+from rsempipeline.conf.settings import (HTML_OUTDIR_BASENAME,
                                         SPECIES_CSV_BASENAME,
                                         NO_SPECIES_CSV_BASENAME)
 
@@ -58,7 +58,7 @@ def gen_outdir(options):
 
 
 def gen_html_outdir(outdir):
-    d = os.path.join(outdir, HTML_DIR_BASENAME)
+    d = os.path.join(outdir, HTML_OUTDIR_BASENAME)
     mkdir(d)
     return d
 

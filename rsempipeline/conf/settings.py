@@ -12,6 +12,9 @@ RP_RUN_LOGGING_CONFIG = os.path.join(CONF_DIR, 'rp-run.logging.config')
 RP_TRANSFER_LOGGING_CONFIG = os.path.join(CONF_DIR, 'rp-transfer.logging.config')
 
 # the dir/file names used running rp-prep gen-csv
-HTML_DIR_BASENAME = 'html'
+HTML_OUTDIR_BASENAME = 'html'
 SPECIES_CSV_BASENAME = 'GSE_species_GSM.csv'
 NO_SPECIES_CSV_BASENAME = 'GSE_no_species_GSM.csv'
+
+# the dir/file names used running rp-prep get-soft
+SOFT_OUTDIR_BASENAME = 'soft'

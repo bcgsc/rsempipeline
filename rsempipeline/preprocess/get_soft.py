@@ -13,6 +13,9 @@ import logging
 logger = logging.getLogger(__name__)
 
 from rsempipeline.preprocess.utils import read
+from rsempipeline.utils.misc import mkdir
+from rsempipeline.conf.settings import SOFT_OUTDIR_BASENAME
+from rsempipeline.preprocess.gen_csv import gen_outdir
 
 class SOFTDownloader(object):
     """
@@ -90,27 +93,28 @@ class SOFTDownloader(object):
         return soft_subset
 
 
+def gen_soft_outdir(outdir):
+    d = os.path.join(outdir, SOFT_OUTDIR_BASENAME)
+    mkdir(d)
+    return d
+
+
+def download_soft(input_csv, soft_outdir):
+    ftp = SOFTDownloader()
+    current_gse = None
+    for gse, gsm in read(input_csv):
+        if current_gse is None or gse != current_gse:
+            ftp.gen_soft_subset(gse, soft_outdir)
+            current_gse = gse
+
 def main(options):
     """
     @param input_csv: e.g. GSE_species_GSM.csv
     """
     input_csv = options.input_csv
-    outdir = options.outdir
-
-    if outdir is None:
-        outdir = os.path.dirname(input_csv)
-
-    outdir = os.path.dirname(input_csv)
-    soft_dir = os.path.join(outdir, 'soft')
-    if not os.path.exists(soft_dir):
-        os.mkdir(soft_dir)
-
-    ftp = SOFTDownloader()
-    current_gse = None
-    for gse, gsm in read(input_csv):
-        if current_gse is None or gse != current_gse:
-            ftp.gen_soft_subset(gse, soft_dir)
-            current_gse = gse
+    outdir = gen_outdir(options)
+    soft_outdir = gen_soft_outdir(outdir)
+    download_soft(input_csv, soft_outdir)
 
 
 if __name__ == '__main__':

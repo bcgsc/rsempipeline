@@ -12,6 +12,9 @@ from testfixtures import log_capture
 # results
 
 from rsempipeline.preprocess import rp_prep, gen_csv
+from rsempipeline.conf.settings import (HTML_OUTDIR_BASENAME,
+                                        SPECIES_CSV_BASENAME,
+                                        NO_SPECIES_CSV_BASENAME)
 from rsempipeline.conf.settings import RP_PREP_LOGGING_CONFIG
 logging.config.fileConfig(RP_PREP_LOGGING_CONFIG)
 
@@ -47,7 +50,7 @@ GSE61491,GSM1506106; GSM1506107;
                          os.path.abspath(gen_csv.gen_outdir(self.options2)))
 
     def test_gen_html_outdir(self):
-        d = os.path.join(self.temp_outdir, 'html')
+        d = os.path.join(self.temp_outdir, HTML_OUTDIR_BASENAME)
         self.assertEqual(d, gen_csv.gen_html_outdir(self.temp_outdir))
         self.assertTrue(os.path.exists(d))
 
@@ -108,7 +111,7 @@ GSE61491,GSM1506106; GSM1506107;
 
     def test_generate_csv(self):
         gen_csv.generate_csv(self.input_csv, self.temp_outdir, num_threads=2)
-        out_csv = os.path.join(self.temp_outdir, 'GSE_species_GSM.csv')
+        out_csv = os.path.join(self.temp_outdir, SPECIES_CSV_BASENAME)
         self.assertTrue(os.path.exists(out_csv))
         with open(out_csv) as inf:
             self.assertEqual(
