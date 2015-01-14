@@ -19,10 +19,7 @@ from bs4 import BeautifulSoup
 import requests
 
 from rsempipeline.preprocess.utils import read
-
-def mkdir(dir_):
-    if not os.path.exists(dir_):
-        os.mkdir(dir_)
+from rsempipeline.utils.misc import backup_file, mkdir
 
 
 def write_csv(rows, out_csv):
@@ -33,56 +30,61 @@ def write_csv(rows, out_csv):
             csv_writer.writerow(_)
 
 
-def find_species(gse, gsm, html_dir):
+def find_species(gse, gsm, outdir):
     """functions calling order: find_sepecies -> gen_soup -> download_html"""
-    soup = gen_soup(gse, gsm, html_dir)
+    soup = gen_soup(gse, gsm, outdir)
     td = soup.find('td', text=re.compile('Organism|Organisms'))
     if td:
         species = td.find_next_sibling().text.strip()
         return species
 
 
-def gen_soup(gse, gsm, html_dir):
-    gse_dir = os.path.join(html_dir, gse)
-    try:
-        # because of parallel execution, not atomic, often OSError is raised
-        os.mkdir(gse_dir)
-    except OSError:
-        pass
-    gsm_html_file = os.path.join(gse_dir, '{0}.html'.format(gsm))
-
-    if not os.path.exists(gsm_html_file):
-        logger.info('downloading {0}'.format(gsm_html_file))
-        download_html(gsm, gsm_html_file)
-    else:
-        logger.info('{0} already downloaded'.format(gsm_html_file))
-    with open(gsm_html_file) as inf:
+def gen_soup(gse, gsm, outdir):
+    gsm_html = gen_gsm_html(outdir, gse, gsm)
+    with open(gsm_html) as inf:
         soup = BeautifulSoup(inf)
     return soup
 
 
-def download_html(GSM, out_html):
-    url = "http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={0}".format(GSM)
+def gen_outdir(options):
+    if options.outdir:
+        d = options.outdir
+        mkdir(d)
+    else:
+        d = os.path.dirname(options.input_csv)
+    return d
+
+
+def gen_html_outdir(outdir):
+    d = os.path.join(outdir, 'html')
+    mkdir(d)
+    return d
+
+
+def gen_gse_dir(outdir, gse):
+    html_dir = gen_html_outdir(outdir)
+    gse_dir = os.path.join(html_dir, gse)
+    mkdir(gse_dir)
+    return gse_dir
+
+
+def gen_gsm_html(outdir, gse, gsm):
+    gse_dir = gen_gse_dir(outdir, gse)
+    gsm_html = os.path.join(gse_dir, '{0}.html'.format(gsm))
+    if not os.path.exists(gsm_html):
+        logger.info('downloading {0}'.format(gsm_html))
+        download_html(gsm, gsm_html)
+    else:
+        logger.info('{0} already downloaded'.format(gsm_html))        
+    return gsm_html
+
+
+def download_html(gsm, out_html):
+    url = "http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc={0}".format(gsm)
     response = requests.get(url)
     with open(out_html, 'wb') as opf:
         opf.write(response.text.encode('utf-8'))
-    return out_html
 
-
-def backup_file(f):
-    if os.path.exists(f):
-        dirname = os.path.dirname(f)
-        basename = os.path.basename(f)
-        count = 1
-        rn_to = os.path.join(
-            dirname, '#' + basename + '.{0}#'.format(count))
-        while os.path.exists(rn_to):
-            count += 1
-            rn_to = os.path.join(
-                dirname, '#' + basename + '.{0}#'.format(count))
-        logger.info("backing up {0} to {1}".format(f, rn_to))
-        os.rename(f, rn_to)
-        return rn_to
 
 def main(options):
     """
@@ -94,13 +96,7 @@ def main(options):
     """
     input_csv = options.input_csv
     n_threads = options.nt
-    outdir = options.outdir
-
-    if outdir is None:
-        outdir = os.path.dirname(input_csv)
-
-    out_html_dir = os.path.join(outdir, 'html')
-    mkdir(out_html_dir)
+    outdir = gen_outdir(options)
 
     # Sometimes GSM data could be private, so no species information will be
     # extracted. e.g. GSE49366 GSM1198168
@@ -111,7 +107,7 @@ def main(options):
     def worker():
         while True:
             GSE, GSM = queue.get()
-            species = find_species(GSE, GSM, out_html_dir)
+            species = find_species(GSE, GSM, outdir)
             row = [GSE, species, GSM]
             if species:
                 res.append(row)
@@ -130,11 +126,11 @@ def main(options):
 
     # write output
     out_csv = os.path.join(outdir, 'GSE_species_GSM.csv')
+    no_species_csv = os.path.join(outdir, 'GSE_no_species_GSM.csv')
     backup_file(out_csv)
     write_csv(res, out_csv)
 
     if res_no_species:
-        no_species_csv = os.path.join(outdir, 'GSE_no_species_GSM.csv')
         backup_file(no_species_csv)
         write_csv(res_no_species, no_species_csv)
 
