@@ -23,52 +23,62 @@ class SOFTDownloader(object):
     file
     """
     def __init__(self):
-        self.ftp_handler = FTP('ftp.ncbi.nlm.nih.gov')
+        domain = 'ftp.ncbi.nlm.nih.gov'
+        self.ftp_handler = FTP(domain)
         self.ftp_handler.login()
+        self.base = 'ftp://{0}'.format(domain)
 
-    def gen_soft_subset(self, gse_id, soft_dir=''):
+    def gen_soft(self, gse, outdir):
         """
-        @param gse_id: GSE ID, e.g. GSE45284
+        @param gse: GSE ID, e.g. GSE45284
         @param soft_dir: directory where soft is to be saved
         """
-        soft_subset = os.path.join(soft_dir,
-                                  '{0}_family.soft.subset'.format(gse_id))
+        soft_subset = os.path.join(
+            outdir, '{0}_family.soft.subset'.format(gse))
         if os.path.exists(soft_subset):
             logger.info('{0} has already existed'.format(soft_subset))
         else:
-            soft_gzip = self.download_soft_gz(gse_id, soft_dir)
+            soft_gzip = self.download_soft_gz(gse, outdir)
             if soft_gzip:       # meaning downloading successful
                 soft_subset = self.gunzip_and_extract_soft(soft_gzip)
                 logger.info('removing {0}'.format(soft_gzip))
                 os.remove(soft_gzip)
                 return soft_subset
 
-    def download_soft_gz(self, gse_id, soft_dir):
+    def download_soft_gz(self, gse, outdir):
         """download soft.gzip file"""
-        gse_mask = gse_id[0:-3] + 'nnn'
-        base = 'ftp://ftp.ncbi.nlm.nih.gov'
-        path = os.path.join('/', 'geo', 'series', gse_mask, gse_id, 'soft')
-        soft_gz = '{0}_family.soft.gz'.format(gse_id)
+        path = self.get_path(gse)
+        soft_gz = self.get_soft_gz_basename(gse)
+        local_soft_gz = os.path.join(outdir, soft_gz)
+        url = self.get_url(gse) # for logging purpose only
+        # e.g. ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45284/soft/GSE45284_family.soft.gz
+        logger.info('downloading {0} from {1} to '
+                    '{2}'.format(soft_gz, url, local_soft_gz))
+        try:
+            self.retrieve(path, soft_gz, local_soft_gz)
+        except Exception:
+            logger.exception('error when downloading {0}'.format(url))            
 
-        local_soft_gz = os.path.join(soft_dir, soft_gz)
+    def get_soft_gz_basename(self, gse):
+        return '{0}_family.soft.gz'.format(gse)
 
-        if os.path.exists(local_soft_gz):
-            logger.info('{0} has already existed'.format(local_soft_gz))
-            return local_soft_gz
-        else:
-            url = urlparse.urljoin(base, os.path.join(path, soft_gz))
-            # e.g. ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45284/soft/GSE45284_family.soft.gz
-            logger.info(
-                'downloading {0} from {1} to {2}'.format(soft_gz, url,
-                                                         local_soft_gz))
-            self.ftp_handler.cwd(path)
-            try:
-                with open(local_soft_gz, 'wb') as opf:
-                    self.ftp_handler.retrbinary(
-                        'RETR {0}'.format(soft_gz), opf.write)
-                    return local_soft_gz
-            except Exception:
-                logger.exception('error when downloading {0}'.format(url))
+    def get_gse_mask(self, gse):
+        return gse[0:-3] + 'nnn'
+
+    def get_path(self, gse):
+        mask = self.get_gse_mask(gse)
+        return os.path.join('/', 'geo', 'series', mask, gse, 'soft')
+    
+    def get_url(self, gse):
+        path = self.get_path(gse)
+        soft_gz = self.get_soft_gz_basename(gse)
+        return urlparse.urljoin(self.base, os.path.join(path, soft_gz))
+
+    def retrieve(self, path, filename, out):
+        self.ftp_handler.cwd(path)
+        with open(out, 'wb') as opf:
+            cmd = 'RETR {0}'.format(filename)
+            self.ftp_handler.retrbinary(cmd, opf.write)
 
     def gunzip_and_extract_soft(self, soft_gz):
         """gunzip soft.gzip and extract its content to generate soft.subset"""
@@ -104,8 +114,9 @@ def download_soft(input_csv, soft_outdir):
     current_gse = None
     for gse, gsm in read(input_csv):
         if current_gse is None or gse != current_gse:
-            ftp.gen_soft_subset(gse, soft_outdir)
+            ftp.gen_soft(gse, soft_outdir)
             current_gse = gse
+
 
 def main(options):
     """
