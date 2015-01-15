@@ -28,13 +28,15 @@ class SOFTDownloader(object):
         self.ftp_handler.login()
         self.base = 'ftp://{0}'.format(domain)
 
+    def get_soft_file(self, gse, outdir):
+        return os.path.join(outdir, '{0}_family.soft.subset'.format(gse))
+        
     def gen_soft(self, gse, outdir):
         """
         @param gse: GSE ID, e.g. GSE45284
         @param soft_dir: directory where soft is to be saved
         """
-        soft_subset = os.path.join(
-            outdir, '{0}_family.soft.subset'.format(gse))
+        soft_subset = self.get_soft_file(gse, outdir)
         if os.path.exists(soft_subset):
             logger.info('{0} has already existed'.format(soft_subset))
         else:
@@ -59,6 +61,12 @@ class SOFTDownloader(object):
         except Exception:
             logger.exception('error when downloading {0}'.format(url))            
 
+    def retrieve(self, path, filename, out):
+        self.ftp_handler.cwd(path)
+        with open(out, 'wb') as opf:
+            cmd = 'RETR {0}'.format(filename)
+            self.ftp_handler.retrbinary(cmd, opf.write)
+
     def get_soft_gz_basename(self, gse):
         return '{0}_family.soft.gz'.format(gse)
 
@@ -73,12 +81,6 @@ class SOFTDownloader(object):
         path = self.get_path(gse)
         soft_gz = self.get_soft_gz_basename(gse)
         return urlparse.urljoin(self.base, os.path.join(path, soft_gz))
-
-    def retrieve(self, path, filename, out):
-        self.ftp_handler.cwd(path)
-        with open(out, 'wb') as opf:
-            cmd = 'RETR {0}'.format(filename)
-            self.ftp_handler.retrbinary(cmd, opf.write)
 
     def gunzip_and_extract_soft(self, soft_gz):
         """gunzip soft.gzip and extract its content to generate soft.subset"""

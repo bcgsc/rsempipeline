@@ -5,6 +5,7 @@ import logging
 import logging.config
 import tempfile
 
+import mock
 from testfixtures import log_capture
 # https://pythonhosted.org/testfixtures/logging.html
 # LogCapture and log_capture are used in different ways to achieve the same
@@ -16,47 +17,28 @@ from rsempipeline.conf.settings import RP_PREP_LOGGING_CONFIG
 logging.config.fileConfig(RP_PREP_LOGGING_CONFIG)
 
 class GetSoftTestCase(unittest.TestCase):
-    def setUp(self):
-        """setUp and tearDown are run for teach test"""
-        self.input_csv = '___valid_input.csv'
-        with open(self.input_csv, 'wb') as opf1:
-            opf1.write(
-"""
-GSE59813,GSM1446812;
-GSE61491,GSM1506106; GSM1506107;
-""")
-        parser = rp_prep.get_parser()
-        self.temp_outdir = tempfile.mkdtemp() # mkdtemp returns abspath
-        self.options1 = parser.parse_args(['get-soft', '-f', self.input_csv])
-        self.options2 = parser.parse_args(['get-soft', '-f', self.input_csv,
-                                           '--outdir', self.temp_outdir])
-        self.gse = 'GSE38003'
-        self.gsm = 'GSM931711'
-        
-    def tearDown(self):
-        os.remove(self.input_csv)
-        shutil.rmtree(self.temp_outdir)
-
-    def test_gen_soft_outdir(self):
-        d = os.path.join(self.temp_outdir, SOFT_OUTDIR_BASENAME)
-        self.assertEqual(d, get_soft.gen_soft_outdir(self.temp_outdir))
-        self.assertTrue(os.path.exists(d))
+    @mock.patch('rsempipeline.preprocess.get_soft.mkdir')
+    def test_gen_soft_outdir(self, mock_mkdir):
+        d = os.path.join('any_outdir', SOFT_OUTDIR_BASENAME)
+        self.assertEqual(d, get_soft.gen_soft_outdir('any_outdir'))
+        mock_mkdir.assert_called_once_with(d)
 
 
 class SOFTDownloaderTestCase(unittest.TestCase):
-    def setUp(self):
-        # der: downloader
-        self.der = get_soft.SOFTDownloader()
-        self.gse1 = 'GSE45284'    # a real one
-        self.gse2 = 'GSE12345678' # a fake one
-        self.outdir = tempfile.mkdtemp()
+    gse1 = 'GSE45284'           # a real one
+    gse2 = 'GSE12345678'        # a fake one
 
-    def tearDown(self):
-        shutil.rmtree(self.outdir)
+    # because internet connection takes a long time
+    @mock.patch('rsempipeline.preprocess.get_soft.FTP')
+    def setUp(self, mock_FTP):
+        self.der = get_soft.SOFTDownloader()
+
+    def test_init(self):
+        self.der.ftp_handler.login.assert_called_once_with()
 
     def test_base(self):
-        self.der.base = 'ftp://ftp.ncbi.nlm.nih.gov'
-
+        self.assertEqual(self.der.base, 'ftp://ftp.ncbi.nlm.nih.gov')
+        
     def test_get_soft_gz_basename(self):
         self.assertEqual(self.der.get_soft_gz_basename(self.gse1),
                          'GSE45284_family.soft.gz')
@@ -74,24 +56,47 @@ class SOFTDownloaderTestCase(unittest.TestCase):
                          'ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45284/soft/GSE45284_family.soft.gz')
 
     def test_retrieve(self):
-        path = self.der.get_path(self.gse1)
-        soft_gz = self.der.get_soft_gz_basename(self.gse1)
-        out = os.path.join(self.outdir, soft_gz)
-        self.assertFalse(os.path.exists(out))
-        self.der.retrieve(path, soft_gz, out)
-        self.assertTrue(os.path.exists(out))
+        mock_open = mock.mock_open()
+        with mock.patch('rsempipeline.preprocess.get_soft.open',
+                        mock_open, create=True):
+            self.der.retrieve('the_path', 'the.soft.gz', 'the_output')
+        mock_open.assert_called_once_with('the_output', 'wb')
+        self.der.ftp_handler.cwd.assert_called_with('the_path')
+        fd = mock_open.return_value.__enter__.return_value
+        cmd = 'RETR the.soft.gz'
+        self.der.ftp_handler.retrbinary.assert_called_with(cmd, fd.write)
 
+    @mock.patch('rsempipeline.preprocess.get_soft.open', create=True)
+    def test_retrieve2(self, mock_open):
+        """supposed to have the same testing purpose as self.test_retrieve, but using
+        patch as a decorator instead of context manager
+        """
+        # mock_open.return_value = mock.MagicMock(spec=file)
+        self.der.retrieve('the_path', 'the.soft.gz', 'the_output')
+        mock_open.assert_called_once_with('the_output', 'wb')
+        self.der.ftp_handler.cwd.assert_called_with('the_path')
+        cmd = 'RETR the.soft.gz'
+        fd = mock_open.return_value.__enter__.return_value
+        self.der.ftp_handler.retrbinary.assert_called_with(cmd, fd.write)
+
+    @mock.patch.object(get_soft.SOFTDownloader, 'retrieve')
     @log_capture()
-    def test_download_soft_gz(self, L):
-        soft_gz = self.der.get_soft_gz_basename(self.gse1)
-        out = os.path.join(self.outdir, soft_gz)
-        self.assertFalse(os.path.exists(out))
-        self.der.download_soft_gz(self.gse1, self.outdir)
-        self.assertTrue(os.path.exists(out))
+    def test_download_soft_gz(self, mock_retrieve, L):
+        self.der.download_soft_gz(self.gse1, 'any_outdir')
+        args = '/geo/series/GSE45nnn/GSE45284/soft', 'GSE45284_family.soft.gz', 'any_outdir/GSE45284_family.soft.gz'
+        mock_retrieve.assert_called_once_with(*args)
         L.check(('rsempipeline.preprocess.get_soft', 'INFO',
-                 'downloading GSE45284_family.soft.gz from ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45284/soft/GSE45284_family.soft.gz to {0}'.format(out)))
+                 'downloading GSE45284_family.soft.gz from ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE45nnn/GSE45284/soft/GSE45284_family.soft.gz to any_outdir/GSE45284_family.soft.gz'))
 
-    # def test_gen_soft
+        mock_retrieve.side_effect = Exception()
+        self.der.download_soft_gz(self.gse1, 'any_outdir')
+        mock_retrieve.assert_called_with(*args)
+        self.assertEqual(mock_retrieve.call_count, 2)
+        self.assertIn('error when downloading', str(L))
+
+    def test_get_soft_file(self):
+        self.assertEqual(self.der.get_soft_file(self.gse1, 'any_outdir'),
+                         'any_outdir/GSE45284_family.soft.subset')
 
 
 if __name__ == "__main__":
