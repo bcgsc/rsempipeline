@@ -5,11 +5,12 @@ import logging
 import logging.config
 import tempfile
 
-from bs4 import BeautifulSoup
+import mock
 from testfixtures import log_capture
 # https://pythonhosted.org/testfixtures/logging.html
 # LogCapture and log_capture are used in different ways to achieve the same
 # results
+from bs4 import BeautifulSoup
 
 from rsempipeline.preprocess import rp_prep, gen_csv
 from rsempipeline.conf.settings import (HTML_OUTDIR_BASENAME,
@@ -48,6 +49,21 @@ GSE61491,GSM1506106; GSM1506107;
     def test_gen_outdir_as_temp_outdir(self):
         self.assertEqual(self.temp_outdir,
                          os.path.abspath(gen_csv.gen_outdir(self.options2)))
+
+    @mock.patch('rsempipeline.preprocess.gen_csv.mkdir')
+    def test_gen_outdir_without_specified_outdir(self, mock_mkdir):
+        p = rp_prep.get_parser()
+        options = p.parse_args(['gen-csv', '-f', 'any_dir/input.csv'])
+        self.assertEqual('any_dir', gen_csv.gen_outdir(options))
+        self.assertFalse(mock_mkdir.called, "mkdir shouldn't have been called with -f is specified")
+
+    @mock.patch('rsempipeline.preprocess.gen_csv.mkdir')
+    def test_gen_outdir_with_specified_outdir(self, mock_mkdir):
+        p = rp_prep.get_parser()
+        options = p.parse_args(['gen-csv', '-f', 'any_dir/input.csv', '--outdir', 'specified_outdir'])
+        self.assertEqual('specified_outdir', gen_csv.gen_outdir(options))        
+        mock_mkdir.called_once_with('specified_outdir')
+
 
     def test_gen_html_outdir(self):
         d = os.path.join(self.temp_outdir, HTML_OUTDIR_BASENAME)
