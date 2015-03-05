@@ -17,6 +17,13 @@ class Series(object):
         # this soft_file where this series belongs
         self.soft_file = soft_file
 
+    def add_sample(self, sample):
+        self.samples.append(sample)
+
+    def add_passed_sample(self, sample):
+        self.add_sample(sample)
+        self.passed_samples.append(sample)
+        
     def num_passed_samples(self):
         """
         return the number of passed (i.e. qualified after checking in
@@ -65,13 +72,17 @@ class Sample(object):
         Generate the output directory where all downloads and analysis
         results of this particular sample are to going to be
         """
-        # dir hirarchy: <GSE>/<species>/<GSM>
-        self.outdir = os.path.join(
-            outdir,
-            self.series.name,
-            self.organism.lower().replace(' ', '_'),
-            self.name)
-        return self.outdir
+        if self.is_info_complete():
+            # dir hirarchy: <GSE>/<species>/<GSM>
+            self.outdir = os.path.join(
+                outdir,
+                self.series.name,
+                self.organism.lower().replace(' ', '_'),
+                self.name)
+            return self.outdir
+        else:
+            raise ValueError('{0} is not information complete, make sure none '
+                             'of its name, organism and url is None'.format(self))
 
     # def num_sras(self):
     #     return len(self.sras)
