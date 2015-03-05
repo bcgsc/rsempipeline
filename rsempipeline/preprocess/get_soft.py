@@ -108,7 +108,7 @@ def gen_soft_outdir(outdir):
     return d
 
 
-def download_soft(input_csv, soft_outdir):
+def download_soft(input_csv, soft_outdir): # pragma: no cover
     ftp = SOFTDownloader()
     current_gse = None
     for gse, gsm in read(input_csv):
