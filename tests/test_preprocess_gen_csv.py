@@ -23,7 +23,7 @@ logging.config.fileConfig(RP_PREP_LOGGING_CONFIG)
 class GenCsvTestCase(unittest.TestCase):
     def setUp(self):
         """setUp and tearDown are run for teach test"""
-        self.input_csv = '___valid_input.csv'
+        self.input_csv = os.path.join(os.path.dirname(__file__), '___valid_input.csv')
         with open(self.input_csv, 'wb') as opf1:
             opf1.write(
 """
@@ -46,6 +46,7 @@ GSE61491,GSM1506106; GSM1506107;
         self.assertEqual(os.path.dirname(__file__),
                          # since __file__ contains absolute path
                          os.path.abspath(gen_csv.gen_outdir(self.options1)))
+
     def test_gen_outdir_as_temp_outdir(self):
         self.assertEqual(self.temp_outdir,
                          os.path.abspath(gen_csv.gen_outdir(self.options2)))
