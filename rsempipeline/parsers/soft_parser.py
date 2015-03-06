@@ -14,10 +14,10 @@ from rsempipeline.utils.objs import Series, Sample
 
 def update(current_sample, label, value, interested_organisms):
     """
-    @param sample: current sample
-    @param label: label of a given line in a soft file
-    @param value: value of a given line in a soft file
-    @interested_organisms: only organism that is in organisms is interested
+    :param sample: current sample
+    :param label: label of a given line in a soft file
+    :param value: value of a given line in a soft file
+    :interested_organisms: only organism that is in organisms is interested
     """
     sample = current_sample
     if label.startswith('!Sample_organism_ch'):
@@ -65,35 +65,51 @@ def update(current_sample, label, value, interested_organisms):
     return current_sample
 
 
-def parse(soft_file, interested_organisms):
-    """Parse the soft file"""
-    def append_passed_sample(current_sample, series, index):
-        if current_sample:
-            if current_sample.is_info_complete():
-                current_sample.index = index
-                series.passed_samples.append(current_sample)
-                index += 1
-            else:
-                logger.warn(
-                    'info incomplete for current sample, '
-                    'name: {0}; organism: {1}; url: {2}'.format(
-                        current_sample.name, current_sample.organism,
-                        current_sample.url))
-        return index
-
-    logger.info("Parsing file: {0} ...".format(soft_file))
-
+def get_series_name_from(soft_file):
+    """Get series name from soft file, e.g. GSE31555 from
+    GSE31555_family.soft.subset"""
     # try to extract the series name from the soft filename
-    series_name_search = re.search(r'GSE\d+', soft_file)
-    if series_name_search is not None:
-        series_name_from_file = series_name_search.group()
+    re_search = re.search(r'GSE\d+', soft_file)
+    if re_search is not None:
+        series_name = re_search.group()
+        return series_name
+    else:
+        raise ValueError("cannot extract the series name from {0}, does it look"
+                         "like GSE12345_family.soft.subset?".format(soft_file))
+    
+
+def add(current_sample, series, index):
+    if current_sample is not None:
+        if current_sample.is_info_complete():
+            current_sample.index = index
+            # add sample to both lists of samples and passed_samples
+            series.add_passed_sample(current_sample)
+            index += 1
+        else:
+            series.add_sample(current_sample)
+            logger.warn(
+                'info incomplete for current sample, '
+                'name: {0}; organism: {1}; url: {2}'.format(
+                    current_sample.name, current_sample.organism,
+                    current_sample.url))
+    return index
+
+
+def parse(soft_file, interested_organisms):
+    """Parse the soft file
+    :param interested_organisms: a list of interested organisms: ['Homo
+                                 sapiens', 'Mus musculus']
+    """
+    logger.info("Parsing file: {0} ...".format(soft_file))
+    series_name_from_file = get_series_name_from(soft_file)
+    print series_name_from_file
 
     # Assume one GSE per soft file
-    index = 1
-    current_sample = None
+    # index: the index of all passed samples, unpassed samples are not indexed
+    index, series, current_sample = 1, None, None
     with open(soft_file, 'rb') as inf:
         for line in inf:
-            label, value = [_.strip() for _ in line.split('=')]
+            label, value = [__.strip() for __ in line.split('=')]
             if label == '^SERIES':
                 series = Series(value, os.path.abspath(soft_file))
                 if series.name != series_name_from_file:
@@ -102,17 +118,17 @@ def parse(soft_file, interested_organisms):
                                series, series_name_from_file))
                     raise ValueError(msg)
             elif label == '^SAMPLE':
-                index = append_passed_sample(current_sample, series, index)
+                index = add(current_sample, series, index)
                 current_sample = Sample(name=value, series=series)
-                series.samples.append(current_sample)
 
             if current_sample:
                 current_sample = update(current_sample, label, value,
                                         interested_organisms)
-        # append the last sample
-        append_passed_sample(current_sample, series, index)
+        if series is not None:
+            # add the last sample
+            add(current_sample, series, index)
 
-    logger.info("{0}: {1}/{2} samples passed".format(
-        series.name, series.num_passed_samples(), series.num_samples()))
-    logger.info('=' * 30)
-    return series
+            logger.info("{0}: {1}/{2} samples passed".format(
+                series.name, series.num_passed_samples(), series.num_samples()))
+            logger.info('=' * 30)
+            return series
