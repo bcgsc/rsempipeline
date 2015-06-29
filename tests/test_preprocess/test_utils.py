@@ -14,8 +14,6 @@ from rsempipeline.preprocess import utils
 from rsempipeline.conf.settings import SHARE_DIR, RP_PREP_LOGGING_CONFIG
 logging.config.fileConfig(RP_PREP_LOGGING_CONFIG)
 
-from utils import remove
-
 
 class UtilsProcessTestCase(unittest.TestCase):
     def setUp(self):
@@ -96,13 +94,14 @@ GSE2,GSM20; GSM21; GSM22;
         self.RE_GSM = re.compile('^GSM\d+')
 
     def tearDown(self):
-        map(remove, [self.valid_input1, self.valid_input2, self.valid_input3,
-                     self.invalid_input])
+        for __ in [self.valid_input1, self.valid_input2, self.valid_input3,
+                   self.invalid_input]:
+            os.remove(__)
 
     def test_valid_input(self):
         self.assertTrue(utils.is_valid(self.valid_input1))
 
-    def test_valid_input_with_appending_semicolon(self):    
+    def test_valid_input_with_appending_semicolon(self):
         self.assertTrue(utils.is_valid(self.valid_input2))
 
     def test_valid_input_with_commented_line(self):
