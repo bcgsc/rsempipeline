@@ -89,9 +89,9 @@ def add(current_sample, series, index):
             series.add_sample(current_sample)
             logger.warn(
                 'info incomplete for current sample, '
-                'name: {0}; organism: {1}; url: {2}'.format(
-                    current_sample.name, current_sample.organism,
-                    current_sample.url))
+                'name: {0} of {1}; organism: {2}; url: {3}'.format(
+                    current_sample.name, current_sample.series.name,
+                    current_sample.organism, current_sample.url))
     return index
 
 
