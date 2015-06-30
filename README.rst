@@ -1,25 +1,27 @@
 rsempipeline
 ========================
 
-(The pipeline is currently being packaged and buggy, and will be fixed in 2015,
-Jan).
+(The pipeline is still under development, please contact the author if you need
+it setup in your environment).
 
-rsempipeline is a pipeline for analyzing GEO data using `RSEM
-<http://deweylab.biostat.wisc.edu/rsem/>`_. Typical analysis process is as
+rsempipeline is a pipeline for analyzing `GEO
+<http://www.ncbi.nlm.nih.gov/geo/>`_ data using `RSEM
+<http://deweylab.biostat.wisc.edu/rsem/>`_. The typical analysis process is as
 follows:
 
 The input to the pipeline are mainly from two resources,
 
 - soft files for all Series (aka. GSE)
-- A GSE_species_GSM.csv file which contains a list of all interested Samples
+- A GSE_species_GSM.csv file which contains a list of all interested samples
   (aka. GSM) to be processed
 
-Three steps are included in the pipeline:
+There are three steps included in this pipeline:
 
-1. Download the sra files for all GSMs from `GEO website
-   <http://www.ncbi.nlm.nih.gov/geo/>`_ using aspc or wget (in case the first
-   fail). aspc and wget use different urls which are linked to duplicates of the
-   same file.
+1. Download the sra files for all GSMs from `GEO
+   <http://www.ncbi.nlm.nih.gov/geo/>`_ website using aspc from `Aspera
+   <http://downloads.asperasoft.com/>`_ or `wget
+   <http://www.gnu.org/software/wget/>`_ (in case when aspc fails). aspc and
+   wget use different urls which are linked to copies of the same file.
 
 2. sra files are converted to fastq.gz files using fastq-dump from `SRA Toolkit
    <http://www.ncbi.nlm.nih.gov/Traces/sra/sra.cgi?view=software>`_
@@ -29,21 +31,22 @@ Three steps are included in the pipeline:
    for all GSMs
 
 The pipeline is designed to run the first two steps (computationally cheap) on
-a local computer. Step 3 (computational intensive) is run on a computer cluster
+a localhost. Step 3 (computationally expensive) is run on a HPC cluster
 (e.g. genesis, westgrid cluster).
 
 Typically, about 100 GSEs and a few thousands of GSMs are picked by our
-collaborators and grouped into a batch. Step 1 and 2 are done on in a
-sub-batch-by-sub-batch fashion where all GSMs are processed in parallel until
-finished. The way each sub-batch of GSMs are selected according to their file
-sizes (mainly sra and resultant fastq.gz files) and currently available disk
-space on the localhost as specified in a config file. After the first two step,
-a submission script will be generated for each GSM, and at Step 3 a new job
-will be submitted to the cluster for processing the GSM using RSEM. A control
-mechanism has also implemented to avoid overuse the cluster resources such as
-compute nodes and disk space. The first two steps are run by the command
-``rp-run`` while the job script generation and job submission is handled by the
-command ``rp-transfer``.
+collaborators and grouped into a batch. Step 1 and 2 are done in a
+sub-batch-by-sub-batch fashion where all GSMs of a sub-batch are processed in
+parallel until finished. Each sub-batch of GSMs are selected based on their
+file sizes (estimated from sizes of sra and its resultant fastq.gz files) and
+how much disk space available on the localhost as specified in a configuration
+file (``rp_config.yml``). At the end of the second step, a submission script
+will be generated for each GSM, and at Step 3 a new job will be submitted to
+the cluster for processing the GSM using RSEM. A control mechanism has also
+been implemented to avoid overuse of the cluster resources such as compute
+nodes and disk space. The first two steps are run by the command ``rp-run``
+while the generation of the submission script and job submission are handled by
+the command ``rp-transfer``.
 
 ..
    It will create all folders for all GSMs according to a designated structure,
