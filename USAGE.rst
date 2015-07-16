@@ -1,7 +1,8 @@
 Preprocessing
 --------------------
 
-Preprocessing is done by ``rp-prep``, which has three sub-commands:
+Preprocessing is done by ``rp-prep`` based on ``GSE_GSM.csv``, which has three
+sub-commands:
 
 - ``find-dup``
 - ``gen-csv``
@@ -20,25 +21,16 @@ Type ``rp-prep -h`` for more help.
       GSExxxxx,GSMxxxxxxx; GSMxxxxxxx; GSMxxxxxxx
       ...
 
-   The following entries will be labeld as invalid.
+   For example, the following entries will be labeld as invalid.
 
    ::
 
       GSE45732, xGSM1113298
       a,b,c
 
-2. Detect duplicated GSMs in an individual GSE. e.g.
-
-   ::
-
-       rp-prep find-dup -f GSE_GSM.csv
-
-   If there are duplicates,, please remove them from ``GSE_GSM.csv``, and rerun
-   ``rp-prep find-dup`` to confirm no duplicates are left.
-
-3. Generate ``GSE_species_GSM.csv``. Species information is obtained by
-   downloading and parsing the webpage for each GSM on `GEO website
-   <http://www.ncbi.nlm.nih.gov/geo/>`__. e.g.
+2. Generate ``GSE_species_GSM.csv`` that will be used after preprocessing is
+   done. Species information is obtained by downloading and parsing the webpage
+   for each GSM on `GEO website <http://www.ncbi.nlm.nih.gov/geo/>`__. e.g.
 
    ::
 
@@ -55,14 +47,14 @@ Type ``rp-prep -h`` for more help.
    GSEs and GSMs from the ``GSE_GSM.csv``, and rerun ``rp-prep gen-csv`` with
    the updated ``GSE_GSM.csv`` to regenerate ``GSE_species_GSM.csv``.
 
-4. Download soft files for all GSEs. The soft
+3. Download soft files for all GSEs. The soft
    file contains all metadata about a particular GSE. The structure and content
    of SOFT format can be found `here
    <http://www.ncbi.nlm.nih.gov/geo/info/soft.html#format>`_. e.g.:
 
    ::
 
-       rp-dup get-soft -f GSE_GSM.csv --outdir dir_to_batchx
+       rp-prep get-soft -f GSE_GSM.csv [--outdir dir_to_batchx]
 
 
 Pipeline Setup:
