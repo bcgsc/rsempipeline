@@ -23,17 +23,17 @@ class Series(object):
     def add_passed_sample(self, sample):
         self.add_sample(sample)
         self.passed_samples.append(sample)
-        
+
+    def num_samples(self):
+        """return the number of total samples for this Series"""
+        return len(self.samples)
+
     def num_passed_samples(self):
         """
         return the number of passed (i.e. qualified after checking in
         soft_parser.py) samples
         """
         return len(self.passed_samples)
-
-    def num_samples(self):
-        """return the number of total samples for this Series"""
-        return len(self.samples)
 
     def __str__(self):
         return "{0} (passed: {1}/{2})".format(

@@ -8,7 +8,7 @@ class SeriesTestCase(unittest.TestCase):
     def setUp(self):
         self.series = Series('GSE123456', 'GSE123456_family.soft.subset')
 
-    def test_init(self):
+    def test___init__(self):
         self.assertEqual(self.series.name, 'GSE123456')
         self.assertEqual(self.series.passed_samples, [])
         self.assertEqual(self.series.samples, [])
@@ -16,19 +16,26 @@ class SeriesTestCase(unittest.TestCase):
         self.assertEqual(self.series.num_passed_samples(), 0)
         self.assertEqual(self.series.num_samples(), 0)
 
-    def test_adding_sample(self):
+    def test_add_sample(self):
         sample = Sample('GSM1', self.series)
         self.series.add_sample(sample)
         self.assertEqual(self.series.num_samples(), 1)
         self.assertEqual(self.series.num_passed_samples(), 0)
 
-    def test_adding_passed_sample(self):
+    def test_add_passed_sample(self):
         sample1 = Sample('GSM1', self.series)
         sample2 = Sample('GSM2', self.series)
         self.series.add_sample(sample1)
         self.series.add_passed_sample(sample2)
         self.assertEqual(self.series.num_samples(), 2)
         self.assertEqual(self.series.num_passed_samples(), 1)
+
+    def test___str__(self):
+        self.assertEqual(str(self.series), 'GSE123456 (passed: 0/0)')
+
+    def test___repr__(self):
+        self.assertEqual(repr(self.series), 'GSE123456 (passed: 0/0)')
+
 
 
 class SampleTestCase(unittest.TestCase):
@@ -53,6 +60,10 @@ class SampleTestCase(unittest.TestCase):
         self.assertRaisesRegexp(ValueError, 'not information complete', 
                                 self.sample.gen_outdir, 'some_outdir')
 
-    def test_str(self):
+    def test___str__(self):
         # 0/0, not indexed
         self.assertEqual(str(self.sample), '<GSM1 (0/0) of GSE123456>')
+        
+    def test___repr__(self):
+        # 0/0, not indexed
+        self.assertEqual(repr(self.sample), '<GSM1 (0/0) of GSE123456>')
