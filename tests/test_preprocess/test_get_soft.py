@@ -102,16 +102,29 @@ class SOFTDownloaderTestCase(unittest.TestCase):
                          'any_outdir/GSE45284_family.soft.subset')
 
     @mock.patch.object(get_soft.gzip, 'open')
-    @mock.patch('rsempipeline.preprocess.get_soft.os.path')
     @log_capture()
-    def test_gunzip_and_extract_soft(self, mock_path, mock_gzip_open, L):
+    def test_gunzip_and_extract_soft(self, mock_path, L):
+        import StringIO
         soft_gz = 'any_dir/the.soft.gz'
         soft_subset = 'any_dir/the.soft.subset'
         mock_open = mock.mock_open()
+        mock_gzip_open = mock.mock_open(read_data='\n'.join(
+            ['^SERIES = GSE67763',
+             '!Sample_instrument_model = Illumina HiSeq 2000',
+             '!Sample_library_strategy = RNA-Seq']))
+        # NOTE: mock_open() object does indeed not implement iteration, see
+        # http://stackoverflow.com/questions/24779893/customizing-unittest-mock-mock-open-for-iteration
+        mock_gzip_open.return_value.__iter__ = lambda self: StringIO.StringIO(self.read())
+        mock_gzip_open.return_value.__next__ = lambda self: self.readline()
         with mock.patch('rsempipeline.preprocess.get_soft.open', mock_open, create=True):
-            self.der.gunzip_and_extract_soft(soft_gz, soft_subset)
+            with mock.patch('rsempipeline.preprocess.get_soft.gzip.open', mock_gzip_open):
+                self.der.gunzip_and_extract_soft(soft_gz, soft_subset)
         mock_open.assert_called_once_with(soft_subset, 'wb')
         mock_gzip_open.assert_called_once_with(soft_gz, 'rb')
+        handle = mock_open()
+        # print mock_open.mock_calls
+        # print mock_gzip_open.mock_calls
+        self.assertTrue(handle.write.called)
         L.check(('rsempipeline.preprocess.get_soft', 'INFO',
                  'gunziping and extracting from any_dir/the.soft.gz to any_dir/the.soft.subset'))
 
