@@ -95,7 +95,7 @@ def originate_params():
 @R.files(originate_params)
 def download(_, outputs, sample):
     """inputs (_) is None"""
-    msg_id = misc.gen_sample_msg_id(sample)
+    msg_id = str(sample)
     # e.g. sra
     # test_data_downloaded_for_genesis/rsem_output/human/GSE24455/GSM602557/SRX029242/SRR070177/SRR070177.sra
     sra, flag_file = outputs    # the others are sra files

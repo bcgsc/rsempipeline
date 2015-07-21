@@ -1,8 +1,6 @@
 """Lists objects used in rsempipeline.py"""
 
 import os
-from rsempipeline.utils.misc import gen_sample_msg_id
-
 
 class Series(object):
     """The object that corresponds to a GSE/Series"""
@@ -84,11 +82,18 @@ class Sample(object):
             raise ValueError('{0} is not information complete, make sure none '
                              'of its name, organism and url is None'.format(self))
 
+    def msg_id(self):
+        """
+        used as an id to identify a particular sample for each logging message
+        """
+
     # def num_sras(self):
     #     return len(self.sras)
 
     def __str__(self):
-        return  '<{0}>'.format(gen_sample_msg_id(self))
+        return '<{0} ({2}/{3}) of {1}>'.format(
+            self.name, self.series.name, self.index,
+            self.series.num_passed_samples())
 
     def __repr__(self):
         return self.__str__()

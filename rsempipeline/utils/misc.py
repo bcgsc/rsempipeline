@@ -63,10 +63,10 @@ def lockit(locker_pattern):
         def deced(*args, **kwargs):
             lockers = get_lockers('{0}*.locker'.format(locker_pattern))
             if len(lockers) >= 1:
-                logger.info('The previous {0} run hasn\'t completed yet with '
-                            'the following locker(s) found: ({1}). '
-                            'Nothing done.'.format(
-                                func.__name__, ' '.join(lockers)))
+                logger.info('Nothing is done because the previous run of {0} '
+                            'hasn\'t completed yet with the following '
+                            'locker(s) found:\n    {1}'.format(
+                                func.__name__, '\n    '.join(lockers)))
                 return
             else:
                 now = datetime.now().strftime('%y-%m-%d_%H:%M:%S')
@@ -112,9 +112,11 @@ def backup_file(f):
             count += 1
             rn_to = os.path.join(
                 dirname, '#' + basename + '.{0}#'.format(count))
-        logger.info("BACKING UP {0} to {1}".format(f, rn_to))
+        logger.info("Backing up {0} to {1}".format(f, rn_to))
         os.rename(f, rn_to)
         return rn_to
+    else:
+        logger.warning('{0} doesn\'t exist'.format(f))
 
 
 def touch(fname, times=None):
@@ -128,51 +130,35 @@ def touch(fname, times=None):
             os.path.abspath('.')))
         os.utime(fname, times)
 
+# cache functions are deprecated
 
-def cache_usable(cache_file, *ref_files):
-    """check if cache is still usable"""
-    f_cache_usable = True
-    if os.path.exists(cache_file):
-        logger.info('{0} exists'.format(cache_file))
-        if cache_up_to_date(cache_file, *ref_files):
-            logger.info('{0} is up to date. '
-                        'reading outputs from cache'.format(cache_file))
-        else:
-            logger.info('{0} is outdated'.format(cache_file))
-            f_cache_usable = False
-    else:
-        logger.info('{0} doesn\'t exist'.format(cache_file))
-        f_cache_usable = False
-    return f_cache_usable
-
-
-def cache_up_to_date(cache_file, *ref_files):
-    """check if cache is up-to-date"""
-    # ctime: e.g. when renaming test.bk to test changes information in
-    # inode
-    for _ in ref_files:
-        if (os.path.getmtime(cache_file) < os.path.getmtime(_) or
-            os.path.getctime(cache_file) < os.path.getctime(_)):
-            return False
-    return True
+# def cache_usable(cache_file, *ref_files):
+#     """check if cache is still usable"""
+#     f_cache_usable = True
+#     if os.path.exists(cache_file):
+#         logger.info('{0} exists'.format(cache_file))
+#         if cache_up_to_date(cache_file, *ref_files):
+#             logger.info('{0} is up to date. '
+#                         'reading outputs from cache'.format(cache_file))
+#         else:
+#             logger.info('{0} is outdated'.format(cache_file))
+#             f_cache_usable = False
+#     else:
+#         logger.info('{0} doesn\'t exist'.format(cache_file))
+#         f_cache_usable = False
+#     return f_cache_usable
 
 
-def gen_sample_msg_id(sample):
-    """
-    used as an id to identify a particular sample for each logging message
-    """
-    return '{0} ({2}/{3}) of {1}'.format(
-        sample.name, sample.series.name,
-        sample.index, sample.series.num_passed_samples())
+# def cache_up_to_date(cache_file, *ref_files):
+#     """check if cache is up-to-date"""
+#     # ctime: e.g. when renaming test.bk to test changes information in
+#     # inode
+#     for _ in ref_files:
+#         if (os.path.getmtime(cache_file) < os.path.getmtime(_) or
+#             os.path.getctime(cache_file) < os.path.getctime(_)):
+#             return False
+#     return True
 
-
-# def gen_sra_msg_id(sra):
-#     sample = sra.sample
-#     series = sample.series
-#     return '{0} ({1}/{2}) of {3} ({4}/{5}) of {6}'.format(
-#         sra.name, sra.index, sample.num_sras(),
-#         sample.name, sample.index, series.num_passed_samples(),
-#         series.name)
 
 # used a better version of execute as defined in rsempipeline.py --2014-08-13
 def execute(cmd, msg_id='', flag_file=None, debug=False):
