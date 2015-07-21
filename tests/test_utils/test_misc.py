@@ -1,20 +1,13 @@
 import os
-import shutil
 import unittest
-import logging
-import logging.config
-import tempfile
-
 import mock
-from testfixtures import LogCapture, log_capture
+
+from testfixtures import LogCapture
 # https://pythonhosted.org/testfixtures/logging.html
 # LogCapture and log_capture are used in different ways to achieve the same
 # results
 
 from rsempipeline.utils import misc
-# can be any of the logging config file as long as logger for utils is included.
-# from rsempipeline.conf.settings import RP_RUN_LOGGING_CONFIG
-# logging.config.fileConfig(RP_RUN_LOGGING_CONFIG)
 
 
 class MiscTestCase(unittest.TestCase):

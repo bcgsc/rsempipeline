@@ -3,7 +3,6 @@ import re
 import unittest
 import types
 import logging
-import logging.config
 
 from testfixtures import LogCapture, log_capture
 # https://pythonhosted.org/testfixtures/logging.html
@@ -11,9 +10,7 @@ from testfixtures import LogCapture, log_capture
 # results
 
 from rsempipeline.preprocess import utils
-from rsempipeline.conf.settings import SHARE_DIR, RP_PREP_LOGGING_CONFIG
-logging.config.fileConfig(RP_PREP_LOGGING_CONFIG)
-
+from rsempipeline.conf.settings import SHARE_DIR
 
 class UtilsProcessTestCase(unittest.TestCase):
     def setUp(self):

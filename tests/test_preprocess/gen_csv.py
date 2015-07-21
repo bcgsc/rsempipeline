@@ -1,8 +1,6 @@
 import os
 import shutil
 import unittest
-import logging
-import logging.config
 import tempfile
 
 import mock
@@ -16,8 +14,6 @@ from rsempipeline.preprocess import rp_prep, gen_csv
 from rsempipeline.conf.settings import (HTML_OUTDIR_BASENAME,
                                         SPECIES_CSV_BASENAME,
                                         NO_SPECIES_CSV_BASENAME)
-from rsempipeline.conf.settings import RP_PREP_LOGGING_CONFIG
-logging.config.fileConfig(RP_PREP_LOGGING_CONFIG)
 
 
 class GenCsvTestCase(unittest.TestCase):

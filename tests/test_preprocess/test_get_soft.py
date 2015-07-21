@@ -1,9 +1,5 @@
 import os
-import shutil
 import unittest
-import logging
-import logging.config
-import tempfile
 
 import mock
 from testfixtures import log_capture
@@ -11,10 +7,9 @@ from testfixtures import log_capture
 # LogCapture and log_capture are used in different ways to achieve the same
 # results
 
-from rsempipeline.preprocess import rp_prep, get_soft
+from rsempipeline.preprocess import get_soft
 from rsempipeline.conf.settings import SOFT_OUTDIR_BASENAME
-from rsempipeline.conf.settings import RP_PREP_LOGGING_CONFIG
-logging.config.fileConfig(RP_PREP_LOGGING_CONFIG)
+
 
 class GetSoftTestCase(unittest.TestCase):
     @mock.patch('rsempipeline.preprocess.get_soft.mkdir')
