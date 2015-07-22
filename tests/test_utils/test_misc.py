@@ -178,6 +178,11 @@ class MiscTestCase(unittest.TestCase):
         self.assertFalse(os.path.exists(f))
         mock_utime.called_once_with(f, None)
 
+    def test_gen_completion_stamp(self):
+        self.assertEqual(misc.gen_completion_stamp('some_key', 'some_dir'),
+                         'some_dir/some_key.COMPLETE')
+
+
     def test_pretty_usage(self):
         self.assertEqual(misc.pretty_usage(1000), '1000.0 bytes')
         self.assertEqual(misc.pretty_usage(1023), '1023.0 bytes')
