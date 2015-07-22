@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 from rsempipeline.parsers.soft_parser import parse
 from rsempipeline.parsers.isamp_parser import get_isamp
-from rsempipeline.utils.misc import pretty_usage, ugly_usage
+from rsempipeline.utils.misc import pretty_usage, ugly_usage, disk_used, disk_free
 
 # about generating samples from soft and isamp inputs
 def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
@@ -186,10 +186,10 @@ def select_samples_to_process(samples, config, options):
     """
 
     l_top_outdir = config['LOCAL_TOP_OUTDIR']
-    l_free_space = get_local_free_disk_space(config['LOCAL_CMD_DF'])
+    l_free_space = disk_free(config['LOCAL_CMD_DF'])
     logger.info(
         'local free space avaialbe: {0}'.format(pretty_usage(l_free_space)))
-    l_current_usage = get_current_local_usage(l_top_outdir)
+    l_current_usage = disk_used(l_top_outdir)
     logger.info('local current usage by {0}: {1}'.format(
         l_top_outdir, pretty_usage(l_current_usage)))
     l_max_usage = min(ugly_usage(config['LOCAL_MAX_USAGE']), l_free_space)
@@ -306,30 +306,3 @@ def get_recorded_gsms(record_file):
     else:
         with open(record_file) as inf:
             return [_.strip() for _ in inf if not _.strip().startswith('#')]
-
-
-def get_current_local_usage(l_top_outdir):
-    """Get the real local usage, equivalent to du -s l_top_outdir"""
-    # proc = subprocess.Popen(
-    #     'du -s {0}'.format(l_top_outdir), stdout=subprocess.PIPE, shell=True)
-    # output = proc.communicate()[0]
-    # return int(output[0].split('\t')[0]) * 1024 # in KB => byte
-    # surprisingly, os.walk is of similar speed to du
-    total_size = 0
-    for dirpath, _, filenames in os.walk(l_top_outdir):
-        for f in filenames:
-            fp = os.path.join(dirpath, f)
-            total_size += os.path.getsize(fp)
-    return total_size
-
-
-def get_local_free_disk_space(cmd_df):
-    """
-    Get the local free disk space with cmd_df specified in the
-    rsempipeline_config.yaml
-    """
-    proc = subprocess.Popen(cmd_df, stdout=subprocess.PIPE, shell=True)
-    output = proc.communicate()[0]
-    # e.g. output:
-    # 'Filesystem     1024-blocks       Used  Available Capacity Mounted on\nisaac:/btl2    10200547328 1267127584 8933419744      13% /projects/btl2\n'
-    return int(output.split(os.linesep)[1].split()[3]) * 1024

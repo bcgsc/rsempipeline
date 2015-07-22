@@ -1,6 +1,8 @@
 import os
+import shutil
 import unittest
 import mock
+import tempfile
 
 from testfixtures import LogCapture
 # https://pythonhosted.org/testfixtures/logging.html
@@ -210,6 +212,44 @@ class MiscTestCase(unittest.TestCase):
         self.assertRaises(ValueError, misc.ugly_usage, 'invalid size')
         # exabyte is not handled yet
         self.assertRaises(ValueError, misc.ugly_usage, '1.5 EB')
+
+
+    def test_disk_used(self):
+        fake_dir = tempfile.mkdtemp(suffix='_rsem_testing')
+        size_fake_dir = os.path.getsize(fake_dir)
+        with tempfile.NamedTemporaryFile(dir=fake_dir, delete=False) as fake_f1:
+            pass                # no content
+        size_fake_f1 = os.path.getsize(fake_f1.name)
+        with tempfile.NamedTemporaryFile(dir=fake_dir, delete=False) as fake_f2:
+            fake_f2.write('1')  # one character
+        size_fake_f2 = os.path.getsize(fake_f2.name)
+        with tempfile.NamedTemporaryFile(dir=fake_dir, delete=False) as fake_f3:
+            fake_f3.write('123')  # three character
+        size_fake_f3 = os.path.getsize(fake_f3.name)
+        # print size_fake_dir # 4096
+        # print size_fake_f1  # 0
+        # print size_fake_f2  # 1
+        # print size_fake_f3  # 3
+        self.assertEqual(sum([size_fake_dir,
+                              size_fake_f1,
+                              size_fake_f2,
+                              size_fake_f3]), 4100)
+        # NOTE: the size of directory is not included!
+        self.assertEqual(misc.disk_used(fake_dir), 4)
+        shutil.rmtree(fake_dir)
+        self.assertFalse(os.path.exists(fake_dir))
+
+
+    @mock.patch('rsempipeline.utils.misc.subprocess')
+    def test_get_local_free_disk_space(self, mock_subprocess):
+        # -k make sure the unit is KB
+        fake_df_cmd = 'some_command like "df -k -P /path/to/dir"'
+        mock_subprocess.Popen().communicate.return_value = (
+            'Filesystem     1024-blocks       Used  Available Capacity Mounted on\nisaac:/btl2    11111111111 2222222222 3333333333      13% /projects/btl2\n',
+            None)
+        self.assertEqual(misc.disk_free(fake_df_cmd), 3333333333 * 1024)
+
+
 
 if __name__ == "__main__":
     unittest.main()

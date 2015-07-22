@@ -332,3 +332,33 @@ def sshexec(cmd, host, username, private_key_file='~/.ssh/id_rsa'):
     channel.close()
     if output:
         return output
+
+
+def disk_used(dir):
+    """mimic the linux command du, equivalent to du -s l_top_outdir"""
+    # proc = subprocess.Popen(
+    #     'du -s {0}'.format(l_top_outdir), stdout=subprocess.PIPE, shell=True)
+    # output = proc.communicate()[0]
+    # return int(output[0].split('\t')[0]) * 1024 # in KB => byte
+    # surprisingly, os.walk is of similar speed to du
+    total_size = 0
+    for dirpath, _, filenames in os.walk(dir):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            total_size += os.path.getsize(fp)
+    return total_size
+
+
+def disk_free(df_cmd):
+    """
+    Get the local free disk space by executing df_cmd as specified in the
+    rsempipeline_config.yaml
+
+    :param df: e.g. df -k -P /path/to/dir, must be in KB
+
+    """
+    proc = subprocess.Popen(df_cmd, stdout=subprocess.PIPE, shell=True)
+    stdout, _ = proc.communicate()
+    # e.g. output:
+    # 'Filesystem     1024-blocks       Used  Available Capacity Mounted on\nisaac:/btl2    10200547328 1267127584 8933419744      13% /projects/btl2\n'
+    return int(stdout.split(os.linesep)[1].split()[3]) * 1024
