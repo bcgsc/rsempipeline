@@ -3,6 +3,7 @@
 """utility functions"""
 
 import os
+import re
 import time
 import logging
 import select
@@ -265,25 +266,29 @@ def decide_num_jobs(sample_outdir, j_rsem=None):
 def pretty_usage(num):
     """convert file size to a pretty human readable format"""
     # http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
-    for x in ['bytes', 'KB', 'MB', 'GB']:
+    for x in ['bytes', 'KB', 'MB', 'GB', 'TB']:
         if num < 1024.0 and num > -1024.0:
             return "%3.1f %s" % (num, x)
         num /= 1024.0
-    return "%3.1f %s" % (num, 'TB')
+    return "%3.1f %s" % (num, 'PB')
 
 
 def ugly_usage(val):
     """convert human readable disk space to byte"""
-    def err(val):
+    def err():
         raise ValueError(
-            "Unreadable size: '{0}', make sure it's in the format "
-            "of e.g. 1024 Byte|KB|MB|GB|TB (case insensitive)".format(val))
-    sv = str(val).split()
-    if len(sv) != 2:
-        err(val)
-    size = float(sv[0])
-    unit = sv[1].lower()
-    if unit == 'byte':
+            "Unreadable size: '{0}', make sure the unit is correct and it's in "
+            " of e.g. 1024 byte|bytes|KB|MB|GB|TB|PB (case insensitive, one or multiple "
+            "spaces between the number and unit is not required)".format(val))
+
+    re_search = re.search('^(?P<size>\d+(.\d+)?)\ *(?P<unit>byte|bytes|KB|MB|GB|TB|PB)$',
+                          val.upper(), re.IGNORECASE)
+    if not re_search:
+        err()
+
+    size = float(re_search.group('size'))
+    unit = re_search.group('unit').lower()
+    if unit == 'byte' or unit == 'bytes':
         return size
     elif unit == 'kb':
         return size * 2 ** 10
@@ -293,8 +298,8 @@ def ugly_usage(val):
         return size * 2 ** 30
     elif unit == 'tb':
         return size * 2 ** 40
-    else:
-        err(val)
+    elif unit == 'pb':
+        return size * 2 ** 50
 
 
 def is_empty_dir(dir_, output):

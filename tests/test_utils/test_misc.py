@@ -178,8 +178,33 @@ class MiscTestCase(unittest.TestCase):
         self.assertFalse(os.path.exists(f))
         mock_utime.called_once_with(f, None)
 
+    def test_pretty_usage(self):
+        self.assertEqual(misc.pretty_usage(1000), '1000.0 bytes')
+        self.assertEqual(misc.pretty_usage(1023), '1023.0 bytes')
+        self.assertEqual(misc.pretty_usage(1024), '1.0 KB')
+        self.assertEqual(misc.pretty_usage(1025), '1.0 KB')
+        self.assertEqual(misc.pretty_usage(-1000), '-1000.0 bytes')
+        self.assertEqual(misc.pretty_usage(-1023), '-1023.0 bytes')
+        self.assertEqual(misc.pretty_usage(-1024), '-1.0 KB')
+        self.assertEqual(misc.pretty_usage(-1025), '-1.0 KB')
+        self.assertEqual(misc.pretty_usage(1024 ** 3), '1.0 GB')
+        self.assertEqual(misc.pretty_usage(1.5 * 1024 ** 3), '1.5 GB')
+        self.assertEqual(misc.pretty_usage(1.59 * 1024 ** 3), '1.6 GB')
+        self.assertEqual(misc.pretty_usage(1.69 * 1024 ** 4), '1.7 TB')
+        self.assertEqual(misc.pretty_usage(1.69 * 1024 ** 5), '1.7 PB')
 
-
+    def test_ugly_usage(self):
+        self.assertEqual(misc.ugly_usage('1024.0 bytes'), 1024)
+        self.assertEqual(misc.ugly_usage('1      kb'), 1024)
+        self.assertEqual(misc.ugly_usage('1 kb'), 1024)
+        self.assertEqual(misc.ugly_usage('1kb'), 1024)
+        self.assertEqual(misc.ugly_usage('1.5MB'), 1.5 * 1024 ** 2)
+        self.assertEqual(misc.ugly_usage('1GB'), 1024 ** 3)
+        self.assertEqual(misc.ugly_usage('1.5 TB'), 1.5 * 1024 ** 4)
+        self.assertEqual(misc.ugly_usage('1.5 PB'), 1.5 * 1024 ** 5)
+        self.assertRaises(ValueError, misc.ugly_usage, 'invalid size')
+        # exabyte is not handled yet
+        self.assertRaises(ValueError, misc.ugly_usage, '1.5 EB')
 
 if __name__ == "__main__":
     unittest.main()
