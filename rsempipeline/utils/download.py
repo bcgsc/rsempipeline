@@ -6,33 +6,15 @@ logger = logging.getLogger(__name__)
 
 import yaml
 
-def gen_orig_params(samples):
-    """
-    Generate original parameters for the download task
-    """
-    orig_params_sets = []
-    for sample in samples:
-        orig_params = gen_orig_params_per(sample)
-        orig_params_sets.extend(orig_params)
-    return orig_params_sets
+from rsempipeline.conf.settings import SRA_INFO_FILE_BASENAME
 
 
 def gen_orig_params_per(sample):
     """
-    construct orig_params based on current sample.outdir
-
-    Example of orig_params:
-    [[None,
-      ['path/to/rsem_output/mouse/GSE35213/GSM863771/SRX116911/SRR401055/SRR401055.sra',
-       'path/to/rsem_output/mouse/GSE35213/GSM863771/SRR401056.sra.download.COMPLETE'],
-      <GSM863771 (2/8) of GSE35213>],
-     [None,
-      ['path/to/rsem_output/mouse/GSE35213/GSM863771/SRX116911/SRR401056/SRR401056.sra',
-       'path/to/rsem_output/mouse/GSE35213/GSM863771/SRR401055.sra.download.COMPLETE'],
-      <GSM863771 (2/8) of GSE35213>],
-     ]
+    construct original parameters per sample, refer to the tests in
+    test_download to see what return value looks like
     """
-    info_file = 'sras_info.yaml'
+    info_file = SRA_INFO_FILE_BASENAME
     with open(os.path.join(sample.outdir, info_file)) as inf:
         sras_info = yaml.load(inf.read())
         sras = [os.path.join(sample.outdir, i)
@@ -46,3 +28,14 @@ def gen_orig_params_per(sample):
     for s, f in zip(sras, flag_files):
         orig_params.append([None, [s, f], sample])
     return orig_params
+
+
+def gen_orig_params(samples):
+    """
+    Generate original parameters for the download task
+    """
+    orig_params_sets = []
+    for sample in samples:
+        orig_params = gen_orig_params_per(sample)
+        orig_params_sets.extend(orig_params)
+    return orig_params_sets

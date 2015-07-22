@@ -18,3 +18,6 @@ NO_SPECIES_CSV_BASENAME = 'GSE_no_species_GSM.csv'
 
 # the dir/file names used running rp-prep get-soft
 SOFT_OUTDIR_BASENAME = 'soft'
+
+# the name of the file that stores information about sra files of a GSM
+SRA_INFO_FILE_BASENAME = 'sras_info.yaml'
