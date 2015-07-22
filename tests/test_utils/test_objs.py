@@ -31,10 +31,10 @@ class SeriesTestCase(unittest.TestCase):
         self.assertEqual(self.series.num_passed_samples(), 1)
 
     def test___str__(self):
-        self.assertEqual(str(self.series), 'GSE123456 (passed: 0/0)')
+        self.assertEqual(str(self.series), 'GSE123456 (passed samples: 0/0)')
 
     def test___repr__(self):
-        self.assertEqual(repr(self.series), 'GSE123456 (passed: 0/0)')
+        self.assertEqual(repr(self.series), 'GSE123456 (passed samples: 0/0)')
 
 
 
@@ -62,8 +62,8 @@ class SampleTestCase(unittest.TestCase):
 
     def test___str__(self):
         # 0/0, not indexed
-        self.assertEqual(str(self.sample), '<GSM1 (0/0) of GSE123456>')
+        self.assertEqual(str(self.sample), '<GSM1 (0/0/0) of GSE123456>')
         
     def test___repr__(self):
         # 0/0, not indexed
-        self.assertEqual(repr(self.sample), '<GSM1 (0/0) of GSE123456>')
+        self.assertEqual(repr(self.sample), '<GSM1 (0/0/0) of GSE123456>')

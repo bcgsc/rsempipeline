@@ -34,7 +34,7 @@ class Series(object):
         return len(self.passed_samples)
 
     def __str__(self):
-        return "{0} (passed: {1}/{2})".format(
+        return "{0} (passed samples: {1}/{2})".format(
             self.name, self.num_passed_samples(), self.num_samples())
 
     def __repr__(self):
@@ -91,9 +91,10 @@ class Sample(object):
     #     return len(self.sras)
 
     def __str__(self):
-        return '<{0} ({2}/{3}) of {1}>'.format(
+        return '<{0} ({2}/{3}/{4}) of {1}>'.format(
             self.name, self.series.name, self.index,
-            self.series.num_passed_samples())
+            self.series.num_passed_samples(),
+            self.series.num_samples())
 
     def __repr__(self):
         return self.__str__()

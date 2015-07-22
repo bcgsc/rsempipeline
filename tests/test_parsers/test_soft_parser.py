@@ -69,7 +69,7 @@ class SoftParserTestCase(unittest.TestCase):
                         create=True) as mock_open:
             mock_open.return_value.__iter__.return_value = settings.INVALID_GSE43770_FAMILY_SOFT_SUBSET_CONTENT.splitlines()
             self.assertRaisesRegexp(
-                ValueError, 'GSE00000 \(passed\: 0\/0\) != GSE43770', soft_parser.parse,
+                ValueError, 'GSE00000 \(passed samples\: 0\/0\) != GSE43770', soft_parser.parse,
                 'GSE43770_family.soft.subset', ['Homo sapiens', 'Mus musculus'])
 
 
