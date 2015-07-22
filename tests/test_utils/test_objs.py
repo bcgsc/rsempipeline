@@ -56,14 +56,19 @@ class SampleTestCase(unittest.TestCase):
         self.sample.url = 'ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX000/SRX000000'
         self.assertEqual(self.sample.gen_outdir('some_outdir'),
                          'some_outdir/GSE123456/mus_musculus/GSM1')
+        self.assertEqual(self.sample.outdir, 'some_outdir/GSE123456/mus_musculus/GSM1')
         mock_is_info_complete.return_value = False
         self.assertRaisesRegexp(ValueError, 'not information complete', 
                                 self.sample.gen_outdir, 'some_outdir')
 
     def test___str__(self):
-        # 0/0, not indexed
-        self.assertEqual(str(self.sample), '<GSM1 (0/0/0) of GSE123456>')
+        self.sample.organism = 'Mus musculus'
+        self.sample.url = 'ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX000/SRX000000'
+        self.sample.gen_outdir('some_outdir')
+        self.assertEqual(str(self.sample), '<GSM1 (0/0/0) of GSE123456 at some_outdir/GSE123456/mus_musculus/GSM1>')
         
     def test___repr__(self):
-        # 0/0, not indexed
-        self.assertEqual(repr(self.sample), '<GSM1 (0/0/0) of GSE123456>')
+        self.sample.organism = 'Mus musculus'
+        self.sample.url = 'ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX000/SRX000000'
+        self.sample.gen_outdir('some_outdir')
+        self.assertEqual(str(self.sample), '<GSM1 (0/0/0) of GSE123456 at some_outdir/GSE123456/mus_musculus/GSM1>')

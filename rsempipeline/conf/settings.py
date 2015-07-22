@@ -19,5 +19,14 @@ NO_SPECIES_CSV_BASENAME = 'GSE_no_species_GSM.csv'
 # the dir/file names used running rp-prep get-soft
 SOFT_OUTDIR_BASENAME = 'soft'
 
+# the qsub script name used for submission to remote cluster
+QSUB_SUBMIT_SCRIPT_BASENAME = '0_submit.sh'
+
 # the name of the file that stores information about sra files of a GSM
 SRA_INFO_FILE_BASENAME = 'sras_info.yaml'
+
+# this is rough estimated ratio when converting sra to fastq files using
+# fastq-dump based on statistics
+SRA2FASTQ_SIZE_RATIO = 1.5
+
+RSEM_OUTPUT_BASENAME = 'rsem_output'

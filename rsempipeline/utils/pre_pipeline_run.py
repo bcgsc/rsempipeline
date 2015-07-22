@@ -22,6 +22,9 @@ logger = logging.getLogger(__name__)
 from rsempipeline.parsers.soft_parser import parse
 from rsempipeline.parsers.isamp_parser import get_isamp
 from rsempipeline.utils.misc import pretty_usage, ugly_usage, disk_used, disk_free
+from rsempipeline.conf.settings import (
+    SRA_INFO_FILE_BASENAME, QSUB_SUBMIT_SCRIPT_BASENAME, SRA2FASTQ_SIZE_RATIO,
+    RSEM_OUTPUT_BASENAME)
 
 # about generating samples from soft and isamp inputs
 def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
@@ -94,7 +97,7 @@ def get_rsem_outdir(top_outdir):
     """
     get the output directory for rsem, it's top_outdir/rsem_output by default.
     """
-    return os.path.join(top_outdir, 'rsem_output')
+    return os.path.join(top_outdir, RSEM_OUTPUT_BASENAME)
 
 
 # about init sample outdirs
@@ -178,87 +181,86 @@ def get_ftp_handler(sample):
     return ftp_handler
 
 
+def calc_free_space_to_use(max_usage, current_usage, free_space, min_free):
+    return min(max_usage - current_usage - min_free,
+               free_space - min_free)
+
+
 # about filtering samples based on their sizes
 def select_samples_to_process(samples, config, options):
     """
     Select a subset of samples based on a combined rule based on availale free
     space on the file system and parameters from rsempipeline_config.yaml
     """
-
-    l_top_outdir = config['LOCAL_TOP_OUTDIR']
-    l_free_space = disk_free(config['LOCAL_CMD_DF'])
+    P, G = pretty_usage, ugly_usage
+    top_outdir = config['LOCATOP_OUTDIR']
+    free_space = disk_free(config['LOCACMD_DF'])
     logger.info(
-        'local free space avaialbe: {0}'.format(pretty_usage(l_free_space)))
-    l_current_usage = disk_used(l_top_outdir)
+        'local free space avaialbe: {0}'.format(P(free_space)))
+    current_usage = disk_used(top_outdir)
     logger.info('local current usage by {0}: {1}'.format(
-        l_top_outdir, pretty_usage(l_current_usage)))
-    l_max_usage = min(ugly_usage(config['LOCAL_MAX_USAGE']), l_free_space)
-    logger.info('l_max_usage: {0}'.format(pretty_usage(l_max_usage)))
-    l_min_free = ugly_usage(config['LOCAL_MIN_FREE'])
-    logger.info('l_min_free: {0}'.format(pretty_usage(l_min_free)))
-    l_free_to_use = min(l_max_usage - l_current_usage,
-                        l_free_space - l_min_free)
-    logger.info('free to use: {0}'.format(pretty_usage(l_free_to_use)))
+        top_outdir, P(current_usage)))
+    max_usage = G(config['LOCAL_MAX_USAGE'])
+    logger.info('maximum usage: {0}'.format(P(max_usage)))
+    min_free = G(config['LOCAMIN_FREE'])
+    logger.info('min_free: {0}'.format(P(min_free)))
+    free_to_use = calc_free_space_to_use(max_usage, current_usage,
+                                         free_space, min_free)
+    logger.info('free to use: {0}'.format(P(free_to_use)))
 
     # gsms are a list of Sample instances
-    gsms = find_gsms_to_process(samples, l_top_outdir,
-                                l_free_to_use, options.ignore_disk_usage_rule)
+    gsms = find_gsms_to_process(samples, free_to_use, options.ignore_disk_usage_rule)
     return gsms
 
 
-def find_gsms_to_process(samples, l_top_outdir, l_free_to_use,
-                         flag_ignore_disk_usage_rule):
+def find_gsms_to_process(samples, l_free_to_use, ignore_disk_usage):
     """
     Find samples that are to be processed, the selecting rule is implemented
     here
     """
     gsms_to_process = []
+    P = pretty_usage
     for gsm in samples:
-        gsm_id = os.path.relpath(gsm.outdir, l_top_outdir)
-        if processed(gsm.outdir):
-            logger.debug('{0} has already been processed successfully, '
-                         'pass'.format(gsm_id))
+        if is_processed(gsm.outdir):
+            logger.debug('{0} has already been processed successfully, pass)'.format(gsm))
             continue
 
-        if flag_ignore_disk_usage_rule:
+        if ignore_disk_usage:
             gsms_to_process.append(gsm)
             continue
 
-        usage = est_proc_usage(gsm.outdir)
+        usage = estimate_proc_usage(gsm.outdir)
         if usage > l_free_to_use:
-            logger.debug(
-                '{0} ({1}) doesn\'t fit current local free_to_use ({2})'.format(
-                    gsm_id, pretty_usage(usage), pretty_usage(l_free_to_use)))
+            logger.debug('{0} ({1}) doesn\'t fit current local free_to_use '
+                         '({2})'.format(gsm, P(usage), P(l_free_to_use)))
             continue
 
-        logger.info(
-            '{0} ({1}) fits local free_to_use ({2})'.format(
-                gsm_id, pretty_usage(usage), pretty_usage(l_free_to_use)))
+        logger.info('{0} ({1}) fits local free_to_use '
+                    '({2})'.format(gsm, P(usage), P(l_free_to_use)))
         l_free_to_use -= usage
         gsms_to_process.append(gsm)
-
     return gsms_to_process
 
 
 def get_sras_info(gsm_dir):
-    info_file = os.path.join(gsm_dir, 'sras_info.yaml')
+    info_file = os.path.join(gsm_dir, SRA_INFO_FILE_BASENAME)
     with open(info_file) as inf:
         return yaml.load(inf.read())
 
 
-def est_proc_usage(gsm_dir):
+def estimate_proc_usage(gsm_dir):
     """
     Estimated the disk usage needed for processing a sample based on the size
     of sra files, the information of which is contained in the info_file 
     """
-    sra2fastq_size_ratio = 1.5  # rough estimate, based on statistics
+    ratio = float(SRA2FASTQ_SIZE_RATIO)
     sras_info = get_sras_info(gsm_dir)
     usage = sum(d[k]['size'] for d in sras_info for k in d.keys())
-    usage = usage * (sra2fastq_size_ratio + 1)
+    usage = (1 + ratio) * usage
     return usage
 
 
-def processed(gsm_dir):
+def is_processed(gsm_dir):
     """
     Checking the processing status, whether completed or not based the
     existence of COMPLETE flags
@@ -268,16 +270,18 @@ def processed(gsm_dir):
     sra_files = [i for j in sras_info for i in j.keys()]
     # e.g. /path/to/rsem_output/GSExxxxx/homo_sapiens/GSMxxxxxx
     sra_files = [os.path.join(gsm_dir, _) for _ in sra_files]
+    res = False
     if is_download_complete(gsm_dir, sra_files):
         if is_sra2fastq_complete(gsm_dir, sra_files):
             if is_gen_qsub_script_complete(gsm_dir):
-                return True
+                res = True
             else:
                 logger.debug('{0}: gen_qsub_script incomplete'.format(gsm_dir))
         else:
             logger.debug('{0}: sra2fastq incomplete'.format(gsm_dir))
     else:
         logger.debug('{0}: download incomplete'.format(gsm_dir))
+    return res
 
     
 def is_download_complete(gsm_dir, sra_files):
@@ -293,16 +297,16 @@ def is_sra2fastq_complete(gsm_dir, sra_files):
 
 
 def is_gen_qsub_script_complete(gsm_dir):
-    return os.path.exists(os.path.join(gsm_dir, '0_submit.sh'))
+    return os.path.exists(os.path.join(gsm_dir, QSUB_SUBMIT_SCRIPT_BASENAME))
 
 
-def get_recorded_gsms(record_file):
-    """
-    fetch the list of GSMs that have already been recorded in the record_file
-    (e.g. transferred_GSMs.txt, sra2fastqed_GSMs.txt)
-    """
-    if not os.path.exists(record_file):
-        return []
-    else:
-        with open(record_file) as inf:
-            return [_.strip() for _ in inf if not _.strip().startswith('#')]
+# def get_recorded_gsms(record_file):
+#     """
+#     fetch the list of GSMs that have already been recorded in the record_file
+#     (e.g. transferred_GSMs.txt, sra2fastqed_GSMs.txt)
+#     """
+#     if not os.path.exists(record_file):
+#         return []
+#     else:
+#         with open(record_file) as inf:
+#             return [_.strip() for _ in inf if not _.strip().startswith('#')]
