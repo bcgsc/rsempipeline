@@ -33,9 +33,9 @@ class PrePipelineRunTestCase(unittest.TestCase):
 
     @mock.patch('rsempipeline.utils.pre_pipeline_run.os')
     @mock.patch('rsempipeline.utils.pre_pipeline_run.write')
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.get_ftp_handler')
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.fetch_sras_info_per')
-    def test_fetch_sras_info(self, mock_fetch, mock_get_ftp_handler, mock_write, mock_os):
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.get_ftp_handler', autospec=True)
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.fetch_sras_info_per', autospec=True)
+    def test_fetch_sras_info_from_scratch(self, mock_fetch, mock_get_ftp_handler, mock_write, mock_os):
         mock_os.path.exists.return_value = False
         mock_fetch.return_value = PARSED_SRA_INFO_YAML_SINGLE_SRA
         ppr.fetch_sras_info(samples=[mock.Mock(), mock.Mock()],
@@ -44,11 +44,23 @@ class PrePipelineRunTestCase(unittest.TestCase):
         self.assertEqual(mock_fetch.call_count, 2)
         self.assertEqual(mock_write.call_count, 2)
 
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.os')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.write')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.get_ftp_handler', autospec=True)
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.fetch_sras_info_per', autospec=True)
+    def test_fetch_sras_info_with_already_existent_yml(self, mock_fetch, mock_get_ftp_handler, mock_write, mock_os):
+        mock_os.path.exists.return_value = True
+        mock_fetch.return_value = PARSED_SRA_INFO_YAML_SINGLE_SRA
+        ppr.fetch_sras_info(samples=[mock.Mock(), mock.Mock()],
+                            flag_recreate_sras_info=False)
+        self.assertEqual(mock_get_ftp_handler.call_count, 1)
+        self.assertEqual(mock_fetch.call_count, 0)
+        self.assertEqual(mock_write.call_count, 0)
 
     @mock.patch('rsempipeline.utils.pre_pipeline_run.os')
     @mock.patch('rsempipeline.utils.pre_pipeline_run.write')
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.get_ftp_handler')
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.fetch_sras_info_per')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.get_ftp_handler', autospec=True)
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.fetch_sras_info_per', autospec=True)
     def test_fetch_sras_info_recreate(self, mock_fetch, mock_get_ftp_handler, mock_write, mock_os):
         mock_os.path.exists.return_value = True
         mock_fetch.return_value = PARSED_SRA_INFO_YAML_SINGLE_SRA
@@ -57,6 +69,26 @@ class PrePipelineRunTestCase(unittest.TestCase):
         self.assertEqual(mock_get_ftp_handler.call_count, 1)
         self.assertEqual(mock_fetch.call_count, 2)
         self.assertEqual(mock_write.call_count, 2)
+
+    def test_fetch_sras_info_per(self):
+        mock_ftp_handler = mock.Mock()
+        mock_ftp_handler.nlst.side_effect = [['SRX0/SRR0'], ['SRX0/SRR0/SRR0.sra']]
+        mock_ftp_handler.size.return_value = 1024 ** 2
+        fake_sample_url = 'ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX029/SRX029242'
+        res = ppr.fetch_sras_info_per(fake_sample_url, mock_ftp_handler)
+        self.assertTrue(mock_ftp_handler.cwd.called_once_with('/sra/sra-instant/reads/ByExp/sra/SRX/SRX029'))
+        self.assertTrue(mock_ftp_handler.nlst.called_once_with('SRX029'))
+        self.assertTrue(mock_ftp_handler.nlst.called_once_with('SRX0/SRR0'))
+        self.assertTrue(mock_ftp_handler.sendcmd.called_once_with('TYPE i'))
+        self.assertTrue(mock_ftp_handler.size.called_once_with('SRX0/SRR0/SRR0.sra'))
+        self.assertEqual(res, [
+            {
+                'SRX0/SRR0/SRR0.sra': {
+                    'readable_size': '1.0 MB',
+                    'size': 1048576
+                }
+            }
+        ])
 
     def gen_fake_isamp(self):
         return {

@@ -172,7 +172,7 @@ def fetch_sras_info(samples, flag_recreate_sras_info):
             continue
         logger.info('({0}/{1}), fetching sras info from FTP for {2}, saving '
                     'to {3}'.format(k+1, num_samples, sample, sras_info_yml))
-        sras_info = fetch_sras_info_per(sample, ftp_handler)
+        sras_info = fetch_sras_info_per(sample.url, ftp_handler)
         if sras_info:       # could be None due to Network problem
             write(sras_info, sras_info_yml)
     ftp_handler.quit()
@@ -183,17 +183,16 @@ def write(sras_info, output_yml):
         yaml.dump(sras_info, stream=opf, default_flow_style=False)
 
 
-def fetch_sras_info_per(sample, ftp_handler):
+def fetch_sras_info_per(sample_url, ftp_handler):
     """
     fetch information of sra files for one sample.
     """
-    url_obj = urlparse.urlparse(sample.url)
-    # one level above SRX123456
-    # e.g. before_srx_dir: /sra/sra-instant/reads/ByExp/sra/SRX/SRX573
-    before_srx_dir = os.path.dirname(url_obj.path)
+    urlparsed = urlparse.urlparse(sample_url)
+    # e.g. before_srx_dir: /sra/sra-instant/reads/ByExp/sra/SRX/SRX573[/SRX123456]
+    before_srx_dir = os.path.dirname(urlparsed.path)
     ftp_handler.cwd(before_srx_dir)
     # e.g. srx: SRX573027
-    srx = os.path.basename(url_obj.path)
+    srx = os.path.basename(urlparsed.path)
     try:
         srrs = ftp_handler.nlst(srx)
         # cool trick for flatten 2D list:
