@@ -225,8 +225,8 @@ def select_samples_to_process(samples, config, options):
     space on the file system and parameters from rsempipeline_config.yaml
     """
     P, G = pretty_usage, ugly_usage
-    top_outdir = config['LOCATOP_OUTDIR']
-    free_space = disk_free(config['LOCACMD_DF'])
+    top_outdir = config['LOCAL_TOP_OUTDIR']
+    free_space = disk_free(config['LOCAL_CMD_DF'])
     logger.info(
         'local free space avaialbe: {0}'.format(P(free_space)))
     current_usage = disk_used(top_outdir)
@@ -234,7 +234,7 @@ def select_samples_to_process(samples, config, options):
         top_outdir, P(current_usage)))
     max_usage = G(config['LOCAL_MAX_USAGE'])
     logger.info('maximum usage: {0}'.format(P(max_usage)))
-    min_free = G(config['LOCAMIN_FREE'])
+    min_free = G(config['LOCAL_MIN_FREE'])
     logger.info('min_free: {0}'.format(P(min_free)))
     free_to_use = calc_free_space_to_use(max_usage, current_usage,
                                          free_space, min_free)

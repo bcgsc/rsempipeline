@@ -188,6 +188,25 @@ class PrePipelineRunTestCase(unittest.TestCase):
         ppr.init_sample_outdirs(fake_samples, 'some_top_outdir')
         self.assertEqual(mock_os.makedirs.call_count, 2)
 
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.disk_free')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.disk_used')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.find_gsms_to_process')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.calc_free_space_to_use')
+    def test_select_samples_to_process(self, mock_calc, mock_find, mock_du, mock_df):
+        """mainly to test the kind of configuration parameters needed"""
+        mock_du.return_value = 1
+        mock_df.return_value = 1
+
+        mock_samples = [mock.Mock()]
+        mock_config = {
+            'LOCAL_TOP_OUTDIR': '',
+            'LOCAL_CMD_DF': '',
+            'LOCAL_MAX_USAGE': '1 GB',
+            'LOCAL_MIN_FREE': '500 MB'
+        }
+        mock_options = mock.Mock()
+        mock_options.ignore_disk_usage_rule = False
+        ppr.select_samples_to_process(mock_samples, mock_config, mock_options)
 
     def test_calc_free_space_to_use(self):
         max_usage = 10
