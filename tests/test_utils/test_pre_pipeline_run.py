@@ -24,10 +24,12 @@ PARSED_SRA_INFO_YAML_SINGLE_SRA = [
 
 
 class PrePipelineRunTestCase(unittest.TestCase):
-    # def test_get_ftp_handler(self):
-    #     sample_url = 'ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX029/SRX029242'
-    #     ppr.get_ftp_handler(sample_url)
-
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.FTP')
+    def test_get_ftp_handler(self, mock_FTP):
+        sample_url = 'ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX029/SRX029242'
+        ppr.get_ftp_handler(sample_url)
+        self.assertTrue(mock_FTP.called_once_with('ftp-trace.ncbi.nlm.nih.gov'))
+        self.assertEqual(mock_FTP.return_value.login.call_count, 1)
 
     @mock.patch('rsempipeline.utils.pre_pipeline_run.os')
     @mock.patch('rsempipeline.utils.pre_pipeline_run.write')

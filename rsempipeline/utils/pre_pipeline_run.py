@@ -148,10 +148,10 @@ def init_sample_outdirs(samples, top_outdir):
 
 def get_ftp_handler(sample_url):
     """Get a FTP hander from sample url"""
-    up = urlparse.urlparse(sample_url)
+    urlparsed = urlparse.urlparse(sample_url)
     logger.info('connecting to {scheme}://{netloc}'.format(
-        scheme=up.scheme, netloc=up.netloc))
-    ftp_handler = FTP(up.hostname)
+        scheme=urlparsed.scheme, netloc=urlparsed.netloc))
+    ftp_handler = FTP(urlparsed.hostname)
     ftp_handler.login()
     return ftp_handler
 
