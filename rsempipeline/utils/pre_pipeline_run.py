@@ -146,6 +146,16 @@ def init_sample_outdirs(samples, top_outdir):
             os.makedirs(sample.outdir)
 
 
+def get_ftp_handler(sample_url):
+    """Get a FTP hander from sample url"""
+    up = urlparse.urlparse(sample_url)
+    logger.info('connecting to {scheme}://{netloc}'.format(
+        scheme=up.scheme, netloc=up.netloc))
+    ftp_handler = FTP(up.hostname)
+    ftp_handler.login()
+    return ftp_handler
+
+
 # about fetch sras info
 def fetch_sras_info(samples, flag_recreate_sras_info):
     """
@@ -154,22 +164,23 @@ def fetch_sras_info(samples, flag_recreate_sras_info):
     """
     # e.g. of sample.url
     # ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX029/SRX029242
-    ftp_handler = None
     num_samples = len(samples)
+    ftp_handler = get_ftp_handler(samples[0].url)
     for k, sample in enumerate(samples):
-        yaml_file = os.path.join(sample.outdir, SRA_INFO_FILE_BASENAME)
-        if not os.path.exists(yaml_file) or flag_recreate_sras_info:
-            if ftp_handler is None:
-                ftp_handler = get_ftp_handler(samples[0])
-            logger.info('({0}/{1}), fetching sras info from FTP '
-                        'for {2}, saving to {3}'.format(k+1, num_samples,
-                                                        sample, yaml_file))
-            sras_info = fetch_sras_info_per(sample, ftp_handler)
-            if sras_info:            # could be None due to Network problem
-                with open(yaml_file, 'wb') as opf:
-                    yaml.dump(sras_info, stream=opf, default_flow_style=False)
-    if ftp_handler is not None:
-        ftp_handler.quit()
+        sras_info_yml = os.path.join(sample.outdir, SRA_INFO_FILE_BASENAME)
+        if os.path.exists(sras_info_yml) and not flag_recreate_sras_info:
+            continue
+        logger.info('({0}/{1}), fetching sras info from FTP for {2}, saving '
+                    'to {3}'.format(k+1, num_samples, sample, sras_info_yml))
+        sras_info = fetch_sras_info_per(sample, ftp_handler)
+        if sras_info:       # could be None due to Network problem
+            write(sras_info, sras_info_yml)
+    ftp_handler.quit()
+
+
+def write(sras_info, output_yml):
+    with open(output_yml, 'wb') as opf:
+        yaml.dump(sras_info, stream=opf, default_flow_style=False)
 
 
 def fetch_sras_info_per(sample, ftp_handler):
@@ -201,15 +212,6 @@ def fetch_sras_info_per(sample, ftp_handler):
         return sras_info
     except Exception, err:
         logger.exception(err)
-
-
-def get_ftp_handler(sample):
-    """Get a FTP hander from sample url"""
-    hostname = urlparse.urlparse(sample.url).hostname
-    logger.info('connecting to ftp://{0}'.format(hostname))
-    ftp_handler = FTP(hostname)
-    ftp_handler.login()
-    return ftp_handler
 
 
 def calc_free_space_to_use(max_usage, current_usage, free_space, min_free):

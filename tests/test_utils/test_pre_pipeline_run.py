@@ -24,6 +24,38 @@ PARSED_SRA_INFO_YAML_SINGLE_SRA = [
 
 
 class PrePipelineRunTestCase(unittest.TestCase):
+    # def test_get_ftp_handler(self):
+    #     sample_url = 'ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX029/SRX029242'
+    #     ppr.get_ftp_handler(sample_url)
+
+
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.os')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.write')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.get_ftp_handler')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.fetch_sras_info_per')
+    def test_fetch_sras_info(self, mock_fetch, mock_get_ftp_handler, mock_write, mock_os):
+        mock_os.path.exists.return_value = False
+        mock_fetch.return_value = PARSED_SRA_INFO_YAML_SINGLE_SRA
+        ppr.fetch_sras_info(samples=[mock.Mock(), mock.Mock()],
+                            flag_recreate_sras_info=False)
+        self.assertEqual(mock_get_ftp_handler.call_count, 1)
+        self.assertEqual(mock_fetch.call_count, 2)
+        self.assertEqual(mock_write.call_count, 2)
+
+
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.os')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.write')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.get_ftp_handler')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.fetch_sras_info_per')
+    def test_fetch_sras_info_recreate(self, mock_fetch, mock_get_ftp_handler, mock_write, mock_os):
+        mock_os.path.exists.return_value = True
+        mock_fetch.return_value = PARSED_SRA_INFO_YAML_SINGLE_SRA
+        ppr.fetch_sras_info(samples=[mock.Mock(), mock.Mock()],
+                            flag_recreate_sras_info=True)
+        self.assertEqual(mock_get_ftp_handler.call_count, 1)
+        self.assertEqual(mock_fetch.call_count, 2)
+        self.assertEqual(mock_write.call_count, 2)
+
     def gen_fake_isamp(self):
         return {
             'GSE0': ['GSM10', 'GSM20'],
