@@ -1,21 +1,11 @@
-import os
-import shutil
 import unittest
 import logging
 import logging.config
-import tempfile
 
 import mock
-from testfixtures import log_capture
-# https://pythonhosted.org/testfixtures/logging.html
-# LogCapture and log_capture are used in different ways to achieve the same
-# results
 
 from rsempipeline.parsers import soft_parser
 from rsempipeline.utils.objs import Series, Sample
-from rsempipeline.conf.settings import SOFT_OUTDIR_BASENAME
-from rsempipeline.conf.settings import RP_RUN_LOGGING_CONFIG
-# logging.config.fileConfig(RP_RUN_LOGGING_CONFIG)
 
 logger = logging.getLogger('rsempipeline.parsers.soft_parser')
 logger.addHandler(logging.StreamHandler())

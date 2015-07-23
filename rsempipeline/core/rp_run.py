@@ -37,7 +37,7 @@ if not os.path.exists('log'):
     os.mkdir('log')
 logging.config.fileConfig(RP_RUN_LOGGING_CONFIG)
 
-samples = PPR.gen_samples_from_soft_and_isamp(
+samples = PPR.gen_all_samples_from_soft_and_isamp(
     options.soft_files, options.isamp, config)
 
 # the standard templates directory

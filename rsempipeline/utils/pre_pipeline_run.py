@@ -26,56 +26,89 @@ from rsempipeline.conf.settings import (
     SRA_INFO_FILE_BASENAME, QSUB_SUBMIT_SCRIPT_BASENAME, SRA2FASTQ_SIZE_RATIO,
     RSEM_OUTPUT_BASENAME)
 
+
+def calc_num_isamp(isamp):
+    """
+    Calculate the  number of isamples in isamp
+
+    :param isamp: a dict with key and value as listing of strings, not Sample
+    instances
+    """
+    return sum(len(val) for val in isamp.values())
+
+
+def log_isamp(isamp_file_or_str, isamp):
+    """just do some logging"""
+    num = calc_num_isamp(isamp)
+    if os.path.exists(isamp_file_or_str): # then it's a file
+        logger.info(
+            '{0} samples found in {1}'.format(num, isamp_file_or_str))
+    else:
+        logger.info('{0} samples found from -i/--isamp input'.format(num))
+
+
 # about generating samples from soft and isamp inputs
-def gen_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
+def gen_all_samples_from_soft_and_isamp(soft_files, isamp_file_or_str, config):
     """
     :param isamp: e.g. mannually prepared interested sample file
-    (e.g. GSE_species_GSM.csv) or isamp_str
-    :type isamp: dict
+    (e.g. GSE_species_GSM.csv) or isamp_str as specified on the command
+
+    :type isamp: a dict with key and value as listing of strings, not Sample
+    instances
     """
     # IMPORTANT NOTE: for historical reason, soft files parsed does not return
     # dict as get_isamp
-
-    # a dict with key and value as str, not Sample instances
     isamp = get_isamp(isamp_file_or_str)
-    num_isamp = sum(len(val) for val in isamp.values())
-    if os.path.exists(isamp_file_or_str): # then it's a file
-        logger.info(
-            '{0} samples found in {1}'.format(num_isamp, isamp_file_or_str))
-    else:
-        logger.info('{0} samples found from -i/--isamp input'.format(num_isamp))
+    log_isamp(isamp_file_or_str, isamp)
 
     # a list, of Sample instances resultant of intersection
-    res_samp = []
+    intersected_samples = []
     for soft_file in soft_files:
-        # e.g. soft_file: GSE51008_family.soft.subset
-        gse = re.search(r'(GSE\d+)\_family\.soft\.subset', soft_file)
-        if not gse:
-            logger.error(
-                'unrecognized soft file: {0} '
-                '(not GSE information in its file name'.format(soft_file))
-        else:
-            if gse.group(1) in isamp:
-                series = parse(soft_file, config['INTERESTED_ORGANISMS'])
-                # samples that are interested by the collaborator
-                if not series.name in isamp:
-                    continue
-                isamp_gse = isamp[series.name]
-                ssamp_gse = series.passed_samples
-                # samples after intersection
-                res_samp_gse = [_ for _ in ssamp_gse if _.name in isamp_gse]
-                if len(isamp_gse) != len(res_samp_gse):
-                    logger.error(
-                        'Discrepancy for {0:12s}: '
-                        '{1:4d} GSMs in isamp, '
-                        'but {2:4d} left after '
-                        'intersection. (# GSMs in soft: {3})'.format(
-                            series.name, len(isamp_gse), len(ssamp_gse),
-                            len(res_samp_gse)))
-                res_samp.extend(res_samp_gse)
-    num_res_samp = len(res_samp)
-    sanity_check(num_isamp, num_res_samp)
-    return res_samp
+        soft_samples = analyze_one(soft_file, isamp, config['INTERESTED_ORGANISMS'])
+        if soft_samples:
+            intersected_samples.extend(soft_samples)
+    num_inter_samp = len(intersected_samples)
+    sanity_check(calc_num_isamp(isamp), num_inter_samp)
+    return intersected_samples
+
+
+def analyze_one(soft_file, isamp, interested_organisms):
+    """analyze a single soft_file"""
+    if not filename_check(soft_file):
+        return
+
+    s_series = parse(soft_file, interested_organisms)
+    # s_series should be in the list of series that are interested by the
+    # collaborator
+    if not s_series.name in isamp.keys():
+        logger.warning('{0} from {1} does not appear in '
+                       'isamp'.format(s_series.name, soft_file))
+        return
+
+    return intersect(s_series, isamp)
+
+
+def intersect(series, isamp):
+    """
+    :param series: a series instance
+    """
+    i_samps = isamp[series.name]
+    s_samps = series.passed_samples
+    intersected = [_ for _ in s_samps if _.name in i_samps]
+    if len(i_samps) != len(intersected):
+        logger.error('Discrepancy for {0}: {1} GSMs in soft, {2} GSMs in isamp, '
+                     'and only {3} left after intersection.'.format(
+                         series.name, len(s_samps), len(i_samps), len(intersected)))
+    return intersected
+
+
+def filename_check(soft_file):
+    res = re.search(r'(GSE\d+)\_family\.soft\.subset', soft_file)
+    if not res:
+        logger.error(
+            'invalid soft file because of no GSE information found '
+            'in its filename: {0}'.format(soft_file))
+    return res
 
 
 def sanity_check(num_isamp, num_res_samp):
@@ -124,7 +157,7 @@ def fetch_sras_info(samples, flag_recreate_sras_info):
     ftp_handler = None
     num_samples = len(samples)
     for k, sample in enumerate(samples):
-        yaml_file = os.path.join(sample.outdir, 'sras_info.yaml')
+        yaml_file = os.path.join(sample.outdir, SRA_INFO_FILE_BASENAME)
         if not os.path.exists(yaml_file) or flag_recreate_sras_info:
             if ftp_handler is None:
                 ftp_handler = get_ftp_handler(samples[0])
@@ -139,12 +172,10 @@ def fetch_sras_info(samples, flag_recreate_sras_info):
         ftp_handler.quit()
 
 
-def fetch_sras_info_per(sample, ftp_handler=None):
+def fetch_sras_info_per(sample, ftp_handler):
     """
     fetch information of sra files for one sample.
     """
-    if ftp_handler is None:
-        ftp_handler = get_ftp_handler(sample)
     url_obj = urlparse.urlparse(sample.url)
     # one level above SRX123456
     # e.g. before_srx_dir: /sra/sra-instant/reads/ByExp/sra/SRX/SRX573

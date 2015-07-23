@@ -3,7 +3,9 @@ import unittest
 import mock
 import tempfile
 
+from testfixtures import log_capture
 
+from rsempipeline.utils.objs import Series, Sample
 from rsempipeline.utils import pre_pipeline_run as ppr
 
 
@@ -22,9 +24,89 @@ PARSED_SRA_INFO_YAML_SINGLE_SRA = [
 
 
 class PrePipelineRunTestCase(unittest.TestCase):
-    
+    def gen_fake_isamp(self):
+        return {
+            'GSE0': ['GSM10', 'GSM20'],
+            'GSE1': ['GSM11']
+        }
+
+    def test_calc_num_isamp(self):
+        fake_isamp = self.gen_fake_isamp()
+        self.assertEqual(ppr.calc_num_isamp(fake_isamp), 3)
+
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.sanity_check')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.analyze_one')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.get_isamp')
+    def test_gen_all_samples_from_soft_and_isamp(
+            self, mock_get_isamp, mock_analyze_one, mock_sanity_check):
+        mock_sanity_check.return_value = True
+        mock_get_isamp.return_value = self.gen_fake_isamp()
+        fake_series = Series('GSE0')
+        sample_list = [Sample('GSM10', fake_series), Sample('GSM20', fake_series)]
+        for __ in sample_list :
+            __.organism = 'Homo Sapiens'
+            fake_series.add_passed_sample(__)
+        mock_analyze_one.return_value = sample_list
+
+        self.assertEqual(ppr.gen_all_samples_from_soft_and_isamp(
+            ['soft1'], 'isamp_file_or_str', {'INTERESTED_ORGANISMS': ['Homo Sapiens']}),
+            sample_list)
+
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.parse')
+    @log_capture()
+    def test_analyze_one(self, mock_parse, L):
+        fake_isamp = self.gen_fake_isamp()
+        fake_series = Series('GSE0')
+        sample_list = [Sample('GSM10', fake_series)]
+        for __ in sample_list :
+            __.organism = 'Homo Sapiens'
+            fake_series.add_passed_sample(__)
+        mock_parse.return_value = fake_series
+        self.assertEqual(ppr.analyze_one('GSE0_family.soft.subset', fake_isamp, ['Homo sapiens']),
+                         sample_list)
+        L.check(('rsempipeline.utils.pre_pipeline_run', 'ERROR',
+                 'Discrepancy for GSE0: 1 GSMs in soft, 2 GSMs in isamp, and only 1 left after intersection.'),)
 
 
+    def test_analyze_one_invalid_filename(self):
+        self.assertIsNone(
+            ppr.analyze_one('invalid_soft_filename', 'some_fake_isamp', ['']))
+
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.parse')
+    @log_capture()
+    def test_analyze_one_soft_series_name_not_in_isamp_series_names_list(self, mock_parse, L):
+        fake_isamp = self.gen_fake_isamp()
+        fake_series = Series('GSE9999')
+        mock_parse.return_value = fake_series
+        self.assertIsNone(ppr.analyze_one('GSE9999_family.soft.subset', fake_isamp, []))
+
+    def test_intersect(self):
+        isamp = self.gen_fake_isamp()
+        series = Series('GSE0')
+        sample_list = [Sample('GSM10', series), Sample('GSM20', series)]
+        for __ in sample_list :
+            series.add_passed_sample(__)
+        self.assertEqual(ppr.intersect(series, isamp), sample_list)
+
+    @log_capture()
+    def test_intersect_with_discrenpacy(self, L):
+        isamp = self.gen_fake_isamp()
+        series = Series('GSE0')
+        sample_list = [Sample('GSM10', series)]
+        for __ in sample_list :
+            series.add_passed_sample(__)
+        self.assertEqual(ppr.intersect(series, isamp), sample_list)
+        L.check(('rsempipeline.utils.pre_pipeline_run', 'ERROR',
+                 'Discrepancy for GSE0: 1 GSMs in soft, 2 GSMs in isamp, and only 1 left after intersection.'),)
+
+    def test_filename_check(self):
+        self.assertTrue(ppr.filename_check('GSE63311_family.soft.subset'))
+
+    @log_capture()
+    def test_filename_check_with_invalid_filename(self, L):
+        self.assertFalse(ppr.filename_check('customized_soft_filename'))
+        L.check(('rsempipeline.utils.pre_pipeline_run', 'ERROR',
+                 'invalid soft file because of no GSE information found in its filename: customized_soft_filename'),)
 
     def test_sanity_check(self):
         self.assertRaises(ValueError, ppr.sanity_check, 1000, 1010)
