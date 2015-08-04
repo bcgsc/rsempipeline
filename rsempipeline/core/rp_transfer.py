@@ -201,7 +201,7 @@ def find_gsms_to_transfer(samples, l_top_outdir, r_free_to_use):
             logger.debug('{0}: already transferred'.format(gsm_id))
             continue
 
-        if not PPR.processed(gsm.outdir):
+        if not PPR.is_processed(gsm.outdir):
             # debug info will be logged by PPR.processed
             continue
 
