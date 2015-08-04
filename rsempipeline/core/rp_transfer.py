@@ -272,7 +272,7 @@ def main():
     # gsms_transfer_record
     gsms_transfer_record = os.path.join(l_top_outdir, 'transferred_GSMs.txt')
     gsms_transferred = get_gsms_transferred(gsms_transfer_record)
-    samples = PPR.gen_samples_from_soft_and_isamp(
+    samples = PPR.gen_all_samples_from_soft_and_isamp(
         options.soft_files, options.isamp, config)
     PPR.init_sample_outdirs(samples, config['LOCAL_TOP_OUTDIR'])
     samples = [_ for _  in samples
