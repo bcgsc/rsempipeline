@@ -1,7 +1,5 @@
-import os
 import unittest
 import mock
-import tempfile
 
 from testfixtures import log_capture
 
