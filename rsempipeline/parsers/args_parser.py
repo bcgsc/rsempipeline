@@ -35,8 +35,7 @@ def parse_args_for_rp_run():
     """parse the command line arguments"""
     parser = R.cmdline.get_argparse(
         description="rsempipeline",
-        usage='require python-2.7.x',
-        version='0.1')
+        usage='require python-2.7.x')
 
     add_common_arguments(parser)
 
