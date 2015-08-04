@@ -118,7 +118,7 @@ def est_rsem_usage(gsm_dir):
 
     # estimate the size of uncompressed fastq
     # res = fq_gz_size / (1 - gzip_compression_ratio)
-    res = PPR.est_proc_usage(gsm_dir)
+    res = PPR.estimate_proc_usage(gsm_dir)
     # overestimate
     res = res * fastq2usage_ratio
     return res
