@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='rsempipeline',
-    version='1.0',
+    version='1.0.1',
 
     zip_safe=True,
 
