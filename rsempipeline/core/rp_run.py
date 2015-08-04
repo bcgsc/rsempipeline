@@ -157,6 +157,7 @@ def sra2fastq(inputs, outputs):
 def gen_qsub_script(inputs, outputs):
     """generate qsub script, usually named 0_submit.sh"""
     inputs = [_ for _ in inputs if not _.endswith('.sra2fastq.COMPLETE')]
+    # SHOULD DO TRY EXCEPT IN CASE THE PREVIOUS STEP DIDN'T FINISH SUCCESSFULLY
     outdir = os.path.dirname(inputs[0])
 
     # only need the basename since the 0_submit.sh will be executed in the
