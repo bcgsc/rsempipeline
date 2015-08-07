@@ -216,6 +216,9 @@ class MiscTestCase(unittest.TestCase):
 
     def test_disk_used(self):
         fake_dir = tempfile.mkdtemp(suffix='_rsem_testing')
+        # Good to know: that the size of a directory can be very different on
+        # different systems
+        # print size_fake_dir # 4096 or maybe 6 (on travis)
         size_fake_dir = os.path.getsize(fake_dir)
         with tempfile.NamedTemporaryFile(dir=fake_dir, delete=False) as fake_f1:
             pass                # no content
@@ -226,14 +229,9 @@ class MiscTestCase(unittest.TestCase):
         with tempfile.NamedTemporaryFile(dir=fake_dir, delete=False) as fake_f3:
             fake_f3.write('123')  # three character
         size_fake_f3 = os.path.getsize(fake_f3.name)
-        # print size_fake_dir # 4096
-        # print size_fake_f1  # 0
-        # print size_fake_f2  # 1
-        # print size_fake_f3  # 3
-        self.assertEqual(sum([size_fake_dir,
-                              size_fake_f1,
-                              size_fake_f2,
-                              size_fake_f3]), 4100)
+        self.assertEqual(size_fake_f1, 0)
+        self.assertEqual(size_fake_f2, 1)
+        self.assertEqual(size_fake_f3, 3)
         # NOTE: the size of directory is not included!
         self.assertEqual(misc.disk_used(fake_dir), 4)
         shutil.rmtree(fake_dir)
