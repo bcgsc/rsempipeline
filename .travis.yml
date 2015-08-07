@@ -5,6 +5,7 @@ python:
 before_install:
   - pwd
   - ls
+  # it's strange why need this step since it's in the package directory already
   - export PYTHONPATH=${PWD}:${PYTHONPATH}
 
 install:
