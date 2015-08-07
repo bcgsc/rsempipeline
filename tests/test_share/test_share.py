@@ -1,7 +1,6 @@
 import os
 import unittest
 
-from rsempipeline.preprocess import utils
 from rsempipeline.conf.settings import SHARE_DIR
 
 
