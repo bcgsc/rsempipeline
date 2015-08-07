@@ -1,3 +1,8 @@
+
+.. image:: https://coveralls.io/repos/bcgsc/rsempipeline/badge.svg?branch=master&service=github
+  :target: https://coveralls.io/github/bcgsc/rsempipeline?branch=master
+
+
 rsempipeline
 ========================
 
