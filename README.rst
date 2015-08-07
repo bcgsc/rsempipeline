@@ -1,7 +1,4 @@
-
-.. image:: https://coveralls.io/repos/bcgsc/rsempipeline/badge.svg?branch=master&service=github
-  :target: https://coveralls.io/github/bcgsc/rsempipeline?branch=master
-
+|build| |cov|
 
 rsempipeline
 ========================
@@ -76,3 +73,13 @@ For installation and usage instructions, please refer to ``INSTALL.rst`` and
 
 If you have found any bugs, questions, comments, please contact Zhuyi Xue
 (zxue@bcgsc.ca).
+
+
+
+.. |build| image:: https://travis-ci.org/bcgsc/rsempipeline.svg?branch=master
+    :alt: Build Status
+    :target: https://travis-ci.org/bcgsc/rsempipeline
+    
+.. |cov| image:: https://coveralls.io/repos/bcgsc/rsempipeline/badge.svg?branch=master&service=github
+    :alt: Coverage Status
+    :target: https://coveralls.io/github/bcgsc/rsempipeline?branch=master
