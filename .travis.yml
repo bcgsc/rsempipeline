@@ -2,10 +2,14 @@ language: python
 python:
   - "2.7"
 
+before_install:
+  - pwd
+  - ls
+  - export PYTHONPATH=${PWD}:${PYTHONPATH}
+
 install:
-  - "pip install ."
-  - "pip install -r requirements.txt"
-  - "pip install git+https://github.com/bcgsc/rsempipeline.git#egg=rsempipeline"
+  - pwd
+  - pip install -r requirements.txt
 
 script:
-  - "py.test --cov=rsempipeline --cov-report=html tests/"
+  - py.test -s --cov=rsempipeline --cov-report=html tests/
