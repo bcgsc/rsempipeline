@@ -1,10 +1,11 @@
 language: python
 python:
   - "2.7"
-# command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
-install: "pip install ."
-# command to run tests, e.g. python setup.py test
-script:  nosetests
-branches:
-  only:
-    - ci
+
+install:
+  - "pip install ."
+  - "pip install -r requirements.txt"
+  - "pip install git+https://github.com/bcgsc/rsempipeline.git#egg=rsempipeline"
+
+script:
+  - "py.test --cov=rsempipeline --cov-report=html tests/"
