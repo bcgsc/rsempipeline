@@ -23,7 +23,7 @@ Adding unit tests
 
 Add them to ``tests`` directory
 
-Running test (28% coverage as of 2015-06-29)
+Running test
 --------------------
 
 .. code-block:: bash
