@@ -13,3 +13,6 @@ install:
 
 script:
   - py.test -s --cov=rsempipeline --cov-report=html tests/
+
+after_success:
+  - coveralls
