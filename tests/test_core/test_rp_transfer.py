@@ -64,7 +64,12 @@ class RPRunTestCase(unittest.TestCase):
         mock_est.return_value = 1e3
         self.assertEqual(RP_T.estimate_current_remote_usage('remote', 'username', '/path/to', '/l_path/to'),
                          1e3)
-        
+
+    @mock.patch('rsempipeline.core.rp_transfer.misc.sshexec')
+    def test_get_real_current_usage(self, mock_sshexec):
+        mock_sshexec.return_value = ['3096\t/path/to/top_outdir\n'] # in KB
+        self.assertEqual(RP_T.get_real_current_usage('remote', 'username', 'r_dir'),
+                         3170304) # in byte
 
     @mock.patch('rsempipeline.core.rp_transfer.PPR.estimate_sra2fastq_usage')
     def test_estimate_rsem_usage(self, mock_estimate_sra2fastq_usage):
