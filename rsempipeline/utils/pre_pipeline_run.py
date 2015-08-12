@@ -261,7 +261,7 @@ def find_gsms_to_process(samples, l_free_to_use, ignore_disk_usage):
             gsms_to_process.append(gsm)
             continue
 
-        usage = estimate_proc_usage(gsm.outdir)
+        usage = estimate_sra2fastq_usage(gsm.outdir)
         if usage > l_free_to_use:
             logger.debug('{0} ({1}) doesn\'t fit current local free_to_use '
                          '({2})'.format(gsm, P(usage), P(l_free_to_use)))
@@ -280,7 +280,7 @@ def get_sras_info(gsm_dir):
         return yaml.load(inf.read())
 
 
-def estimate_proc_usage(gsm_dir):
+def estimate_sra2fastq_usage(gsm_dir):
     """
     Estimated the disk usage needed for processing a sample based on the size
     of sra files, the information of which is contained in the info_file 

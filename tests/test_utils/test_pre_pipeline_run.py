@@ -228,11 +228,11 @@ class PrePipelineRunTestCase(unittest.TestCase):
         samples = [mock.Mock(), mock.Mock()]
         self.assertEqual(ppr.find_gsms_to_process(samples, 1024 ** 3, True), samples)
 
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.estimate_proc_usage')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.estimate_sra2fastq_usage')
     @mock.patch('rsempipeline.utils.pre_pipeline_run.is_processed')
-    def test_find_gsms_to_process_fit_disk_usage(self, mock_is_processed, mock_estimate_proc_usage):
+    def test_find_gsms_to_process_fit_disk_usage(self, mock_is_processed, mock_estimate_sra2fastq_usage):
         mock_is_processed.return_value = False
-        mock_estimate_proc_usage.return_value = 513
+        mock_estimate_sra2fastq_usage.return_value = 513
         samples = [mock.Mock(), mock.Mock()]
         self.assertEqual(ppr.find_gsms_to_process(samples, 1024, False), [samples[0]])
 
@@ -254,10 +254,10 @@ class PrePipelineRunTestCase(unittest.TestCase):
 
     @mock.patch('rsempipeline.utils.pre_pipeline_run.get_sras_info')
     @mock.patch('rsempipeline.utils.pre_pipeline_run.SRA2FASTQ_SIZE_RATIO')
-    def test_estimate_proc_usage(self, mock_ratio, mock_get_sras_info):
+    def test_estimate_sra2fastq_usage(self, mock_ratio, mock_get_sras_info):
         mock_ratio = 2
         mock_get_sras_info.return_value = PARSED_SRA_INFO_YAML_SINGLE_SRA
-        self.assertEqual(ppr.estimate_proc_usage('some_gsm_dir'), 2546696608 * mock_ratio)
+        self.assertEqual(ppr.estimate_sra2fastq_usage('some_gsm_dir'), 2546696608 * mock_ratio)
 
     @mock.patch('rsempipeline.utils.pre_pipeline_run.get_sras_info')
     @mock.patch('rsempipeline.utils.pre_pipeline_run.is_gen_qsub_script_complete')
