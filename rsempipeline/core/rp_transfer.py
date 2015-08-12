@@ -10,9 +10,9 @@ and execute it
 
 import os
 import sys
+sys.stdout.flush()              # flush print outputs to screen
 import re
 import stat
-import yaml
 import datetime
 import logging.config
 
@@ -23,21 +23,8 @@ from rsempipeline.utils import misc
 from rsempipeline.conf.settings import RP_TRANSFER_LOGGING_CONFIG
 from rsempipeline.parsers.args_parser import parse_args_for_rp_transfer
 
-sys.stdout.flush()              #flush print outputs to screen
-
-# global variables: options, config, logger
-options = parse_args_for_rp_transfer()
-try:
-    with open(options.config_file) as inf:
-        config = yaml.load(inf.read())
-except IOError, _:
-    print 'configuration file: {0} not found'.format(options.config_file)
-    sys.exit(1)
-
 logging.config.fileConfig(RP_TRANSFER_LOGGING_CONFIG)
-
 logger = logging.getLogger('rp_transfer')
-
 
 def get_remote_free_disk_space(df_cmd, remote, username):
     """
@@ -52,7 +39,18 @@ def get_remote_free_disk_space(df_cmd, remote, username):
     return int(output[1].split()[3]) * 1024
 
 
-def est_current_remote_usage(remote, username, r_dir, l_dir):
+def fetch_remote_file_list(remote, username, r_dir):
+    find_cmd = 'find {0}'.format(r_dir)
+    output = misc.sshexec(find_cmd, remote, username)
+    if output is None:
+        raise ValueError(
+            'cannot estimate current usage on remote host. Please check '
+            '{0} exists on {1}, or {1} may be down'.format(r_dir, remote))
+    output = [_.strip() for _ in output] # remote trailing '\n'
+    return output
+
+
+def estimate_current_remote_usage(remote, username, r_dir, l_dir):
     """
     estimate the space that has already been or will be consumed by rsem_output
     by walking through each GSM and computing the sum of their estimated usage,
@@ -67,24 +65,17 @@ def est_current_remote_usage(remote, username, r_dir, l_dir):
     :param l_dir: local rsem output directory
 
     """
-    find_cmd = 'find {0}'.format(r_dir)
-    output = misc.sshexec(find_cmd, remote, username)
-    if output is None:
-        raise ValueError(
-            'cannot estimate current usage on remote host. please check '
-            '{0} exists on {1}'.format(r_dir, remote))
-    output = [_.strip() for _ in output] # remote trailing '\n'
-
+    files = fetch_remote_file_list(remote, username, r_dir)
     usage = 0
-    for dir_ in sorted(output):
+    for dir_ in sorted(files):
         match = re.search(r'(GSM\d+$)', os.path.basename(dir_))
         if match:
             rsem_comp = os.path.join(dir_, 'rsem.COMPLETE')
-            if (not rsem_comp in output) and (not misc.is_empty_dir(dir_, output)):
+            if (not rsem_comp in files) and (not misc.is_empty_dir(dir_, files)):
                 # only count the disk spaces used by those GSMs that are
-                # finished or processed successfully
+                # being processed
                 gsm_dir = dir_.replace(r_dir, l_dir)
-                usage += est_rsem_usage(gsm_dir)
+                usage += estimate_rsem_usage(gsm_dir)
     return usage
 
 
@@ -97,7 +88,7 @@ def get_real_current_usage(remote, username, r_dir):
     return usage
 
 
-def est_rsem_usage(gsm_dir):
+def estimate_rsem_usage(gsm_dir, fastq2rsem_ratio):
     """
     estimate the maximum disk space that is gonna be consumed by rsem analysis
     on one GSM based on a list of fq_gzs
@@ -105,23 +96,8 @@ def est_rsem_usage(gsm_dir):
     :param fq_gz_size: a number reprsenting the total size of fastq.gz files
                        for the corresponding GSM
     """
-    # Based on observation of smaller fastq.gz file by gunzip -l
-    # compressed        uncompressed  ratio uncompressed_name
-    # 266348960          1384762028  80.8% rsem_output/GSE42735/homo_sapiens/GSM1048945/SRR628721_1.fastq
-    # 241971266          1255233364  80.7% rsem_output/GSE42735/homo_sapiens/GSM1048946/SRR628722_1.fastq
-
-    # would be easier just incorporate this value into FASTQ2USAGE_RATIO, or
-    # ignore it based on the observation of the size between fastq.gz and
-    # *.temp
-    # gzip_compression_ratio = 0.8
-    fastq2usage_ratio = config['FASTQ2USAGE_RATIO']
-
-    # estimate the size of uncompressed fastq
-    # res = fq_gz_size / (1 - gzip_compression_ratio)
-    res = PPR.estimate_proc_usage(gsm_dir)
-    # overestimate
-    res = res * fastq2usage_ratio
-    return res
+    fastq_usage = PPR.estimate_sra2fastq_usage(gsm_dir)
+    return fastq_usage * fastq2rsem_ratio
 
 
 def get_gsms_transferred(record_file):
@@ -169,7 +145,7 @@ def select_samples_to_transfer(samples, l_top_outdir, r_top_outdir,
     logger.info('real current usage on {0} by {1}: {2}'.format(
         r_host, r_top_outdir, misc.pretty_usage(r_real_current_usage)))
 
-    r_est_current_usage = est_current_remote_usage(
+    r_est_current_usage = estimate_current_remote_usage(
         r_host, r_username, r_top_outdir, l_top_outdir)
     logger.info('estimated current usage (excluding samples with '
                 'rsem.COMPLETE) on {0} by {1}: {2}'.format(
@@ -205,7 +181,7 @@ def find_gsms_to_transfer(samples, l_top_outdir, r_free_to_use):
             # debug info will be logged by PPR.processed
             continue
 
-        rsem_usage = est_rsem_usage(gsm.outdir)
+        rsem_usage = estimate_rsem_usage(gsm.outdir)
 
         if rsem_usage > r_free_to_use:
             logger.debug(
@@ -261,9 +237,12 @@ def write(transfer_script, template, **params):
         opf.write(template.render(**params))
 
 
-@misc.lockit(os.path.join(config['LOCAL_TOP_OUTDIR'], '.rp-transfer'))
+@misc.lockit(os.path.expanduser('~/.rp-transfer'))
 def main():
     """the main function"""
+    options = parse_args_for_rp_transfer()
+    config = misc.get_config(options.config_file)
+
     l_top_outdir = config['LOCAL_TOP_OUTDIR']
     r_top_outdir = config['REMOTE_TOP_OUTDIR']
     r_host, r_username = config['REMOTE_HOST'], config['USERNAME']
