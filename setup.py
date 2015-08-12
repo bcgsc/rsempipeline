@@ -37,6 +37,7 @@ setup(
         'pytest>=2.7.2',
         'pytest-cov>=1.8.1',
         'python-coveralls>=2.5.0',
+        'mock>=1.1.3'
     ],
 
     scripts=[

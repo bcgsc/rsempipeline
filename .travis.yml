@@ -10,6 +10,7 @@ before_install:
 
 install:
   - pwd
+  - pip install -U pip setuptools
   - python setup.py develop
   # - pip install -r requirements.txt
 
