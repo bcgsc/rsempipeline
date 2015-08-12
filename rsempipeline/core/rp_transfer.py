@@ -104,11 +104,11 @@ def get_gsms_transferred(record_file):
     """
     fetch the list of GSMs that have already been transferred from record_file
     """
+    print os.path.exists, os.path.exists('lele')
     if not os.path.exists(record_file):
         return []
-    else:
-        with open(record_file) as inf:
-            return [_.strip() for _ in inf if not _.strip().startswith('#')]
+    with open(record_file) as inf:
+        return [_.strip() for _ in inf if not _.strip().startswith('#')]
 
 
 def append_transfer_record(gsm_to_transfer, record_file):

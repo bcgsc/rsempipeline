@@ -75,3 +75,24 @@ class RPRunTestCase(unittest.TestCase):
     def test_estimate_rsem_usage(self, mock_estimate_sra2fastq_usage):
         mock_estimate_sra2fastq_usage.return_value = 1e5
         self.assertEqual(RP_T.estimate_rsem_usage('gsm_dir', 5), 5e5)
+
+    def test_get_gsms_transferred_record_file_not_exist(self):
+        self.assertEqual(RP_T.get_gsms_transferred('nonexistent_transferred_GSMs.txt'), [])
+
+    @mock.patch('rsempipeline.core.rp_transfer.os.path.exists')
+    def test_get_gsms_transferred(self, mock_exists):
+        mock_exists.return_value = True
+        # known issue, mock_open doesn't implement iteration,
+        # http://stackoverflow.com/questions/24779893/customizing-unittest-mock-mock-open-for-iteration
+        # cannot successfully implement what is suggested in this thread, but
+        # my such hack works
+        m = mock.mock_open()
+        m.return_value.__iter__.return_value = [
+            '# 15-07-17 09:04:38',
+            'rsem_output/GSE34736/homo_sapiens/GSM854343',
+            'rsem_output/GSE34736/homo_sapiens/GSM854344'
+        ]
+        with mock.patch('rsempipeline.core.rp_transfer.open', m):
+            self.assertEqual(RP_T.get_gsms_transferred('transferred_GSMs.txt'),
+                             ['rsem_output/GSE34736/homo_sapiens/GSM854343',
+                              'rsem_output/GSE34736/homo_sapiens/GSM854344'])
