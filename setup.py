@@ -33,6 +33,7 @@ setup(
         'ruffus>=2.4.1',
         'requests>=2.3.0',
 
+        'testfixtures>=4.1.2',
         'pytest>=2.7.2',
         'pytest-cov>=1.8.1',
         'python-coveralls>=2.5.0',
