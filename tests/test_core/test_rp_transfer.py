@@ -150,3 +150,17 @@ class RPRunTestCase(unittest.TestCase):
         mock_exists.return_value = True
         self.assertEqual(RP_T.create_transfer_sh_dir('l_top_outdir'), 'l_top_outdir/transfer_scripts')
         self.assertFalse(mock_mkdir.called)
+
+    @mock.patch('rsempipeline.core.rp_transfer.create_transfer_sh_dir')
+    @mock.patch('rsempipeline.core.rp_transfer.datetime')
+    @mock.patch('rsempipeline.core.rp_transfer.write')
+    def test_write_transfer_sh(self, mock_write, mock_datetime, mock_create):
+        mock_create.return_value = 'l_top_outdir/transfer_scripts'
+        mock_datetime.datetime.now.return_value = datetime.datetime(2015, 1, 1, 1, 1, 1)
+        self.assertEqual(RP_T.write_transfer_sh(
+            ['rsem_output/GSE56743/rattus_norvegicus/GSM1367849',
+             'rsem_output/GSE56743/rattus_norvegicus/GSM1367850'],
+            'rsync_template',
+            'l_top_outdir',
+            'r_username', 'r_host', 'r_top_outdir'),
+                         'l_top_outdir/transfer_scripts/transfer.15-01-01_01:01:01.sh')
