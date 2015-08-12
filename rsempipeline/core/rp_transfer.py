@@ -104,22 +104,24 @@ def get_gsms_transferred(record_file):
     """
     fetch the list of GSMs that have already been transferred from record_file
     """
-    print os.path.exists, os.path.exists('lele')
     if not os.path.exists(record_file):
         return []
     with open(record_file) as inf:
         return [_.strip() for _ in inf if not _.strip().startswith('#')]
 
 
-def append_transfer_record(gsm_to_transfer, record_file):
+def append_transfer_record(gsms_to_transfer, record_file):
     """
     append the GSMs that have just beened transferred successfully to
     record_file
+    :param gsms_to_transfer: a list of strings representing the GSMs to be transferred, e.g.
+     ['rsem_output/GSE34736/homo_sapiens/GSM854343',
+      'rsem_output/GSE34736/homo_sapiens/GSM854344']
     """
     with open(record_file, 'ab') as opf:
-        now = datetime.datetime.now()
-        opf.write('# {0}\n'.format(now.strftime('%y-%m-%d %H:%M:%S')))
-        for _ in gsm_to_transfer:
+        now = datetime.datetime.now().strftime('%y-%m-%d %H:%M:%S')
+        opf.write('# {0}\n'.format(now))
+        for _ in gsms_to_transfer:
             opf.write('{0}\n'.format(_))
 
 

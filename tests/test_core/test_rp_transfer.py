@@ -1,3 +1,5 @@
+import datetime
+
 import unittest
 import mock
 
@@ -96,3 +98,42 @@ class RPRunTestCase(unittest.TestCase):
             self.assertEqual(RP_T.get_gsms_transferred('transferred_GSMs.txt'),
                              ['rsem_output/GSE34736/homo_sapiens/GSM854343',
                               'rsem_output/GSE34736/homo_sapiens/GSM854344'])
+
+    @mock.patch('rsempipeline.core.rp_transfer.datetime')
+    def test_append_transfer_record(self, mock_datetime):
+        mock_datetime.datetime.now.return_value = datetime.datetime(2015, 1, 1, 1, 1, 1)
+        m = mock.mock_open()
+        records = ['rsem_output/GSE1/homo_sapiens/GSM1',
+                   'rsem_output/GSE2/homo_sapiens/GSM2']
+        with mock.patch('rsempipeline.core.rp_transfer.open', m):
+            RP_T.append_transfer_record(records, 'transferred_GSMs.txt')
+            self.assertEqual(m().write.call_count, 3)
+
+
+    # such mocking works, too
+    @mock.patch('rsempipeline.core.rp_transfer.datetime.datetime')
+    def test_append_transfer_record2(self, mock_datetime):
+        mock_datetime.now().strftime.return_value = '15-01-01 01:01:01'
+        m = mock.mock_open()
+        records = ['rsem_output/GSE1/homo_sapiens/GSM1',
+                   'rsem_output/GSE2/homo_sapiens/GSM2']
+        with mock.patch('rsempipeline.core.rp_transfer.open', m):
+            RP_T.append_transfer_record(records, 'transferred_GSMs.txt')
+            m.assert_called_once_with('transferred_GSMs.txt', 'ab')
+            expected = [mock.call('# 15-01-01 01:01:01\n'),
+                        mock.call('rsem_output/GSE1/homo_sapiens/GSM1\n'),
+                        mock.call('rsem_output/GSE2/homo_sapiens/GSM2\n')]
+            self.assertEqual(expected, m().write.call_args_list)
+
+    # # Interestingly, such mock doesn't work because of the following error
+    # # E           TypeError: can't set attributes of built-in/extension type 'datetime.datetime'
+    # # http://stackoverflow.com/questions/4481954/python-trying-to-mock-datetime-date-today-but-not-working
+    # @mock.patch('rsempipeline.core.rp_transfer.datetime.datetime.now')
+    # def test_append_transfer_record3(self, mock_now):
+    #     mock_now.return_value = datetime.datetime(2015, 1, 1, 1, 1, 1)
+    #     m = mock.mock_open()
+    #     records = ['rsem_output/GSE1/homo_sapiens/GSM1',
+    #                'rsem_output/GSE2/homo_sapiens/GSM2']
+    #     with mock.patch('rsempipeline.core.rp_transfer.open', m):
+    #         RP_T.append_transfer_record(records, 'transferred_GSMs.txt')
+    #         self.assertEqual(m().write.call_count, 3)
