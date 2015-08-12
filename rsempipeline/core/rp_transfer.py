@@ -23,6 +23,8 @@ from rsempipeline.utils import misc
 from rsempipeline.conf.settings import RP_TRANSFER_LOGGING_CONFIG
 from rsempipeline.parsers.args_parser import parse_args_for_rp_transfer
 
+if not os.path.exists('log'):
+    os.mkdir('log')
 logging.config.fileConfig(RP_TRANSFER_LOGGING_CONFIG)
 logger = logging.getLogger('rp_transfer')
 
