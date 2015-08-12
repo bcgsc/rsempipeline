@@ -14,7 +14,9 @@ from datetime import datetime
 from functools import update_wrapper
 logger = logging.getLogger(__name__)
 
+import yaml
 import paramiko
+
 
 def mkdir(d):
     try:
@@ -130,6 +132,21 @@ def touch(fname, times=None):
         opf.write('location of code execution: {0}\n'.format(
             os.path.abspath('.')))
         os.utime(fname, times)
+
+
+def get_config(config_yaml_file):
+    try:
+        with open(config_yaml_file) as inf:
+            config = yaml.load(inf.read())
+        return config
+    except IOError:
+        logger.exception(
+            'configuration file: {0} not found'.format(config_yaml_file))
+        raise
+    except yaml.YAMLError:
+        logger.exception(
+            'potentially invalid yaml format in {0}'.format(config_yaml_file))
+        raise
 
 # cache functions are deprecated
 

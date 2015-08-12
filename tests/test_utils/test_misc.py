@@ -4,7 +4,7 @@ import unittest
 import mock
 import tempfile
 
-from testfixtures import LogCapture
+from testfixtures import LogCapture, log_capture
 # https://pythonhosted.org/testfixtures/logging.html
 # LogCapture and log_capture are used in different ways to achieve the same
 # results
@@ -184,6 +184,33 @@ class MiscTestCase(unittest.TestCase):
         self.assertEqual(misc.gen_completion_stamp('some_key', 'some_dir'),
                          'some_dir/some_key.COMPLETE')
 
+    def test_get_config(self):
+        with mock.patch('rsempipeline.utils.misc.open',
+                        mock.mock_open(read_data='a: b'),
+                        create=True):
+            self.assertEqual(misc.get_config('config.yaml'), {'a': 'b'})
+
+    @log_capture()
+    def test_get_config_config_file_not_exist(self, L):
+        self.assertRaises(IOError, misc.get_config, 'non_existent_config.yaml')
+        L.check(('rsempipeline.utils.misc', 'ERROR',
+                 'configuration file: non_existent_config.yaml not found'),)
+
+    @log_capture()
+    def test_get_config_invalid_format(self, L):
+        # from yaml import YAMLError
+        import yaml
+        with mock.patch('rsempipeline.utils.misc.open',
+                        mock.mock_open(read_data='a\nb:'),
+                        create=True):
+            # If the YAML parser encounters an error condition, it raises an
+            # exception which is an instance of YAMLError or of its subclass,
+            # so both the following two lines can capture the exception.
+            self.assertRaises(yaml.scanner.ScannerError, misc.get_config, 'invalid_yaml.yaml')
+            # self.assertRaises(yaml.YAMLError, misc.get_config, 'invalid_yaml.yaml')
+            L.check(('rsempipeline.utils.misc', 'ERROR',
+                     'potentially invalid yaml format in invalid_yaml.yaml'),)
+
 
     def test_pretty_usage(self):
         self.assertEqual(misc.pretty_usage(1000), '1000.0 bytes')
@@ -212,7 +239,6 @@ class MiscTestCase(unittest.TestCase):
         self.assertRaises(ValueError, misc.ugly_usage, 'invalid size')
         # exabyte is not handled yet
         self.assertRaises(ValueError, misc.ugly_usage, '1.5 EB')
-
 
     def test_disk_used(self):
         fake_dir = tempfile.mkdtemp(suffix='_rsem_testing')
