@@ -6,11 +6,12 @@ before_install:
   - pwd
   - ls
   # it's strange why need this step since it's in the package directory already
-  - export PYTHONPATH=${PWD}:${PYTHONPATH}
+  # - export PYTHONPATH=${PWD}:${PYTHONPATH}
 
 install:
   - pwd
-  - pip install -r requirements.txt
+  - python setup.py develop
+  # - pip install -r requirements.txt
 
 script:
   - py.test -s --cov=rsempipeline --cov-report=html tests/
