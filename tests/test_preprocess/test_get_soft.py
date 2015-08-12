@@ -52,8 +52,7 @@ class SOFTDownloaderTestCase(unittest.TestCase):
 
     def test_retrieve(self):
         mock_open = mock.mock_open()
-        with mock.patch('rsempipeline.preprocess.get_soft.open',
-                        mock_open, create=True):
+        with mock.patch('rsempipeline.preprocess.get_soft.open', mock_open):
             self.der.retrieve('the_path', 'the.soft.gz', 'the_output')
         mock_open.assert_called_once_with('the_output', 'wb')
         self.der.ftp_handler.cwd.assert_called_with('the_path')
@@ -61,7 +60,7 @@ class SOFTDownloaderTestCase(unittest.TestCase):
         cmd = 'RETR the.soft.gz'
         self.der.ftp_handler.retrbinary.assert_called_with(cmd, fd.write)
 
-    @mock.patch('rsempipeline.preprocess.get_soft.open', create=True)
+    @mock.patch('rsempipeline.preprocess.get_soft.open')
     def test_retrieve2(self, mock_open):
         """supposed to have the same testing purpose as self.test_retrieve, but using
         patch as a decorator instead of context manager
@@ -111,7 +110,7 @@ class SOFTDownloaderTestCase(unittest.TestCase):
         # http://stackoverflow.com/questions/24779893/customizing-unittest-mock-mock-open-for-iteration
         mock_gzip_open.return_value.__iter__ = lambda self: StringIO.StringIO(self.read())
         mock_gzip_open.return_value.__next__ = lambda self: self.readline()
-        with mock.patch('rsempipeline.preprocess.get_soft.open', mock_open, create=True):
+        with mock.patch('rsempipeline.preprocess.get_soft.open', mock_open):
             with mock.patch('rsempipeline.preprocess.get_soft.gzip.open', mock_gzip_open):
                 self.der.gunzip_and_extract_soft(soft_gz, soft_subset)
         mock_open.assert_called_once_with(soft_subset, 'wb')

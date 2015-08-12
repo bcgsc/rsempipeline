@@ -36,13 +36,12 @@ class SoftParserTestCase(unittest.TestCase):
         self.assertEqual(soft_parser.add(current_sample, series, 1), 1)
 
     def test_parse(self):
-        with mock.patch('rsempipeline.parsers.soft_parser.open',
-                        mock.mock_open(read_data=settings.GSE43770_FAMILY_SOFT_SUBSET_CONTENT),
-                        create=True) as mock_open:
-            mock_open.return_value.__iter__.return_value = settings.GSE43770_FAMILY_SOFT_SUBSET_CONTENT.splitlines()
+        m = mock.mock_open()
+        with mock.patch('rsempipeline.parsers.soft_parser.open', m):
+            m.return_value.__iter__.return_value = settings.GSE43770_FAMILY_SOFT_SUBSET_CONTENT.splitlines()
             series = soft_parser.parse('GSE43770_family.soft.subset',
                               ['Homo sapiens', 'Mus musculus'])
-            mock_open.assert_called_once_with('GSE43770_family.soft.subset', 'rb')
+            m.assert_called_once_with('GSE43770_family.soft.subset', 'rb')
             self.assertEqual(series.name, 'GSE43770')
             self.assertEqual([__.name for __ in series.passed_samples],
                              ['GSM1070765', 'GSM1070766'])
@@ -54,10 +53,9 @@ class SoftParserTestCase(unittest.TestCase):
                              [1, 2, 0]) # 0 mean unindexed
 
     def test_parse_invalid_GSE44770(self):
-        with mock.patch('rsempipeline.parsers.soft_parser.open',
-                        mock.mock_open(read_data=settings.INVALID_GSE43770_FAMILY_SOFT_SUBSET_CONTENT),
-                        create=True) as mock_open:
-            mock_open.return_value.__iter__.return_value = settings.INVALID_GSE43770_FAMILY_SOFT_SUBSET_CONTENT.splitlines()
+        m = mock.mock_open()
+        with mock.patch('rsempipeline.parsers.soft_parser.open', m):
+            m.return_value.__iter__.return_value = settings.INVALID_GSE43770_FAMILY_SOFT_SUBSET_CONTENT.splitlines()
             self.assertRaisesRegexp(
                 ValueError, 'GSE00000 \(passed samples\: 0\/0\) != GSE43770', soft_parser.parse,
                 'GSE43770_family.soft.subset', ['Homo sapiens', 'Mus musculus'])

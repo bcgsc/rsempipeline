@@ -246,8 +246,7 @@ class PrePipelineRunTestCase(unittest.TestCase):
     @mock.patch('rsempipeline.utils.pre_pipeline_run.os')
     def test_get_sras_info(self, _):
         with mock.patch('rsempipeline.utils.pre_pipeline_run.open',
-                        mock.mock_open(read_data=SRA_INFO_YAML_SINGLE_SRA),
-                        create=True):
+                        mock.mock_open(read_data=SRA_INFO_YAML_SINGLE_SRA)):
             res = ppr.get_sras_info('some_dir')
         self.assertEqual(res, PARSED_SRA_INFO_YAML_SINGLE_SRA)
 

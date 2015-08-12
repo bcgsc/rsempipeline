@@ -33,8 +33,7 @@ class UtilsDownloadTestCase(unittest.TestCase):
         series.add_passed_sample(sample)
 
         with mock.patch('rsempipeline.utils.download.open',
-                        mock.mock_open(read_data=SRA_INFO_YAML_SINGLE_SRA),
-                        create=True):
+                        mock.mock_open(read_data=SRA_INFO_YAML_SINGLE_SRA)):
             vals = download.gen_orig_params_per(sample)
         self.assertEqual(vals, [
             [None, ['some_outdir/GSE123456/some_species/GSM1/SRX685892/SRR1557065/SRR1557065.sra',
@@ -49,8 +48,7 @@ class UtilsDownloadTestCase(unittest.TestCase):
         series.add_passed_sample(sample)
 
         with mock.patch('rsempipeline.utils.download.open',
-                        mock.mock_open(read_data=SRA_INFO_YAML_MULTIPLE_SRAS),
-                        create=True):
+                        mock.mock_open(read_data=SRA_INFO_YAML_MULTIPLE_SRAS)):
             vals = download.gen_orig_params_per(sample)
         self.assertEqual(vals, [
             # in the format of input, outputs, other params

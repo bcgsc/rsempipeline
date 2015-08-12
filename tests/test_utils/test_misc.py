@@ -186,8 +186,7 @@ class MiscTestCase(unittest.TestCase):
 
     def test_get_config(self):
         with mock.patch('rsempipeline.utils.misc.open',
-                        mock.mock_open(read_data='a: b'),
-                        create=True):
+                        mock.mock_open(read_data='a: b')):
             self.assertEqual(misc.get_config('config.yaml'), {'a': 'b'})
 
     @log_capture()
@@ -201,8 +200,7 @@ class MiscTestCase(unittest.TestCase):
         # from yaml import YAMLError
         import yaml
         with mock.patch('rsempipeline.utils.misc.open',
-                        mock.mock_open(read_data='a\nb:'),
-                        create=True):
+                        mock.mock_open(read_data='a\nb:')):
             # If the YAML parser encounters an error condition, it raises an
             # exception which is an instance of YAMLError or of its subclass,
             # so both the following two lines can capture the exception.
