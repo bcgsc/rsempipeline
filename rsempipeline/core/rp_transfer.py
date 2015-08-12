@@ -22,6 +22,7 @@ from rsempipeline.utils import pre_pipeline_run as PPR
 from rsempipeline.utils import misc
 from rsempipeline.parsers.args_parser import parse_args_for_rp_transfer
 from rsempipeline.conf.settings import (RP_TRANSFER_LOGGING_CONFIG,
+                                        TRANSFER_SCRIPTS_DIR_BASENAME,
                                         TRANSFER_SCRIPTS_DIR_BASENAME)
 
 
@@ -129,59 +130,36 @@ def append_transfer_record(gsms_to_transfer, record_file):
             opf.write('{0}\n'.format(_))
 
 
-def select_samples_to_transfer(samples, l_top_outdir, r_top_outdir,
-                               r_host, r_username):
+def calc_r_free_to_use(r_free_space, r_est_current_usage, r_max_usage, r_min_free):
     """
-    select samples to transfer (different from select_samples_to_process in
-    utils_pre_pipeline.py, which are to process)
+    Calculate free space that could be used on remote host
+
+    :param r_max_usage: max usage allowed as specified in the config file
     """
-    # r_: means relevant to remote host, l_: to local host
-    r_free_space = get_remote_free_disk_space(
-        config['REMOTE_CMD_DF'], r_host, r_username)
-    logger.info(
-        'r_free_space: {0}: {1}'.format(r_host, misc.pretty_usage(r_free_space)))
-
-    # r_real_current_usage is just for giving an idea of real usage on remote,
-    # this variable is not utilized by following calculations, but the
-    # corresponding current local usage is always real since there's no point
-    # to estimate because only one process would be writing to the disk
-    # simultaneously.
-    r_real_current_usage = get_real_current_usage(
-        r_host, r_username, r_top_outdir)
-    logger.info('real current usage on {0} by {1}: {2}'.format(
-        r_host, r_top_outdir, misc.pretty_usage(r_real_current_usage)))
-
-    r_est_current_usage = estimate_current_remote_usage(
-        r_host, r_username, r_top_outdir, l_top_outdir)
-    logger.info('estimated current usage (excluding samples with '
-                'rsem.COMPLETE) on {0} by {1}: {2}'.format(
-                    r_host, r_top_outdir, misc.pretty_usage(r_est_current_usage)))
-    r_max_usage = min(misc.ugly_usage(config['REMOTE_MAX_USAGE']), r_free_space)
-    logger.info('r_max_usage: {0}'.format(misc.pretty_usage(r_max_usage)))
-    r_min_free = misc.ugly_usage(config['REMOTE_MIN_FREE'])
-    logger.info('r_min_free: {0}'.format(misc.pretty_usage(r_min_free)))
+    r_max_usage = min(r_max_usage, r_free_space)
     r_free_to_use = min(r_max_usage - r_est_current_usage,
                         r_free_space - r_min_free)
     logger.info('r_free_to_use: {0}'.format(misc.pretty_usage(r_free_to_use)))
-
-    gsms = find_gsms_to_transfer(samples, l_top_outdir, r_free_to_use)
-    return gsms
+    return r_free_to_use
 
 
-def find_gsms_to_transfer(samples, l_top_outdir, r_free_to_use):
+def find_gsms_to_transfer(all_gsms, transferred_gsms, l_top_outdir, r_free_to_use):
     """
+    select samples to transfer (different from select_samples_to_process in
+    utils_pre_pipeline.py, which are to process)
+
     Walk through local top outdir, and for each GSMs, estimate its usage, and
     if it fits free_to_use space on remote host, count it as an element
     gsms_to_transfer
-    """
-    gsms_to_transfer = []
-    for gsm in samples:
-        gsm_id = os.path.relpath(gsm.outdir, l_top_outdir)
 
-        comp_flag = os.path.join(gsm.outdir, 'transfer.COMPLETE')
-        if os.path.exists(comp_flag):
-            logger.debug('{0}: already transferred'.format(gsm_id))
-            continue
+    :param all_gsms: a list of Sample instances representing all GSMs
+    :param transferred_gsms: a list of string with GSM ids. e.g. [GSM1, GSM2]
+    """
+    # not yet transferred GSMs
+    non_tf_gsms = [_ for _  in all_gsms if _.name not in transferred_gsms]
+    gsms_to_transfer = []
+    for gsm in non_tf_gsms:
+        gsm_id = os.path.relpath(gsm.outdir, l_top_outdir)
 
         if not PPR.is_processed(gsm.outdir):
             # debug info will be logged by PPR.processed
@@ -199,7 +177,6 @@ def find_gsms_to_transfer(samples, l_top_outdir, r_free_to_use):
             gsm_id, misc.pretty_usage(rsem_usage), misc.pretty_usage(r_free_to_use)))
         r_free_to_use -= rsem_usage
         gsms_to_transfer.append(gsm)
-
     return gsms_to_transfer
 
 
@@ -243,46 +220,95 @@ def write(transfer_script, template, **params):
         opf.write(template.render(**params))
 
 
+def log_remote_real_usage(r_host, r_username, r_top_outdir):
+    # r_real_current_usage is just for giving an idea of real usage on remote,
+    # this variable is not utilized by following calculations, but the
+    # corresponding current local usage is always real since there's no point
+    # to estimate because only one process would be writing to the disk
+    # simultaneously.
+    r_real = get_real_current_usage(r_host, r_username, r_top_outdir)
+    r_real_pretty = misc.pretty_usage(r_real)
+    logger.info('real current usage on {r_host} by {r_top_outdir}: '
+                '{r_real_pretty}'.format(**locals()))
+    return r_real
+
+
+def log_r_free_space(r_free_space, r_host):
+    free_pretty = misc.pretty_usage(r_free_space)
+    logger.info('free space on {r_host}: {free_pretty}'.format(**locals()))
+
+
+def log_r_estimated_current_usage(usage, r_host, r_top_outdir):
+    usage_pretty = misc.pretty_usage(usage)
+    logger.info('estimated current usage (excluding samples with '
+                'rsem.COMPLETE) on {r_host} by {r_top_outdir}: '
+                '{usage_pretty}'.format(**locals()))
+
+
 @misc.lockit(os.path.expanduser('~/.rp-transfer'))
 def main():
-    """the main function"""
     options = parse_args_for_rp_transfer()
     config = misc.get_config(options.config_file)
 
+    # r_: means relevant to remote host, l_: to local host
     l_top_outdir = config['LOCAL_TOP_OUTDIR']
     r_top_outdir = config['REMOTE_TOP_OUTDIR']
     r_host, r_username = config['REMOTE_HOST'], config['USERNAME']
-    # different from processing in rsempipeline.py, where the completion is
-    # marked by .COMPLETE flags, but by writting the completed GSMs to
-    # gsms_transfer_record
-    gsms_transfer_record = os.path.join(l_top_outdir, 'transferred_GSMs.txt')
-    gsms_transferred = get_gsms_transferred(gsms_transfer_record)
-    samples = PPR.gen_all_samples_from_soft_and_isamp(
-        options.soft_files, options.isamp, config)
-    PPR.init_sample_outdirs(samples, config['LOCAL_TOP_OUTDIR'])
-    samples = [_ for _  in samples
-               if _.name not in map(os.path.basename, gsms_transferred)]
 
-    gsms = select_samples_to_transfer(
-        samples, l_top_outdir, r_top_outdir, r_host, r_username)
-    if not gsms:
+    log_remote_real_usage(r_host, r_username, r_top_outdir)
+
+    r_max_usage_pretty = config['REMOTE_MAX_USAGE']
+    r_max_usage = misc.ugly_usage(r_max_usage_pretty)
+    logger.info('r_max_usage: {0}'.format(r_max_usage))
+
+    r_min_free_pretty = config['REMOTE_MIN_FREE']
+    r_min_free = misc.ugly_usage(r_min_free_pretty)
+    logger.info('r_min_free: {0}'.format(r_min_free_pretty))
+
+    r_cmd_df = config['REMOTE_CMD_DF']
+    r_free_space = get_remote_free_disk_space(r_cmd_df, r_host, r_username)
+    log_r_free_space(r_free_space)
+    r_estimated_current_usage = estimate_current_remote_usage(
+        r_host, r_username, r_top_outdir, l_top_outdir)
+    log_r_estimated_current_usage(r_estimated_current_usage, r_host, r_top_outdir)
+
+    r_free_to_use = calc_r_free_to_use(r_free_space, r_estimated_current_usage,
+                                       r_max_usage, r_min_free)
+
+    G = PPR.gen_all_samples_from_soft_and_isamp
+    all_gsms = G(options.soft_files, options.isamp, config)
+    PPR.init_sample_outdirs(all_gsms, l_top_outdir)
+
+    # tf: transfer/transferred
+    tf_record = os.path.join(l_top_outdir, 'transferred_GSMs.txt')
+    tf_gsms = get_gsms_transferred(tf_record)
+    tf_gsms_bn = map(os.path.basename, tf_gsms)
+
+    # Find GSMs to transfer based on disk usage rule
+    gsms_to_tf = find_gsms_to_transfer(all_gsms, tf_gsms_bn, r_free_to_use,
+                                       l_top_outdir)
+    if not gsms_to_tf:
         logger.info('Cannot find a GSM that fits the current disk usage rule')
         return
 
     logger.info('GSMs to transfer:')
-    for k, gsm in enumerate(gsms):
+    for k, gsm in enumerate(gsms_to_tf):
         logger.info('\t{0:3d} {1:30s} {2}'.format(k+1, gsm, gsm.outdir))
 
-    gsms_tf_ids = [os.path.relpath(_.outdir, l_top_outdir) for _ in gsms]
+    gsms_to_tf_ids = [os.path.relpath(_.outdir, l_top_outdir)
+                      for _ in gsms_to_tf]
     tf_script = write_transfer_sh(
-        gsms_tf_ids, options.rsync_template, l_top_outdir,
+        gsms_to_tf_ids, options.rsync_template, l_top_outdir,
         r_username, r_host, r_top_outdir)
 
     os.chmod(tf_script, stat.S_IRUSR | stat.S_IWUSR| stat.S_IXUSR)
     rcode = misc.execute_log_stdout_stderr(tf_script)
 
     if rcode == 0:
-        append_transfer_record(gsms_tf_ids, gsms_transfer_record)
+        # different from processing in rsempipeline.py, where the completion is
+        # marked by .COMPLETE flags, but by writting the completed GSMs to
+        # gsms_transfer_record
+        append_transfer_record(gsms_to_tf_ids, tf_record)
 
 
 if __name__ == "__main__":
