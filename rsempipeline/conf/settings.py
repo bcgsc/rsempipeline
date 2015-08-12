@@ -29,4 +29,8 @@ SRA_INFO_FILE_BASENAME = 'sras_info.yaml'
 # fastq-dump based on statistics
 SRA2FASTQ_SIZE_RATIO = 1.5
 
+# where all analysis results go to
 RSEM_OUTPUT_BASENAME = 'rsem_output'
+
+# where scripts are saved for transferring fastq files to remote HPC host
+TRANSFER_SCRIPTS_DIR_BASENAME = 'transfer_scripts'

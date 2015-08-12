@@ -20,8 +20,10 @@ from jinja2 import Template
 
 from rsempipeline.utils import pre_pipeline_run as PPR
 from rsempipeline.utils import misc
-from rsempipeline.conf.settings import RP_TRANSFER_LOGGING_CONFIG
 from rsempipeline.parsers.args_parser import parse_args_for_rp_transfer
+from rsempipeline.conf.settings import (RP_TRANSFER_LOGGING_CONFIG,
+                                        TRANSFER_SCRIPTS_DIR_BASENAME)
+
 
 if not os.path.exists('log'):
     os.mkdir('log')
@@ -202,7 +204,7 @@ def find_gsms_to_transfer(samples, l_top_outdir, r_free_to_use):
 
 
 def create_transfer_sh_dir(l_top_outdir):
-    d = os.path.join(l_top_outdir, 'transfer_scripts')
+    d = os.path.join(l_top_outdir, TRANSFER_SCRIPTS_DIR_BASENAME)
     if not os.path.exists(d):
         os.mkdir(d)
     return d

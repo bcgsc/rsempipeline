@@ -137,3 +137,16 @@ class RPRunTestCase(unittest.TestCase):
     #     with mock.patch('rsempipeline.core.rp_transfer.open', m):
     #         RP_T.append_transfer_record(records, 'transferred_GSMs.txt')
     #         self.assertEqual(m().write.call_count, 3)
+
+    @mock.patch.object(RP_T.os, 'mkdir')
+    @mock.patch.object(RP_T.os.path, 'exists')
+    def test_create_transfer_sh_dir(self, mock_exists, mock_mkdir):
+        mock_exists.return_value = False
+        self.assertEqual(RP_T.create_transfer_sh_dir('l_top_outdir'), 'l_top_outdir/transfer_scripts')
+        mock_mkdir.called_once_with('l_top_outdir/transfer_scripts')
+
+        mock_exists.reset_mock()
+        mock_mkdir.reset_mock()
+        mock_exists.return_value = True
+        self.assertEqual(RP_T.create_transfer_sh_dir('l_top_outdir'), 'l_top_outdir/transfer_scripts')
+        self.assertFalse(mock_mkdir.called)
