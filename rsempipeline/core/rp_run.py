@@ -33,8 +33,7 @@ options = parse_args_for_rp_run()
 with open(options.config_file) as inf:
     config = yaml.load(inf.read())
 
-if not os.path.exists('log'):
-    os.mkdir('log')
+misc.mkdir('log')
 logging.config.fileConfig(RP_RUN_LOGGING_CONFIG)
 
 samples = PPR.gen_all_samples_from_soft_and_isamp(

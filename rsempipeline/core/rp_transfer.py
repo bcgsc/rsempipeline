@@ -26,8 +26,7 @@ from rsempipeline.conf.settings import (RP_TRANSFER_LOGGING_CONFIG,
                                         TRANSFER_SCRIPTS_DIR_BASENAME)
 
 
-if not os.path.exists('log'):
-    os.mkdir('log')
+misc.mkdir('log')
 logging.config.fileConfig(RP_TRANSFER_LOGGING_CONFIG)
 logger = logging.getLogger('rp_transfer')
 
