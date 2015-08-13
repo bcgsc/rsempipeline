@@ -18,17 +18,17 @@ import logging.config
 
 from jinja2 import Template
 
-from rsempipeline.utils import pre_pipeline_run as PPR
 from rsempipeline.utils import misc
+misc.mkdir('log')
+from rsempipeline.utils import pre_pipeline_run as PPR
 from rsempipeline.parsers.args_parser import parse_args_for_rp_transfer
 from rsempipeline.conf.settings import (RP_TRANSFER_LOGGING_CONFIG,
-                                        TRANSFER_SCRIPTS_DIR_BASENAME,
                                         TRANSFER_SCRIPTS_DIR_BASENAME)
 
 
-misc.mkdir('log')
 logging.config.fileConfig(RP_TRANSFER_LOGGING_CONFIG)
 logger = logging.getLogger('rp_transfer')
+
 
 def get_remote_free_disk_space(remote, username, df_cmd):
     """
@@ -234,7 +234,6 @@ def calc_remote_free_space_to_use(r_host, r_username, r_top_outdir, l_top_outdir
     r_free_to_use = misc.calc_free_space_to_use(
         r_estimated_current_usage, r_free_space, r_min_free, r_max_usage)
     return r_free_to_use
-
 
 
 @misc.lockit(os.path.expanduser('~/.rp-transfer'))
