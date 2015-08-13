@@ -15,7 +15,8 @@ class RPRunTestCase(unittest.TestCase):
         mock_sshexec.return_value = [
             'Filesystem         1024-blocks      Used Available Capacity Mounted on\n',
             '/dev/analysis        16106127360 13106127360 3000000000      82% /extscratch\n']
-        res = RP_T.get_remote_free_disk_space('df -k -P target_dir', 'remote', 'username')
+        cmd = 'df -k -P target_dir'
+        res = RP_T.get_remote_free_disk_space('remote', 'username', cmd)
         self.assertEqual(res, 3072e9)
 
     @mock.patch('rsempipeline.core.rp_transfer.misc.sshexec')
@@ -218,3 +219,124 @@ class RPRunTestCase(unittest.TestCase):
             'l_top_outdir',
             'r_username', 'r_host', 'r_top_outdir'),
                          'l_top_outdir/transfer_scripts/transfer.15-01-01_01:01:01.sh')
+
+    @mock.patch('rsempipeline.core.rp_transfer.get_real_current_usage')
+    @mock.patch('rsempipeline.core.rp_transfer.estimate_current_remote_usage')
+    @mock.patch('rsempipeline.core.rp_transfer.get_remote_free_disk_space')
+    def test_calc_remote_free_space_to_use(
+            self, mock_get_real, mock_estimate_current, mock_get_remote_free):
+        """numbers are intentionally made small for convenience, in real scenario,
+        just image multiplying them by a constant factor"""
+        mock_get_real.return_value = 1234
+        mock_estimate_current.return_value = 10
+        mock_get_remote_free.return_value = 90
+        r_max_usage = 50
+        r_min_free = 20
+        res = RP_T.calc_remote_free_space_to_use(
+            'r_host', 'r_username', 'r_top_outdir',
+            'l_top_outdir', 'r_cmd_df', r_max_usage, r_min_free)
+        self.assertEqual(res, 40)
+
+    @mock.patch('rsempipeline.core.rp_transfer.os')
+    @mock.patch('rsempipeline.core.rp_transfer.append_transfer_record')
+    @mock.patch('rsempipeline.core.rp_transfer.misc.execute_log_stdout_stderr')
+    @mock.patch('rsempipeline.core.rp_transfer.write_transfer_sh')
+    @mock.patch('rsempipeline.core.rp_transfer.find_gsms_to_transfer')
+    @mock.patch('rsempipeline.core.rp_transfer.get_gsms_transferred')
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.init_sample_outdirs')
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.gen_all_samples_from_soft_and_isamp')
+    @mock.patch('rsempipeline.core.rp_transfer.calc_remote_free_space_to_use')
+    @mock.patch('rsempipeline.core.rp_transfer.misc.get_config')
+    @mock.patch('rsempipeline.core.rp_transfer.parse_args_for_rp_transfer')
+    def test_main(self, mock_parse, mock_get_config, mock_calc, mock_gen, mock_init,
+                  mock_get_gsms_transferred, mock_find_gsms, mock_write_transfer_script,
+                  mock_execute, mock_append, mock_os):
+        mock_get_config.return_value = {
+            'LOCAL_TOP_OUTDIR': 'l_top_outdir',
+            'REMOTE_TOP_OUTDIR': 'r_top_outdir',
+            'REMOTE_HOST': 'remote',
+            'USERNAME': 'username',
+            'REMOTE_CMD_DF': 'df -k -P target_dir',
+            'REMOTE_MAX_USAGE': '50 GB',
+            'REMOTE_MIN_FREE': '20 GB',
+        }
+        mock_calc.return_value = 40
+        m1 = mock.Mock()
+        m1.outdir = 'l_top_outdir/rsemoutput/GSE1/homo_sapiens/GSM1'
+        m1.name = 'GSM1'
+        m2 = mock.Mock()
+        m2.outdir = 'l_top_outdir/rsemoutput/GSE2/homo_sapiens/GSM2'
+        m2.name = 'GSM2'
+        mock_find_gsms.return_value = [m1, m2]
+        mock_execute.return_value = 0
+        RP_T.main()
+        self.assertTrue(mock_execute.called)
+        self.assertTrue(mock_append.called)
+
+    @mock.patch('rsempipeline.core.rp_transfer.os')
+    @mock.patch('rsempipeline.core.rp_transfer.append_transfer_record')
+    @mock.patch('rsempipeline.core.rp_transfer.misc.execute_log_stdout_stderr')
+    @mock.patch('rsempipeline.core.rp_transfer.write_transfer_sh')
+    @mock.patch('rsempipeline.core.rp_transfer.find_gsms_to_transfer')
+    @mock.patch('rsempipeline.core.rp_transfer.get_gsms_transferred')
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.init_sample_outdirs')
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.gen_all_samples_from_soft_and_isamp')
+    @mock.patch('rsempipeline.core.rp_transfer.calc_remote_free_space_to_use')
+    @mock.patch('rsempipeline.core.rp_transfer.misc.get_config')
+    @mock.patch('rsempipeline.core.rp_transfer.parse_args_for_rp_transfer')
+    def test_main_no_GSM_found_for_transfer(
+            self, mock_parse, mock_get_config, mock_calc, mock_gen, mock_init,
+            mock_get_gsms_transferred, mock_find_gsms, mock_write_transfer_script,
+            mock_execute, mock_append, mock_os):
+        mock_get_config.return_value = {
+            'LOCAL_TOP_OUTDIR': 'l_top_outdir',
+            'REMOTE_TOP_OUTDIR': 'r_top_outdir',
+            'REMOTE_HOST': 'remote',
+            'USERNAME': 'username',
+            'REMOTE_CMD_DF': 'df -k -P target_dir',
+            'REMOTE_MAX_USAGE': '50 GB',
+            'REMOTE_MIN_FREE': '20 GB',
+        }
+        mock_calc.return_value = 40
+        mock_find_gsms.return_value = []
+        mock_execute.return_value = 0
+        RP_T.main()
+        self.assertFalse(mock_write_transfer_script.called)
+        self.assertFalse(mock_execute.called)
+
+    @mock.patch('rsempipeline.core.rp_transfer.os')
+    @mock.patch('rsempipeline.core.rp_transfer.append_transfer_record')
+    @mock.patch('rsempipeline.core.rp_transfer.misc.execute_log_stdout_stderr')
+    @mock.patch('rsempipeline.core.rp_transfer.write_transfer_sh')
+    @mock.patch('rsempipeline.core.rp_transfer.find_gsms_to_transfer')
+    @mock.patch('rsempipeline.core.rp_transfer.get_gsms_transferred')
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.init_sample_outdirs')
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.gen_all_samples_from_soft_and_isamp')
+    @mock.patch('rsempipeline.core.rp_transfer.calc_remote_free_space_to_use')
+    @mock.patch('rsempipeline.core.rp_transfer.misc.get_config')
+    @mock.patch('rsempipeline.core.rp_transfer.parse_args_for_rp_transfer')
+    def test_main_transfer_unsuccessfull(
+            self, mock_parse, mock_get_config, mock_calc, mock_gen, mock_init,
+            mock_get_gsms_transferred, mock_find_gsms, mock_write_transfer_script,
+            mock_execute, mock_append, mock_os):
+        mock_get_config.return_value = {
+            'LOCAL_TOP_OUTDIR': 'l_top_outdir',
+            'REMOTE_TOP_OUTDIR': 'r_top_outdir',
+            'REMOTE_HOST': 'remote',
+            'USERNAME': 'username',
+            'REMOTE_CMD_DF': 'df -k -P target_dir',
+            'REMOTE_MAX_USAGE': '50 GB',
+            'REMOTE_MIN_FREE': '20 GB',
+        }
+        mock_calc.return_value = 40
+        m1 = mock.Mock()
+        m1.outdir = 'l_top_outdir/rsemoutput/GSE1/homo_sapiens/GSM1'
+        m1.name = 'GSM1'
+        m2 = mock.Mock()
+        m2.outdir = 'l_top_outdir/rsemoutput/GSE2/homo_sapiens/GSM2'
+        m2.name = 'GSM2'
+        mock_find_gsms.return_value = [m1, m2]
+        mock_execute.return_value = 1
+        RP_T.main()
+        self.assertTrue(mock_execute.called)
+        self.assertFalse(mock_append.called)

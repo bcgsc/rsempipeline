@@ -31,7 +31,7 @@ if not os.path.exists('log'):
 logging.config.fileConfig(RP_TRANSFER_LOGGING_CONFIG)
 logger = logging.getLogger('rp_transfer')
 
-def get_remote_free_disk_space(df_cmd, remote, username):
+def get_remote_free_disk_space(remote, username, df_cmd):
     """
     find the free disk space on remote host.
 
@@ -207,29 +207,35 @@ def write(transfer_script, template, **params):
         opf.write(template.render(**params))
 
 
-def log_remote_real_usage(r_host, r_username, r_top_outdir):
+def calc_remote_free_space_to_use(r_host, r_username, r_top_outdir, l_top_outdir,
+                                  r_cmd_df, r_max_usage, r_min_free):
     # r_real_current_usage is just for giving an idea of real usage on remote,
-    # this variable is not utilized by following calculations, but the
-    # corresponding current local usage is always real since there's no point
-    # to estimate because only one process would be writing to the disk
-    # simultaneously.
+    # and it's not used for calculating free space to use
+    P = misc.pretty_usage
     r_real = get_real_current_usage(r_host, r_username, r_top_outdir)
-    r_real_pretty = misc.pretty_usage(r_real)
+    r_real_pretty = P(r_real)
     logger.info('real current usage on {r_host} by {r_top_outdir}: '
                 '{r_real_pretty}'.format(**locals()))
-    return r_real
 
+    r_estimated_current_usage = estimate_current_remote_usage(
+        r_host, r_username, r_top_outdir, l_top_outdir)
+    r_estimated_current_usage_pretty = P(r_estimated_current_usage)
+    logger.info('free space on {r_host}: {r_estimated_current_usage_pretty}'.format(**locals()))
 
-def log_r_free_space(r_free_space, r_host):
-    free_pretty = misc.pretty_usage(r_free_space)
-    logger.info('free space on {r_host}: {free_pretty}'.format(**locals()))
+    r_free_space = get_remote_free_disk_space(r_host, r_username, r_cmd_df)
+    r_free_space_pretty = P(r_free_space)
+    logger.info('free space on {r_host}: {r_free_space_pretty}'.format(**locals()))
 
+    r_max_usage_pretty = P(r_max_usage)
+    logger.info('r_max_usage: {0}'.format(r_max_usage_pretty))
 
-def log_r_estimated_current_usage(usage, r_host, r_top_outdir):
-    usage_pretty = misc.pretty_usage(usage)
-    logger.info('estimated current usage (excluding samples with '
-                'rsem.COMPLETE) on {r_host} by {r_top_outdir}: '
-                '{usage_pretty}'.format(**locals()))
+    r_min_free_pretty = P(r_min_free)
+    logger.info('r_min_free: {0}'.format(r_min_free_pretty))
+
+    r_free_to_use = misc.calc_free_space_to_use(
+        r_estimated_current_usage, r_free_space, r_min_free, r_max_usage)
+    return r_free_to_use
+
 
 
 @misc.lockit(os.path.expanduser('~/.rp-transfer'))
@@ -241,26 +247,13 @@ def main():
     l_top_outdir = config['LOCAL_TOP_OUTDIR']
     r_top_outdir = config['REMOTE_TOP_OUTDIR']
     r_host, r_username = config['REMOTE_HOST'], config['USERNAME']
-
-    log_remote_real_usage(r_host, r_username, r_top_outdir)
-
-    r_max_usage_pretty = config['REMOTE_MAX_USAGE']
-    r_max_usage = misc.ugly_usage(r_max_usage_pretty)
-    logger.info('r_max_usage: {0}'.format(r_max_usage))
-
-    r_min_free_pretty = config['REMOTE_MIN_FREE']
-    r_min_free = misc.ugly_usage(r_min_free_pretty)
-    logger.info('r_min_free: {0}'.format(r_min_free_pretty))
-
     r_cmd_df = config['REMOTE_CMD_DF']
-    r_free_space = get_remote_free_disk_space(r_cmd_df, r_host, r_username)
-    log_r_free_space(r_free_space)
-    r_estimated_current_usage = estimate_current_remote_usage(
-        r_host, r_username, r_top_outdir, l_top_outdir)
-    log_r_estimated_current_usage(r_estimated_current_usage, r_host, r_top_outdir)
+    r_max_usage = misc.ugly_usage(config['REMOTE_MAX_USAGE'])
+    r_min_free = misc.ugly_usage(config['REMOTE_MIN_FREE'])
 
-    r_free_to_use = misc.calc_free_to_use(
-        r_estimated_current_usage, r_free_space, r_min_free, r_max_usage)
+    r_free_to_use  = calc_remote_free_space_to_use(
+        r_host, r_username, r_top_outdir, l_top_outdir,
+        r_cmd_df, r_max_usage, r_min_free)
 
     G = PPR.gen_all_samples_from_soft_and_isamp
     all_gsms = G(options.soft_files, options.isamp, config)
