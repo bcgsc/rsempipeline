@@ -347,8 +347,8 @@ def sshexec(cmd, host, username, private_key_file='~/.ssh/id_rsa'):
     # not sure what -1 does? learned from ssh.py
     output = session.makefile('rb', -1).readlines()
     channel.close()
-    if output:
-        return output
+    # if execution failed, output is None
+    return output
 
 
 def disk_used(dir):

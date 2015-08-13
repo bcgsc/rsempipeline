@@ -280,6 +280,22 @@ class MiscTestCase(unittest.TestCase):
         # when free < min_free
         self.assertEqual(misc.calc_free_space_to_use(10, 90, 100, 200), 0)
 
+    @mock.patch('rsempipeline.utils.misc.paramiko')
+    def test_sshexec(self, mock_paramiko):
+        mock_paramiko.Transport().open_session().makefile().readlines.return_value = ['some_output\n']
+        self.assertEqual(misc.sshexec('cmd', 'host', 'username'), ['some_output\n'])
+        # interestingly, Transpost is called twice while in the code, it's
+        # explicitly called only once
+        self.assertEqual(mock_paramiko.Transport.call_args_list,
+                         [mock.call(), mock.call(('host', 22))])
+
+    @mock.patch('rsempipeline.utils.misc.paramiko')
+    def test_sshexec_execution_failed_remotely(self, mock_paramiko):
+        mock_paramiko.Transport().open_session().makefile().readlines.return_value = None
+        self.assertIsNone(misc.sshexec('cmd', 'host', 'username'))
+        self.assertEqual(mock_paramiko.Transport.call_args_list,
+                         [mock.call(), mock.call(('host', 22))])
+
 
 if __name__ == "__main__":
     unittest.main()
