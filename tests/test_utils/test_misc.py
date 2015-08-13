@@ -280,6 +280,10 @@ class MiscTestCase(unittest.TestCase):
         # when free < min_free
         self.assertEqual(misc.calc_free_space_to_use(10, 90, 100, 200), 0)
 
+    def test_is_empty_dir(self):
+        self.assertFalse(misc.is_empty_dir('/p', ['/p', '/p/a.txt']))
+        self.assertTrue(misc.is_empty_dir('/p', ['/p', '/s', '/s/a.txt']))
+
     @mock.patch('rsempipeline.utils.misc.paramiko')
     def test_sshexec(self, mock_paramiko):
         mock_paramiko.Transport().open_session().makefile().readlines.return_value = ['some_output\n']
