@@ -206,16 +206,6 @@ class PrePipelineRunTestCase(unittest.TestCase):
         mock_options.ignore_disk_usage_rule = False
         ppr.select_samples_to_process(mock_samples, mock_config, mock_options)
 
-    def test_calc_free_space_to_use(self):
-        max_usage = 10
-        current_usage = 2
-        free_space = 20
-        min_free = 1
-        self.assertEqual(ppr.calc_free_space_to_use(max_usage, current_usage, free_space, min_free), 7)
-        free_space = 6
-        self.assertEqual(ppr.calc_free_space_to_use(max_usage, current_usage, free_space, min_free), 5)
-
-
     @mock.patch('rsempipeline.utils.pre_pipeline_run.is_processed')
     def test_find_gsms_to_process_all_processed(self, mock_is_processed):
         mock_is_processed.return_value = True

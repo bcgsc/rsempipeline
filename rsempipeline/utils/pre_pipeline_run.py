@@ -10,18 +10,17 @@ and parameters from rsempipeline_config.yaml
 """
 
 import os
-import sys
 import re
 import yaml
 import urlparse
-import subprocess
 from ftplib import FTP
 import logging
 logger = logging.getLogger(__name__)
 
 from rsempipeline.parsers.soft_parser import parse
 from rsempipeline.parsers.isamp_parser import get_isamp
-from rsempipeline.utils.misc import pretty_usage, ugly_usage, disk_used, disk_free
+from rsempipeline.utils.misc import (
+    pretty_usage, ugly_usage, disk_used, disk_free, calc_free_space_to_use)
 from rsempipeline.conf.settings import (
     SRA_INFO_FILE_BASENAME, QSUB_SUBMIT_SCRIPT_BASENAME, SRA2FASTQ_SIZE_RATIO,
     RSEM_OUTPUT_BASENAME)
@@ -212,12 +211,6 @@ def fetch_sras_info_per(sample_url, ftp_handler):
     except Exception, err:
         logger.exception(err)
 
-
-def calc_free_space_to_use(max_usage, current_usage, free_space, min_free):
-    return min(max_usage - current_usage - min_free,
-               free_space - min_free)
-
-
 # about filtering samples based on their sizes
 def select_samples_to_process(samples, config, options):
     """
@@ -236,8 +229,8 @@ def select_samples_to_process(samples, config, options):
     logger.info('maximum usage: {0}'.format(P(max_usage)))
     min_free = G(config['LOCAL_MIN_FREE'])
     logger.info('min_free: {0}'.format(P(min_free)))
-    free_to_use = calc_free_space_to_use(max_usage, current_usage,
-                                         free_space, min_free)
+    free_to_use = calc_free_space_to_use(
+        current_usage, free_space, min_free, max_usage)
     logger.info('free to use: {0}'.format(P(free_to_use)))
 
     # gsms are a list of Sample instances

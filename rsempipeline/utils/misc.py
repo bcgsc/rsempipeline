@@ -379,3 +379,38 @@ def disk_free(df_cmd):
     # e.g. output:
     # 'Filesystem     1024-blocks       Used  Available Capacity Mounted on\nisaac:/btl2    10200547328 1267127584 8933419744      13% /projects/btl2\n'
     return int(stdout.split(os.linesep)[1].split()[3]) * 1024
+
+
+def calc_free_space_to_use(current_usage, free, min_free, max_usage):
+    """
+    Calculate free space that could be used on remote host, this problem can be
+    illustrated by the following graph, where ^ show the 3 possible cases where
+    max_usage could point to.
+
+                                |                 free                     |
+    +----------------------------------------------------------------------+
+    |  current_usage            |   free - min_free      |    min_free     |
+    +----------------------------------------------------------------------+
+                           ^                        ^       ^
+
+    :param current_usage: current_usage
+    :param free: free space left
+    :param min_free: min free space should be left on the disk
+    :param max_usage: max allowed usage
+
+    """
+    P = pretty_usage
+    if min_free >= free:
+        logger.info('free_space ({0}) < min_free ({1}), '
+                    'return 0'.format(P(free), P(min_free)))
+        return 0
+    else:
+        free = free - min_free
+        if max_usage < current_usage:
+            logger.info('current_usage ({0}) > max_usage ({1}), '
+                        'return 0'.format(P(current_usage), P(max_usage)))
+            return 0
+        else:
+            res =  min(max_usage - current_usage, free)
+            logger.info('free space to use: {0}'.format(P(res)))
+            return res

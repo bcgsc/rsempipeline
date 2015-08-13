@@ -130,19 +130,6 @@ def append_transfer_record(gsms_to_transfer, record_file):
             opf.write('{0}\n'.format(_))
 
 
-def calc_r_free_to_use(r_free_space, r_est_current_usage, r_max_usage, r_min_free):
-    """
-    Calculate free space that could be used on remote host
-
-    :param r_max_usage: max usage allowed as specified in the config file
-    """
-    r_max_usage = min(r_max_usage, r_free_space)
-    r_free_to_use = min(r_max_usage - r_est_current_usage,
-                        r_free_space - r_min_free)
-    logger.info('r_free_to_use: {0}'.format(misc.pretty_usage(r_free_to_use)))
-    return r_free_to_use
-
-
 def find_gsms_to_transfer(all_gsms, transferred_gsms, l_top_outdir, r_free_to_use):
     """
     select samples to transfer (different from select_samples_to_process in
@@ -272,8 +259,8 @@ def main():
         r_host, r_username, r_top_outdir, l_top_outdir)
     log_r_estimated_current_usage(r_estimated_current_usage, r_host, r_top_outdir)
 
-    r_free_to_use = calc_r_free_to_use(r_free_space, r_estimated_current_usage,
-                                       r_max_usage, r_min_free)
+    r_free_to_use = misc.calc_free_to_use(
+        r_estimated_current_usage, r_free_space, r_min_free, r_max_usage)
 
     G = PPR.gen_all_samples_from_soft_and_isamp
     all_gsms = G(options.soft_files, options.isamp, config)

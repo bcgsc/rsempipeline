@@ -271,6 +271,14 @@ class MiscTestCase(unittest.TestCase):
             None)
         self.assertEqual(misc.disk_free(fake_df_cmd), 3333333333 * 1024)
 
+    def test_calc_free_space_to_use(self):
+        # The following 3 assertions correspond to 3 cases where max_usage
+        # could point to
+        self.assertEqual(misc.calc_free_space_to_use(10, 90, 50, 5), 0)
+        self.assertEqual(misc.calc_free_space_to_use(10, 90, 50, 20), 10)
+        self.assertEqual(misc.calc_free_space_to_use(10, 90, 50, 90), 40)
+        # when free < min_free
+        self.assertEqual(misc.calc_free_space_to_use(10, 90, 100, 200), 0)
 
 
 if __name__ == "__main__":
