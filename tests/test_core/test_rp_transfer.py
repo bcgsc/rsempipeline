@@ -138,6 +138,60 @@ class RPRunTestCase(unittest.TestCase):
     #         RP_T.append_transfer_record(records, 'transferred_GSMs.txt')
     #         self.assertEqual(m().write.call_count, 3)
 
+
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.is_processed')
+    def test_find_gsms_to_transfer_all_processed(self, mock_is_processed):
+        mock_is_processed.return_value = False
+        m1 = mock.Mock()
+        m1.outdir = 'l_top_outdir/rsemoutput/GSE1/homo_sapiens/GSM1'
+        m1.name = 'GSM1'
+        m2 = mock.Mock()
+        m2.outdir = 'l_top_outdir/rsemoutput/GSE2/homo_sapiens/GSM2'
+        m2.name = 'GSM2'
+        all_gsms = [m1, m2]
+        transferred_gsms = ['GSM1']
+        self.assertEqual(
+            RP_T.find_gsms_to_transfer(
+                all_gsms, transferred_gsms, 'l_top_outdir', 1e6), [])
+
+    @mock.patch('rsempipeline.core.rp_transfer.estimate_rsem_usage')
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.is_processed')
+    def test_find_gsms_to_transfer_with_one_GSM_already_transferred(self, mock_is_processed,
+                                                                    mock_estimate_rsem_usage):
+        mock_is_processed.return_value = True
+        mock_estimate_rsem_usage.return_value = 7e5
+        m1 = mock.Mock()
+        m1.outdir = 'l_top_outdir/rsemoutput/GSE1/homo_sapiens/GSM1'
+        m1.name = 'GSM1'
+        m2 = mock.Mock()
+        m2.outdir = 'l_top_outdir/rsemoutput/GSE2/homo_sapiens/GSM2'
+        m2.name = 'GSM2'
+        all_gsms = [m1, m2]
+        transferred_gsms = ['GSM1']
+        self.assertEqual(
+            RP_T.find_gsms_to_transfer(
+                all_gsms, transferred_gsms, 'l_top_outdir', 1e6), [m2])
+
+
+    @mock.patch('rsempipeline.core.rp_transfer.estimate_rsem_usage')
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.is_processed')
+    def test_find_gsms_to_transfer_with_no_GSM_already_transferred(self, mock_is_processed,
+                                                                   mock_estimate_rsem_usage):
+        mock_is_processed.return_value = True
+        mock_estimate_rsem_usage.return_value = 7e5
+        m1 = mock.Mock()
+        m1.outdir = 'l_top_outdir/rsemoutput/GSE1/homo_sapiens/GSM1'
+        m1.name = 'GSM1'
+        m2 = mock.Mock()
+        m2.outdir = 'l_top_outdir/rsemoutput/GSE2/homo_sapiens/GSM2'
+        m2.name = 'GSM2'
+        all_gsms = [m1, m2]
+        transferred_gsms = []
+        self.assertEqual(
+            RP_T.find_gsms_to_transfer(
+                all_gsms, transferred_gsms, 'l_top_outdir', 1e6), [m1])
+
+
     @mock.patch.object(RP_T.os, 'mkdir')
     @mock.patch.object(RP_T.os.path, 'exists')
     def test_create_transfer_sh_dir(self, mock_exists, mock_mkdir):
