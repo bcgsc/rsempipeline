@@ -9,22 +9,14 @@ logger = logging.getLogger(__name__)
 
 def read_csv_gse_as_key(infile):
     """
-    "param infile: input file, usually named GSE_species_GSM.csv
+    param infile: input file, usually named GSE_species_GSM.csv
 
     Data structure of sample_data returned:
     sample_data = {
-        'gse1': {[gsm1, gsm2, gsm3, ...],
-                 [gsm1, gsm2, gsm3, ...],
-                 [gsm1, gsm2, gsm3, ...],
-                  ...},
-        'gse2': {[gsm1, gsm2, gsm3, ...],
-                 [gsm1, gsm2, gsm3, ...],
-                 [gsm1, gsm2, gsm3, ...],
-                  ...},
-        'gse3':  [gsm1, gsm2, gsm3, ...],
-                 [gsm1, gsm2, gsm3, ...],
-                 [gsm1, gsm2, gsm3, ...],
-                  ...},
+        'GSE1': [GSM11, GSM12, GSM13, ...],
+        'GSE2': [GSM21, GSM22, GSM23, ...],
+        'GSE3': [GSM31, GSM32, GSM33, ...],
+        ...
         }
     """
     sample_data = {}
@@ -77,7 +69,7 @@ def gen_isamp_from_csv(input_csv):
 def gen_isamp_from_str(data_str):
     """Generate input data from command line argument"""
     sample_data = {}
-    for _ in data_str.split(';'):
+    for _ in data_str.strip(';').split(';'):
         stuffs = _.strip().split()
         gse, gsms = stuffs[0], stuffs[1:]
         if gse not in sample_data:
@@ -100,8 +92,8 @@ def get_isamp(isamp_file_or_str):
         if os.path.splitext(V)[-1] == '.csv': # then it's a csv file
             res = gen_isamp_from_csv(V)
         else:
-            raise ValueError("uncognized file type of {0} as input_file for "
-                             "isamples".format(V))
+            raise ValueError("unrecognized file type of {0}. The filename must "
+                             "end with .csv".format(V))
     else:                       # it's a string
         res = gen_isamp_from_str(V)
     return res
