@@ -191,17 +191,18 @@ def execute(cmd, msg_id='', flag_file=None, debug=False):
         returncode = subprocess.call(cmd, shell=True, executable="/bin/bash")
         if returncode != 0:
             logger.error(
-                '{0}, started, but then failed with returncode: {1}. '
-                'CMD "{2}"'.format(msg_id, returncode, cmd))
+                '{0}: started, but failed to finish with a returncode of {1}. '
+                'CMD: "{2}"'.format(msg_id, returncode, cmd))
         else:
-            logger.info('{0}, execution succeeded with returncode: {1}. '
-                        'CMD "{2}"'.format(msg_id, returncode, cmd))
+            logger.info(
+                '{0}: execution succeeded with a returncode of {1}. '
+                'CMD: "{2}"'.format(msg_id, returncode, cmd))
             if flag_file is not None:
                 touch(flag_file)
         return returncode
-    except OSError, err:
+    except OSError as err:
         logger.exception(
-            '{0}, failed to start, raising OSError {1}. '
+            '{0}: failed to start, raising OSError {1}. '
             'CMD: "{2}"'.format(msg_id, err, cmd))
 
 

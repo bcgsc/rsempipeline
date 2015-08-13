@@ -209,6 +209,36 @@ class MiscTestCase(unittest.TestCase):
             L.check(('rsempipeline.utils.misc', 'ERROR',
                      'potentially invalid yaml format in invalid_yaml.yaml'),)
 
+    @mock.patch('rsempipeline.utils.misc.subprocess')
+    @log_capture()
+    def test_execute_fail_to_start(self, mock_subprocess, L):
+        mock_subprocess.call.side_effect = OSError('some err msg')
+        self.assertIsNone(misc.execute('some cmd', 'msg_id'))
+        L.check(('rsempipeline.utils.misc', 'INFO', 'executing CMD: some cmd'),
+                ('rsempipeline.utils.misc', 'ERROR',
+                 'msg_id: failed to start, raising OSError some err msg. CMD: "some cmd"'))
+
+    @mock.patch('rsempipeline.utils.misc.touch')
+    @mock.patch('rsempipeline.utils.misc.subprocess')
+    @log_capture()
+    def test_execute_started_but_fail_to_finish(self, mock_subprocess, mock_touch, L):
+        mock_subprocess.call.return_value = 1
+        self.assertEqual(misc.execute('some cmd', 'msg_id'), 1)
+        L.check(('rsempipeline.utils.misc', 'INFO', 'executing CMD: some cmd'),
+                ('rsempipeline.utils.misc', 'ERROR',
+                 'msg_id: started, but failed to finish with a returncode of 1. CMD: "some cmd"'))
+        self.assertFalse(mock_touch.called)
+
+    @mock.patch('rsempipeline.utils.misc.touch')
+    @mock.patch('rsempipeline.utils.misc.subprocess')
+    @log_capture()
+    def test_execute_started_and_finished_successfully(self, mock_subprocess, mock_touch, L):
+        mock_subprocess.call.return_value = 0
+        self.assertEqual(misc.execute('some cmd', 'msg_id', 'some_flag.txt'), 0)
+        L.check(('rsempipeline.utils.misc', 'INFO', 'executing CMD: some cmd'),
+                ('rsempipeline.utils.misc', 'INFO',
+                 'msg_id: execution succeeded with a returncode of 0. CMD: "some cmd"'))
+        mock_touch.assert_called_with('some_flag.txt')
 
     def test_pretty_usage(self):
         self.assertEqual(misc.pretty_usage(1000), '1000.0 bytes')
