@@ -54,7 +54,7 @@ def fetch_remote_file_list(remote, username, r_dir):
     return output
 
 
-def estimate_current_remote_usage(remote, username, r_dir, l_dir):
+def estimate_current_remote_usage(remote, username, r_dir, l_dir, fastq2rsem_ratio):
     """
     estimate the space that has already been or will be consumed by rsem_output
     by walking through each GSM and computing the sum of their estimated usage,
@@ -79,7 +79,7 @@ def estimate_current_remote_usage(remote, username, r_dir, l_dir):
                 # only count the disk spaces used by those GSMs that are
                 # being processed
                 gsm_dir = dir_.replace(r_dir, l_dir)
-                usage += estimate_rsem_usage(gsm_dir)
+                usage += estimate_rsem_usage(gsm_dir, fastq2rsem_ratio)
     return usage
 
 
@@ -208,7 +208,7 @@ def write(transfer_script, template, **params):
 
 
 def calc_remote_free_space_to_use(r_host, r_username, r_top_outdir, l_top_outdir,
-                                  r_cmd_df, r_max_usage, r_min_free):
+                                  r_cmd_df, r_max_usage, r_min_free, fastq2rsem_ratio):
     # r_real_current_usage is just for giving an idea of real usage on remote,
     # and it's not used for calculating free space to use
     P = misc.pretty_usage
@@ -218,7 +218,7 @@ def calc_remote_free_space_to_use(r_host, r_username, r_top_outdir, l_top_outdir
                 '{r_real_pretty}'.format(**locals()))
 
     r_estimated_current_usage = estimate_current_remote_usage(
-        r_host, r_username, r_top_outdir, l_top_outdir)
+        r_host, r_username, r_top_outdir, l_top_outdir, fastq2rsem_ratio)
     r_estimated_current_usage_pretty = P(r_estimated_current_usage)
     logger.info('free space on {r_host}: {r_estimated_current_usage_pretty}'.format(**locals()))
 
@@ -251,12 +251,13 @@ def main():
     PPR.init_sample_outdirs(all_gsms, l_top_outdir)
 
     r_host, r_username = config['REMOTE_HOST'], config['USERNAME']
+    fastq2rsem_ratio = config['FASTQ2RSEM_RATIO']
     r_cmd_df = config['REMOTE_CMD_DF']
     r_max_usage = misc.ugly_usage(config['REMOTE_MAX_USAGE'])
     r_min_free = misc.ugly_usage(config['REMOTE_MIN_FREE'])
     r_free_to_use  = calc_remote_free_space_to_use(
         r_host, r_username, r_top_outdir, l_top_outdir,
-        r_cmd_df, r_max_usage, r_min_free)
+        r_cmd_df, r_max_usage, r_min_free, fastq2rsem_ratio)
 
     # tf: transfer/transferred
     tf_record = os.path.join(l_top_outdir, 'transferred_GSMs.txt')
@@ -265,7 +266,7 @@ def main():
 
     # Find GSMs to transfer based on disk usage rule
     gsms_to_tf = find_gsms_to_transfer(
-        all_gsms, tf_gsms_bn, l_top_outdir, r_free_to_use, config['FASTQ2RSEM_RATIO'])
+        all_gsms, tf_gsms_bn, l_top_outdir, r_free_to_use, fastq2rsem_ratio)
 
     if not gsms_to_tf:
         logger.info('Cannot find a GSM that fits the current disk usage rule')
