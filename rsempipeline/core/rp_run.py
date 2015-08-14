@@ -106,7 +106,6 @@ def sra2fastq(inputs, outputs):
     DRR: DRA run accession
     """
     sra, _ = inputs             # ignore the flag file from previous task
-    print inputs
     flag_file = outputs[-1]
     outdir = os.path.dirname(os.path.dirname(os.path.dirname(sra)))
     cmd = config['CMD_FASTQ_DUMP'].format(output_dir=outdir, accession=sra)

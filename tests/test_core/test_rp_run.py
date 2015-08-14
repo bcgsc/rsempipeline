@@ -39,7 +39,7 @@ class RPRunTestCase(unittest.TestCase):
         series = Series('GSE31555', 'GSE31555_family.soft.subset')
         sample = Sample('GSM783253', series, url='ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX093/SRX093321')
         outputs = ['some_outdir/rsem_output/GSE31555/some_species/GSM783253/SRX093321/SRR333831/SRR333831.sra',
-                   'some_outdir/rsem_output/GSE31555/some_species/GSM1/SRX093321/SRR333831/SRR333831.sra.download.COMPLETE']
+                   'some_outdir/rsem_output/GSE31555/some_species/GSM1/SRR333831.sra.download.COMPLETE']
         mock_os.path.exists.return_value = False
         cmd = '''/path/to/ascp 
 -i /path/to/.aspera/connect/etc/asperaweb_id_dsa.putty 
@@ -56,9 +56,8 @@ anonftp@ftp-trace.ncbi.nlm.nih.gov:/sra/sra-instant/reads/ByExp/sra/SRX/SRX093/S
         mock_execute.assert_called_once_with(
             cmd,
             '<GSM783253 (0/0/0) of GSE31555 at None>',
-            'some_outdir/rsem_output/GSE31555/some_species/GSM1/SRX093321/SRR333831/SRR333831.sra.download.COMPLETE',
+            'some_outdir/rsem_output/GSE31555/some_species/GSM1/SRR333831.sra.download.COMPLETE',
             False)
-
 
     @mock.patch('rsempipeline.core.rp_run.options', autospec=True)
     @mock.patch('rsempipeline.core.rp_run.config', autospec=True)
@@ -68,7 +67,7 @@ anonftp@ftp-trace.ncbi.nlm.nih.gov:/sra/sra-instant/reads/ByExp/sra/SRX/SRX093/S
         series = Series('GSE31555', 'GSE31555_family.soft.subset')
         sample = Sample('GSM783253', series, url='ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX093/SRX093321')
         outputs = ['some_outdir/rsem_output/GSE31555/some_species/GSM783253/SRX093321/SRR333831/SRR333831.sra',
-                   'some_outdir/rsem_output/GSE31555/some_species/GSM1/SRX093321/SRR333831/SRR333831.sra.download.COMPLETE']
+                   'some_outdir/rsem_output/GSE31555/some_species/GSM1/SRR333831.sra.download.COMPLETE']
         mock_os.path.exists.return_value = False
         ascp_cmd = '''/path/to/ascp 
 -i /path/to/.aspera/connect/etc/asperaweb_id_dsa.putty 
@@ -88,10 +87,24 @@ anonftp@ftp-trace.ncbi.nlm.nih.gov:/sra/sra-instant/reads/ByExp/sra/SRX/SRX093/S
         mock_execute.assert_has_calls([
             mock.call(ascp_cmd,
                       '<GSM783253 (0/0/0) of GSE31555 at None>',
-                      'some_outdir/rsem_output/GSE31555/some_species/GSM1/SRX093321/SRR333831/SRR333831.sra.download.COMPLETE',
+                      'some_outdir/rsem_output/GSE31555/some_species/GSM1/SRR333831.sra.download.COMPLETE',
                       False),
             mock.call(wget_cmd,
                       '<GSM783253 (0/0/0) of GSE31555 at None>',
-                      'some_outdir/rsem_output/GSE31555/some_species/GSM1/SRX093321/SRR333831/SRR333831.sra.download.COMPLETE',
+                      'some_outdir/rsem_output/GSE31555/some_species/GSM1/SRR333831.sra.download.COMPLETE',
                       False)])
 
+    @mock.patch('rsempipeline.core.rp_run.options', autospec=True)
+    @mock.patch('rsempipeline.core.rp_run.config', autospec=True)
+    @mock.patch('rsempipeline.core.rp_run.misc.execute_log_stdout_stderr', autospec=True)
+    def test_sra2_fastq(self, mock_execute, mock_config, mock_options):
+        cmd = '''fastq-dump 
+--minReadLen 25 --gzip --split-files --outdir some_outdir/rsem_output/GSE99999/some_species/GSM999999 
+some_outdir/rsem_output/GSE99999/some_species/GSM999999/SRX999999/SRR999999/SRR999999.sra'''
+        flag_file = 'some_outdir/rsem_output/GSE99999/some_species/GSM999999/SRX999999/SRR999999/SRR999999.sra.sra2fastq.COMPLETE'
+        mock_config.__getitem__().format.return_value = cmd
+        mock_options.debug = False
+        rp_run.sra2fastq(['some_outdir/rsem_output/GSE99999/some_species/GSM999999/SRX999999/SRR999999/SRR999999.sra',
+                          'some_outdir/rsem_output/GSE99999/some_species/GSM999999/SRR999999.sra.download.COMPLETE'],
+                         [flag_file])
+        mock_execute.assert_called_once_with(cmd, flag_file=flag_file, debug=False)
