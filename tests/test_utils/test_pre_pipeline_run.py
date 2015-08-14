@@ -22,15 +22,15 @@ PARSED_SRA_INFO_YAML_SINGLE_SRA = [
 
 
 class PrePipelineRunTestCase(unittest.TestCase):
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.FTP')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.FTP', autospec=True)
     def test_get_ftp_handler(self, mock_FTP):
         sample_url = 'ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX029/SRX029242'
         ppr.get_ftp_handler(sample_url)
-        self.assertTrue(mock_FTP.called_once_with('ftp-trace.ncbi.nlm.nih.gov'))
+        mock_FTP.assert_called_once_with('ftp-trace.ncbi.nlm.nih.gov')
         self.assertEqual(mock_FTP.return_value.login.call_count, 1)
 
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.os')
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.write')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.os', autospec=True)
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.write', autospec=True)
     @mock.patch('rsempipeline.utils.pre_pipeline_run.get_ftp_handler', autospec=True)
     @mock.patch('rsempipeline.utils.pre_pipeline_run.fetch_sras_info_per', autospec=True)
     def test_fetch_sras_info_from_scratch(self, mock_fetch, mock_get_ftp_handler, mock_write, mock_os):
@@ -42,8 +42,8 @@ class PrePipelineRunTestCase(unittest.TestCase):
         self.assertEqual(mock_fetch.call_count, 2)
         self.assertEqual(mock_write.call_count, 2)
 
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.os')
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.write')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.os', autospec=True)
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.write', autospec=True)
     @mock.patch('rsempipeline.utils.pre_pipeline_run.get_ftp_handler', autospec=True)
     @mock.patch('rsempipeline.utils.pre_pipeline_run.fetch_sras_info_per', autospec=True)
     def test_fetch_sras_info_with_already_existent_yml(self, mock_fetch, mock_get_ftp_handler, mock_write, mock_os):
@@ -55,8 +55,8 @@ class PrePipelineRunTestCase(unittest.TestCase):
         self.assertEqual(mock_fetch.call_count, 0)
         self.assertEqual(mock_write.call_count, 0)
 
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.os')
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.write')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.os', autospec=True)
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.write', autospec=True)
     @mock.patch('rsempipeline.utils.pre_pipeline_run.get_ftp_handler', autospec=True)
     @mock.patch('rsempipeline.utils.pre_pipeline_run.fetch_sras_info_per', autospec=True)
     def test_fetch_sras_info_recreate(self, mock_fetch, mock_get_ftp_handler, mock_write, mock_os):
@@ -74,11 +74,11 @@ class PrePipelineRunTestCase(unittest.TestCase):
         mock_ftp_handler.size.return_value = 1024 ** 2
         fake_sample_url = 'ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByExp/sra/SRX/SRX029/SRX029242'
         res = ppr.fetch_sras_info_per(fake_sample_url, mock_ftp_handler)
-        self.assertTrue(mock_ftp_handler.cwd.called_once_with('/sra/sra-instant/reads/ByExp/sra/SRX/SRX029'))
-        self.assertTrue(mock_ftp_handler.nlst.called_once_with('SRX029'))
-        self.assertTrue(mock_ftp_handler.nlst.called_once_with('SRX0/SRR0'))
-        self.assertTrue(mock_ftp_handler.sendcmd.called_once_with('TYPE i'))
-        self.assertTrue(mock_ftp_handler.size.called_once_with('SRX0/SRR0/SRR0.sra'))
+        mock_ftp_handler.cwd.assert_called_once_with('/sra/sra-instant/reads/ByExp/sra/SRX/SRX029')
+        self.assertEqual(mock_ftp_handler.nlst.call_args_list,
+                         [mock.call('SRX029242'), mock.call('SRX0/SRR0')])
+        mock_ftp_handler.sendcmd.assert_called_once_with('TYPE i')
+        mock_ftp_handler.size.assert_called_once_with('SRX0/SRR0/SRR0.sra')
         self.assertEqual(res, [
             {
                 'SRX0/SRR0/SRR0.sra': {
@@ -98,9 +98,9 @@ class PrePipelineRunTestCase(unittest.TestCase):
         fake_isamp = self.gen_fake_isamp()
         self.assertEqual(ppr.calc_num_isamp(fake_isamp), 3)
 
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.sanity_check')
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.analyze_one')
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.get_isamp')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.sanity_check', autospec=True)
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.analyze_one', autospec=True)
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.get_isamp', autospec=True)
     def test_gen_all_samples_from_soft_and_isamp(
             self, mock_get_isamp, mock_analyze_one, mock_sanity_check):
         mock_sanity_check.return_value = True
@@ -116,7 +116,7 @@ class PrePipelineRunTestCase(unittest.TestCase):
             ['soft1'], 'isamp_file_or_str', {'INTERESTED_ORGANISMS': ['Homo Sapiens']}),
             sample_list)
 
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.parse')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.parse', autospec=True)
     @log_capture()
     def test_analyze_one(self, mock_parse, L):
         fake_isamp = self.gen_fake_isamp()
@@ -136,7 +136,7 @@ class PrePipelineRunTestCase(unittest.TestCase):
         self.assertIsNone(
             ppr.analyze_one('invalid_soft_filename', 'some_fake_isamp', ['']))
 
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.parse')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.parse', autospec=True)
     @log_capture()
     def test_analyze_one_soft_series_name_not_in_isamp_series_names_list(self, mock_parse, L):
         fake_isamp = self.gen_fake_isamp()
@@ -179,7 +179,7 @@ class PrePipelineRunTestCase(unittest.TestCase):
     def test_get_rsem_outdir(self):
         self.assertEqual(ppr.get_rsem_outdir('some_outdir'), 'some_outdir/rsem_output')
 
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.os')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.os', autospec=True)
     def test_init_sample_outdirs(self, mock_os):
         mock_os.path.exists.return_value = False
         fake_samples = [mock.Mock(), mock.Mock()]
@@ -206,52 +206,51 @@ class PrePipelineRunTestCase(unittest.TestCase):
     #     mock_options.ignore_disk_usage_rule = False
     #     ppr.select_samples_to_process(mock_samples, mock_config, mock_options)
 
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.is_processed')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.is_processed', autospec=True)
     def test_select_gsms_to_process_all_processed(self, mock_is_processed):
         mock_is_processed.return_value = True
         samples = [mock.Mock(), mock.Mock()]
         self.assertEqual(ppr.select_gsms_to_process(samples, 1024 ** 3, False), [])
 
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.is_processed')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.is_processed', autospec=True)
     def test_select_gsms_to_process_ignore_disk_usage(self, mock_is_processed):
         mock_is_processed.return_value = False
         samples = [mock.Mock(), mock.Mock()]
         self.assertEqual(ppr.select_gsms_to_process(samples, 1024 ** 3, True), samples)
 
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.estimate_sra2fastq_usage')
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.is_processed')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.estimate_sra2fastq_usage', autospec=True)
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.is_processed', autospec=True)
     def test_select_gsms_to_process_fit_disk_usage(self, mock_is_processed, mock_estimate_sra2fastq_usage):
         mock_is_processed.return_value = False
         mock_estimate_sra2fastq_usage.return_value = 513
         samples = [mock.Mock(), mock.Mock()]
         self.assertEqual(ppr.select_gsms_to_process(samples, 1024, False), [samples[0]])
 
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.os')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.os', autospec=True)
     def test_is_gen_qsub_script_complete(self, mock_os):
         mock_os.path.exists.return_value = True
         self.assertTrue(ppr.is_gen_qsub_script_complete('some_gsm_dir'))
         mock_os.path.exists.return_value = False
         self.assertFalse(ppr.is_gen_qsub_script_complete('some_gsm_dir'))
         
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.os')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.os', autospec=True)
     def test_get_sras_info(self, _):
         with mock.patch('rsempipeline.utils.pre_pipeline_run.open',
                         mock.mock_open(read_data=SRA_INFO_YAML_SINGLE_SRA)):
             res = ppr.get_sras_info('some_dir')
         self.assertEqual(res, PARSED_SRA_INFO_YAML_SINGLE_SRA)
 
-
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.get_sras_info')
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.SRA2FASTQ_SIZE_RATIO')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.get_sras_info', autospec=True)
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.SRA2FASTQ_SIZE_RATIO', autospec=True)
     def test_estimate_sra2fastq_usage(self, mock_ratio, mock_get_sras_info):
         mock_ratio = 2
         mock_get_sras_info.return_value = PARSED_SRA_INFO_YAML_SINGLE_SRA
         self.assertEqual(ppr.estimate_sra2fastq_usage('some_gsm_dir'), 2546696608 * mock_ratio)
 
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.get_sras_info')
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.is_gen_qsub_script_complete')
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.is_sra2fastq_complete')
-    @mock.patch('rsempipeline.utils.pre_pipeline_run.is_download_complete')
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.get_sras_info', autospec=True)
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.is_gen_qsub_script_complete', autospec=True)
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.is_sra2fastq_complete', autospec=True)
+    @mock.patch('rsempipeline.utils.pre_pipeline_run.is_download_complete', autospec=True)
     def test_is_process(self, mock_g, mock_s, mock_d, mock_get_sras_info):
         mock_get_sras_info
         mock_d.return_value = False

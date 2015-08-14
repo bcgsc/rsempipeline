@@ -214,6 +214,7 @@ def calc_remote_free_space_to_use(r_host, r_username, r_top_outdir, l_top_outdir
     # r_real_current_usage is just for giving an idea of real usage on remote,
     # and it's not used for calculating free space to use
     P = misc.pretty_usage
+
     r_real = get_real_current_usage(r_host, r_username, r_top_outdir)
     r_real_pretty = P(r_real)
     logger.info('real current usage on {r_host} by {r_top_outdir}: '

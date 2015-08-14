@@ -214,6 +214,7 @@ def rsem(inputs, outputs):
 
 
 def calc_local_free_space_to_use(top_outdir, cmd_df, min_free, max_usage):
+    """All variables are in the context of local"""
     P = misc.pretty_usage
 
     current_usage = PPR.disk_used(top_outdir)
@@ -241,9 +242,8 @@ def main():
     # because of ruffus, have to use some global variables
     # global variables: options, config, samples, env, logger, logger_mutex
     # minimize the number of global variables as much as possible
-    global options
+    global options, config
     options = parse_args_for_rp_run()
-    global config
     config = misc.get_config(options.config_file)
 
     global samples
