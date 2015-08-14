@@ -126,3 +126,11 @@ some_outdir/rsem_output/GSE99999/some_species/GSM999999/SRX999999/SRR999999/SRR9
                     'some_outdir/rsem_output/GSE99999/some_species/GSM999999/0_submit.sh'
                 ])
         self.assertTrue(mop().write.called)
+
+    @mock.patch('rsempipeline.core.rp_run.PPR.disk_used', autospec=True)
+    @mock.patch('rsempipeline.core.rp_run.PPR.disk_free', autospec=True)
+    def test_calc_local_free_space_to_use(self, mock_disk_free, mock_disk_used):
+        mock_disk_free.return_value = 90
+        mock_disk_used.return_value = 20
+        res = rp_run.calc_local_free_space_to_use('top_outdir', 'df -k -P /local/path', 10, 50)
+        self.assertEqual(res, 30)
