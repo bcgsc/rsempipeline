@@ -11,58 +11,32 @@ import re
 import logging.config
 
 import urlparse
-import yaml
 
 import ruffus as R
 
 from jinja2 import Environment, FileSystemLoader
 
 from rsempipeline.utils import misc
+misc.mkdir('log')
 from rsempipeline.utils import pre_pipeline_run as PPR
 from rsempipeline.utils.download import gen_orig_params
 from rsempipeline.utils.rsem import gen_fastq_gz_input
-from rsempipeline.conf.settings import RP_RUN_LOGGING_CONFIG, TEMPLATES_DIR
 from rsempipeline.parsers.args_parser import parse_args_for_rp_run
+from rsempipeline.conf.settings import RP_RUN_LOGGING_CONFIG, TEMPLATES_DIR
+# as PATH_RE for backward compatibility
+from rsempipeline.conf.settings import RSEM_OUTPUT_DIR_RE as PATH_RE
 
-PATH_RE = r'(.*)/(?P<GSE>GSE\d+)/(?P<species>\S+)/(?P<GSM>GSM\d+)'
 
-# because of ruffus, have to use some global variables
-# global variables: options, config, samples, env, logger, logger_mutex
-# minimize the number of global variables as much as possible
-options = parse_args_for_rp_run()
-with open(options.config_file) as inf:
-    config = yaml.load(inf.read())
-
-misc.mkdir('log')
+# logger is used as a global variable by convention
 logging.config.fileConfig(RP_RUN_LOGGING_CONFIG)
-
-samples = PPR.gen_all_samples_from_soft_and_isamp(
-    options.soft_files, options.isamp, config)
-
-# the standard templates directory
-# the current working directory
-jinja2_env = Environment(loader=FileSystemLoader([TEMPLATES_DIR, os.getcwd()]))
-
 logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
     R.proxy_logger.setup_std_shared_logger,
     "rp_run",
     {"config_file": os.path.join(RP_RUN_LOGGING_CONFIG)})
 
-LOCKER_PATTERN = os.path.join(config['LOCAL_TOP_OUTDIR'], '.rp-run')
-
-@misc.lockit(LOCKER_PATTERN)
-def prepare_pipeline_run():
-    logger.info('Preparing sample outdirs')
-    PPR.init_sample_outdirs(samples, config['LOCAL_TOP_OUTDIR'])
-    logger.info('Fetching sras info')
-    PPR.fetch_sras_info(samples, options.recreate_sras_info)
-    logger.info('Selecting samples to process based their usages, '
-                'available disk size and parameters specified '
-
-                'in {0}'.format(options.config_file))
-    return PPR.select_samples_to_process(samples, config, options)
-samples = prepare_pipeline_run()
-
+# global variable initialized here to get rid of syntax error shown by
+# pyflakes, they will be assigned in main function
+config, options, samples = None, None, None
 ##################################end of main##################################
 
 # def execute_mutex(cmd, msg_id='', flag_file=None, debug=False):
@@ -106,15 +80,6 @@ def download(_, outputs, sample):
     url_path = urlparse.urlparse(sample.url).path
     sra_url_path = os.path.join(url_path, *sra.split('/')[-2:])
 
-    # cmd template looks like this:
-    # /home/kmnip/bin/ascp 
-    # -i /home/kmnip/.aspera/connect/etc/asperaweb_id_dsa.putty 
-    # --ignore-host-key 
-    # -QT 
-    # -L {log_dir}
-    # -k2 
-    # -l 300m 
-    # anonftp@ftp-trace.ncbi.nlm.nih.gov:{url_path} {output_dir}
     cmd = config['CMD_ASCP'].format(
         log_dir=sra_outdir, url_path=sra_url_path, output_dir=sra_outdir)
     returncode = misc.execute(cmd, msg_id, flag_file, options.debug)
@@ -172,6 +137,11 @@ def gen_qsub_script(inputs, outputs):
     n_jobs = misc.decide_num_jobs(outdir, options.j_rsem)
 
     qsub_script = os.path.join(outdir, '0_submit.sh')
+
+    # TEMPLATES_DIR: the standard templates directory
+    # os.getcwd(): the current working directory
+    # use both for looking for the template
+    jinja2_env = Environment(loader=FileSystemLoader([TEMPLATES_DIR, os.getcwd()]))
     template = jinja2_env.get_template(options.qsub_template)
     with open(qsub_script, 'wb') as opf:
         content = template.render(**locals())
@@ -243,29 +213,48 @@ def rsem(inputs, outputs):
     misc.execute_log_stdout_stderr(cmd, flag_file=flag_file, debug=options.debug)
 
 
+@misc.lockit(os.path.expanduser('~/.rp-run'))
 def main():
-    if samples is None:
-        pass                    # meaning it's locked.
-    elif samples:
-        logger.info('GSMs to process:')
-        for k, gsm in enumerate(samples):
-            logger.info('\t{0:3d} {1:30s} {2}'.format(k+1, gsm, gsm.outdir))
-        if 'gen_qsub_script' in options.target_tasks:
-            if not options.qsub_template:
-                raise IOError('-t/--qsub_template required when running gen_qsub_script')
-        pipeline_run = misc.lockit(LOCKER_PATTERN)(R.pipeline_run)
-        pipeline_run(
-            logger=logger,
-            target_tasks=options.target_tasks,
-            forcedtorun_tasks=options.forced_tasks,
-            multiprocess=options.jobs,
-            verbose=options.verbose,
-            touch_files_only=options.touch_files_only,
-            # history_file=os.path.join('log', '.{0}.sqlite'.format(
-            #     '_'.join([_.name for _ in sorted(samples, key=lambda x: x.name)])))
-        )
-    else:                       # meaning if samples != []
+    # because of ruffus, have to use some global variables
+    # global variables: options, config, samples, env, logger, logger_mutex
+    # minimize the number of global variables as much as possible
+    global options
+    options = parse_args_for_rp_run()
+    global config
+    config = misc.get_config(options.config_file)
+
+    global samples
+    samples = PPR.gen_all_samples_from_soft_and_isamp(options.soft_files,
+                                                      options.isamp, config)
+    PPR.init_sample_outdirs(samples, config['LOCAL_TOP_OUTDIR'])
+    PPR.fetch_sras_info(samples, options.recreate_sras_info)
+    logger.info('Selecting samples to process based their usages, '
+                'available disk size and parameters specified '
+                'in {0}'.format(options.config_file))
+    samples = PPR.select_samples_to_process(samples, config, options)
+
+    if not samples:             # when samples == []
         logger.info('Cannot find a GSM that fits the disk usage rule')
+        return 
+
+    logger.info('GSMs to process:')
+    for k, gsm in enumerate(samples):
+        logger.info('\t{0:3d} {1:30s} {2}'.format(k+1, gsm, gsm.outdir))
+
+    if 'gen_qsub_script' in options.target_tasks:
+        if not options.qsub_template:
+            raise IOError('-t/--qsub_template required when running gen_qsub_script')
+
+    R.pipeline_run(
+        logger=logger,
+        target_tasks=options.target_tasks,
+        forcedtorun_tasks=options.forced_tasks,
+        multiprocess=options.jobs,
+        verbose=options.verbose,
+        touch_files_only=options.touch_files_only,
+        # history_file=os.path.join('log', '.{0}.sqlite'.format(
+        #     '_'.join([_.name for _ in sorted(samples, key=lambda x: x.name)])))
+    )
 
 
 if __name__ == "__main__":
