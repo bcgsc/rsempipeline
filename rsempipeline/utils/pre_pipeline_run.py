@@ -211,34 +211,8 @@ def fetch_sras_info_per(sample_url, ftp_handler):
     except Exception, err:
         logger.exception(err)
 
-# about filtering samples based on their sizes
-def select_samples_to_process(samples, config, options):
-    """
-    Select a subset of samples based on a combined rule based on availale free
-    space on the file system and parameters from rsempipeline_config.yaml
-    """
-    P, G = pretty_usage, ugly_usage
-    top_outdir = config['LOCAL_TOP_OUTDIR']
-    free_space = disk_free(config['LOCAL_CMD_DF'])
-    logger.info(
-        'local free space avaialbe: {0}'.format(P(free_space)))
-    current_usage = disk_used(top_outdir)
-    logger.info('local current usage by {0}: {1}'.format(
-        top_outdir, P(current_usage)))
-    max_usage = G(config['LOCAL_MAX_USAGE'])
-    logger.info('maximum usage: {0}'.format(P(max_usage)))
-    min_free = G(config['LOCAL_MIN_FREE'])
-    logger.info('min_free: {0}'.format(P(min_free)))
-    free_to_use = calc_free_space_to_use(
-        current_usage, free_space, min_free, max_usage)
-    logger.info('free to use: {0}'.format(P(free_to_use)))
 
-    # gsms are a list of Sample instances
-    gsms = find_gsms_to_process(samples, free_to_use, options.ignore_disk_usage_rule)
-    return gsms
-
-
-def find_gsms_to_process(samples, l_free_to_use, ignore_disk_usage):
+def select_gsms_to_process(samples, l_free_to_use, ignore_disk_usage=False):
     """
     Find samples that are to be processed, the selecting rule is implemented
     here

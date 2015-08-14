@@ -129,7 +129,7 @@ def append_transfer_record(gsms_to_transfer, record_file):
             opf.write('{0}\n'.format(_))
 
 
-def find_gsms_to_transfer(all_gsms, transferred_gsms,
+def select_gsms_to_transfer(samples, transferred_gsms,
                           l_top_outdir, r_free_to_use, fastq2rsem_ratio):
     """
     select samples to transfer (different from select_samples_to_process in
@@ -139,11 +139,13 @@ def find_gsms_to_transfer(all_gsms, transferred_gsms,
     if it fits free_to_use space on remote host, count it as an element
     gsms_to_transfer
 
-    :param all_gsms: a list of Sample instances representing all GSMs
+    :param samples: a list of Sample instances representing both transferred
+                    and non-transferred GSMs
     :param transferred_gsms: a list of string with GSM ids. e.g. [GSM1, GSM2]
+
     """
     # not yet transferred GSMs
-    non_tf_gsms = [_ for _  in all_gsms if _.name not in transferred_gsms]
+    non_tf_gsms = [_ for _  in samples if _.name not in transferred_gsms]
     gsms_to_transfer = []
     for gsm in non_tf_gsms:
         gsm_id = os.path.relpath(gsm.outdir, l_top_outdir)
@@ -247,14 +249,14 @@ def main():
     r_top_outdir = config['REMOTE_TOP_OUTDIR']
 
     G = PPR.gen_all_samples_from_soft_and_isamp
-    all_gsms = G(options.soft_files, options.isamp, config)
-    PPR.init_sample_outdirs(all_gsms, l_top_outdir)
+    samples = G(options.soft_files, options.isamp, config)
+    PPR.init_sample_outdirs(samples, l_top_outdir)
 
     r_host, r_username = config['REMOTE_HOST'], config['USERNAME']
     fastq2rsem_ratio = config['FASTQ2RSEM_RATIO']
     r_cmd_df = config['REMOTE_CMD_DF']
-    r_max_usage = misc.ugly_usage(config['REMOTE_MAX_USAGE'])
     r_min_free = misc.ugly_usage(config['REMOTE_MIN_FREE'])
+    r_max_usage = misc.ugly_usage(config['REMOTE_MAX_USAGE'])
     r_free_to_use  = calc_remote_free_space_to_use(
         r_host, r_username, r_top_outdir, l_top_outdir,
         r_cmd_df, r_max_usage, r_min_free, fastq2rsem_ratio)
@@ -264,9 +266,9 @@ def main():
     tf_gsms = get_gsms_transferred(tf_record)
     tf_gsms_bn = map(os.path.basename, tf_gsms)
 
-    # Find GSMs to transfer based on disk usage rule
-    gsms_to_tf = find_gsms_to_transfer(
-        all_gsms, tf_gsms_bn, l_top_outdir, r_free_to_use, fastq2rsem_ratio)
+    logger.info('Selecting samples to transfer based their estimated remote usage')
+    gsms_to_tf = select_gsms_to_transfer(
+        samples, tf_gsms_bn, l_top_outdir, r_free_to_use, fastq2rsem_ratio)
 
     if not gsms_to_tf:
         logger.info('Cannot find a GSM that fits the current disk usage rule')

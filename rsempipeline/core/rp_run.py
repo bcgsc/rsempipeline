@@ -213,6 +213,29 @@ def rsem(inputs, outputs):
     misc.execute_log_stdout_stderr(cmd, flag_file=flag_file, debug=options.debug)
 
 
+def calc_local_free_space_to_use(top_outdir, cmd_df, min_free, max_usage):
+    P = misc.pretty_usage
+
+    current_usage = PPR.disk_used(top_outdir)
+    current_usage_pretty = P(current_usage)
+    logger.info('local current usage by {0}: '
+                '{1}'.format(top_outdir, current_usage_pretty))
+
+    free_space = PPR.disk_free(cmd_df)
+    free_space_pretty = P(free_space)
+    logger.info('local free space avaialbe: {0}'.format(free_space_pretty))
+
+    min_free_pretty = P(min_free)
+    logger.info('min_free: {0}'.format(min_free_pretty))
+
+    max_usage_pretty = P(max_usage)
+    logger.info('maximum usage: {0}'.format(max_usage_pretty))
+
+    free_to_use = PPR.calc_free_space_to_use(
+        current_usage, free_space, min_free, max_usage)
+    return free_to_use
+
+
 @misc.lockit(os.path.expanduser('~/.rp-run'))
 def main():
     # because of ruffus, have to use some global variables
@@ -224,14 +247,20 @@ def main():
     config = misc.get_config(options.config_file)
 
     global samples
-    samples = PPR.gen_all_samples_from_soft_and_isamp(options.soft_files,
-                                                      options.isamp, config)
+    G = PPR.gen_all_samples_from_soft_and_isamp
+    samples = G(options.soft_files, options.isamp, config)
     PPR.init_sample_outdirs(samples, config['LOCAL_TOP_OUTDIR'])
     PPR.fetch_sras_info(samples, options.recreate_sras_info)
-    logger.info('Selecting samples to process based their usages, '
-                'available disk size and parameters specified '
-                'in {0}'.format(options.config_file))
-    samples = PPR.select_samples_to_process(samples, config, options)
+
+    top_outdir = config['LOCAL_TOP_OUTDIR']
+    cmd_df = config['LOCAL_CMD_DF']
+    min_free = misc.ugly_usage(config['LOCAL_MIN_FREE'])
+    max_usage = misc.ugly_usage(config['LOCAL_MAX_USAGE'])
+    free_to_use = calc_local_free_space_to_use(
+        top_outdir, cmd_df, min_free, max_usage)
+
+    logger.info('Selecting samples to process based their usage')
+    samples = PPR.select_gsms_to_process(samples, free_to_use)
 
     if not samples:             # when samples == []
         logger.info('Cannot find a GSM that fits the disk usage rule')

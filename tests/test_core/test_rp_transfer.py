@@ -141,7 +141,7 @@ class RPRunTestCase(unittest.TestCase):
 
 
     @mock.patch('rsempipeline.core.rp_transfer.PPR.is_processed', autospec=True)
-    def test_find_gsms_to_transfer_all_processed(self, mock_is_processed):
+    def test_select_gsms_to_transfer_all_processed(self, mock_is_processed):
         mock_is_processed.return_value = False
         m1 = mock.Mock()
         m1.outdir = 'l_top_outdir/rsemoutput/GSE1/homo_sapiens/GSM1'
@@ -152,12 +152,12 @@ class RPRunTestCase(unittest.TestCase):
         all_gsms = [m1, m2]
         transferred_gsms = ['GSM1']
         self.assertEqual(
-            RP_T.find_gsms_to_transfer(
+            RP_T.select_gsms_to_transfer(
                 all_gsms, transferred_gsms, 'l_top_outdir', 1e6, 5), [])
 
     @mock.patch('rsempipeline.core.rp_transfer.estimate_rsem_usage', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.PPR.is_processed', autospec=True)
-    def test_find_gsms_to_transfer_with_one_GSM_already_transferred(self, mock_is_processed,
+    def test_select_gsms_to_transfer_with_one_GSM_already_transferred(self, mock_is_processed,
                                                                     mock_estimate_rsem_usage):
         mock_is_processed.return_value = True
         mock_estimate_rsem_usage.return_value = 7e5
@@ -170,13 +170,13 @@ class RPRunTestCase(unittest.TestCase):
         all_gsms = [m1, m2]
         transferred_gsms = ['GSM1']
         self.assertEqual(
-            RP_T.find_gsms_to_transfer(
+            RP_T.select_gsms_to_transfer(
                 all_gsms, transferred_gsms, 'l_top_outdir', 1e6, 5), [m2])
 
 
     @mock.patch('rsempipeline.core.rp_transfer.estimate_rsem_usage', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.PPR.is_processed', autospec=True)
-    def test_find_gsms_to_transfer_with_no_GSM_already_transferred(self, mock_is_processed,
+    def test_select_gsms_to_transfer_with_no_GSM_already_transferred(self, mock_is_processed,
                                                                    mock_estimate_rsem_usage):
         mock_is_processed.return_value = True
         mock_estimate_rsem_usage.return_value = 7e5
@@ -189,7 +189,7 @@ class RPRunTestCase(unittest.TestCase):
         all_gsms = [m1, m2]
         transferred_gsms = []
         self.assertEqual(
-            RP_T.find_gsms_to_transfer(
+            RP_T.select_gsms_to_transfer(
                 all_gsms, transferred_gsms, 'l_top_outdir', 1e6, 5), [m1])
 
 
@@ -241,7 +241,7 @@ class RPRunTestCase(unittest.TestCase):
     @mock.patch('rsempipeline.core.rp_transfer.append_transfer_record', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.misc.execute_log_stdout_stderr', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.write_transfer_sh', autospec=True)
-    @mock.patch('rsempipeline.core.rp_transfer.find_gsms_to_transfer', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.select_gsms_to_transfer', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.get_gsms_transferred', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.PPR.init_sample_outdirs', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.PPR.gen_all_samples_from_soft_and_isamp', autospec=True)
@@ -278,7 +278,7 @@ class RPRunTestCase(unittest.TestCase):
     @mock.patch('rsempipeline.core.rp_transfer.append_transfer_record', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.misc.execute_log_stdout_stderr', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.write_transfer_sh', autospec=True)
-    @mock.patch('rsempipeline.core.rp_transfer.find_gsms_to_transfer', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.select_gsms_to_transfer', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.get_gsms_transferred', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.PPR.init_sample_outdirs', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.PPR.gen_all_samples_from_soft_and_isamp', autospec=True)
@@ -310,7 +310,7 @@ class RPRunTestCase(unittest.TestCase):
     @mock.patch('rsempipeline.core.rp_transfer.append_transfer_record', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.misc.execute_log_stdout_stderr', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.write_transfer_sh', autospec=True)
-    @mock.patch('rsempipeline.core.rp_transfer.find_gsms_to_transfer', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.select_gsms_to_transfer', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.get_gsms_transferred', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.PPR.init_sample_outdirs', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.PPR.gen_all_samples_from_soft_and_isamp', autospec=True)
