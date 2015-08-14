@@ -129,7 +129,8 @@ def append_transfer_record(gsms_to_transfer, record_file):
             opf.write('{0}\n'.format(_))
 
 
-def find_gsms_to_transfer(all_gsms, transferred_gsms, l_top_outdir, r_free_to_use):
+def find_gsms_to_transfer(all_gsms, transferred_gsms,
+                          l_top_outdir, r_free_to_use, fastq2rsem_ratio):
     """
     select samples to transfer (different from select_samples_to_process in
     utils_pre_pipeline.py, which are to process)
@@ -151,7 +152,7 @@ def find_gsms_to_transfer(all_gsms, transferred_gsms, l_top_outdir, r_free_to_us
             # debug info will be logged by PPR.processed
             continue
 
-        rsem_usage = estimate_rsem_usage(gsm.outdir)
+        rsem_usage = estimate_rsem_usage(gsm.outdir, fastq2rsem_ratio)
 
         if rsem_usage > r_free_to_use:
             logger.debug(
@@ -244,18 +245,18 @@ def main():
     # r_: means relevant to remote host, l_: to local host
     l_top_outdir = config['LOCAL_TOP_OUTDIR']
     r_top_outdir = config['REMOTE_TOP_OUTDIR']
-    r_host, r_username = config['REMOTE_HOST'], config['USERNAME']
-    r_cmd_df = config['REMOTE_CMD_DF']
-    r_max_usage = misc.ugly_usage(config['REMOTE_MAX_USAGE'])
-    r_min_free = misc.ugly_usage(config['REMOTE_MIN_FREE'])
-
-    r_free_to_use  = calc_remote_free_space_to_use(
-        r_host, r_username, r_top_outdir, l_top_outdir,
-        r_cmd_df, r_max_usage, r_min_free)
 
     G = PPR.gen_all_samples_from_soft_and_isamp
     all_gsms = G(options.soft_files, options.isamp, config)
     PPR.init_sample_outdirs(all_gsms, l_top_outdir)
+
+    r_host, r_username = config['REMOTE_HOST'], config['USERNAME']
+    r_cmd_df = config['REMOTE_CMD_DF']
+    r_max_usage = misc.ugly_usage(config['REMOTE_MAX_USAGE'])
+    r_min_free = misc.ugly_usage(config['REMOTE_MIN_FREE'])
+    r_free_to_use  = calc_remote_free_space_to_use(
+        r_host, r_username, r_top_outdir, l_top_outdir,
+        r_cmd_df, r_max_usage, r_min_free)
 
     # tf: transfer/transferred
     tf_record = os.path.join(l_top_outdir, 'transferred_GSMs.txt')
@@ -263,8 +264,9 @@ def main():
     tf_gsms_bn = map(os.path.basename, tf_gsms)
 
     # Find GSMs to transfer based on disk usage rule
-    gsms_to_tf = find_gsms_to_transfer(all_gsms, tf_gsms_bn, r_free_to_use,
-                                       l_top_outdir)
+    gsms_to_tf = find_gsms_to_transfer(
+        all_gsms, tf_gsms_bn, l_top_outdir, r_free_to_use, config['FASTQ2RSEM_RATIO'])
+
     if not gsms_to_tf:
         logger.info('Cannot find a GSM that fits the current disk usage rule')
         return

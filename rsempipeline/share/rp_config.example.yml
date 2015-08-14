@@ -60,7 +60,7 @@ LOCAL_CMD_DF: df -k -P /local/path
 # The ratio for estimating the usage by a particular GSM based on its size of
 # fastq.gz files. This ratio is a very rough estimation, further work is
 # underway to come up with a better to estimate the size of usage
-FASTQ2USAGE_RATIO: 5
+FASTQ2RSEM_RATIO: 5
 
 # used when parsing soft files
 INTERESTED_ORGANISMS: 

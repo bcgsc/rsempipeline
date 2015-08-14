@@ -155,7 +155,7 @@ class RPRunTestCase(unittest.TestCase):
             RP_T.find_gsms_to_transfer(
                 all_gsms, transferred_gsms, 'l_top_outdir', 1e6), [])
 
-    @mock.patch('rsempipeline.core.rp_transfer.estimate_rsem_usage')
+    @mock.patch('rsempipeline.core.rp_transfer.estimate_rsem_usage', autospec=True)
     @mock.patch('rsempipeline.core.rp_transfer.PPR.is_processed')
     def test_find_gsms_to_transfer_with_one_GSM_already_transferred(self, mock_is_processed,
                                                                     mock_estimate_rsem_usage):
