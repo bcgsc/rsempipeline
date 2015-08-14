@@ -133,7 +133,6 @@ def gen_qsub_script(inputs, outputs):
     gsm = res.group('GSM')
     reference_name = config['REMOTE_REFERENCE_NAMES'][species]
     sample_name = '{gsm}'.format(gsm=gsm)
-    n_jobs = misc.decide_num_jobs(outdir, options.j_rsem)
 
     qsub_script = os.path.join(outdir, '0_submit.sh')
 
