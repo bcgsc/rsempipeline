@@ -10,7 +10,7 @@ from rsempipeline.utils.objs import Series, Sample
 
 
 class RPRunTestCase(unittest.TestCase):
-    @mock.patch('rsempipeline.core.rp_transfer.misc.sshexec')
+    @mock.patch('rsempipeline.core.rp_transfer.misc.sshexec', autospec=True)
     def test_get_remote_free_disk(self, mock_sshexec):
         mock_sshexec.return_value = [
             'Filesystem         1024-blocks      Used Available Capacity Mounted on\n',
@@ -19,7 +19,7 @@ class RPRunTestCase(unittest.TestCase):
         res = RP_T.get_remote_free_disk_space('remote', 'username', cmd)
         self.assertEqual(res, 3072e9)
 
-    @mock.patch('rsempipeline.core.rp_transfer.misc.sshexec')
+    @mock.patch('rsempipeline.core.rp_transfer.misc.sshexec', autospec=True)
     def test_fetch_remote_file_list(self, mock_sshexec):
         mock_sshexec.return_value = [
                              '/path/to/rsemoutput\n',
@@ -39,7 +39,7 @@ class RPRunTestCase(unittest.TestCase):
                              '/path/to/rsemoutput/GSE2/homo_sapiens',
                              '/path/to/rsemoutput/GSE2/homo_sapiens/GSM2'])
 
-    @mock.patch('rsempipeline.core.rp_transfer.misc.sshexec')
+    @mock.patch('rsempipeline.core.rp_transfer.misc.sshexec', autospec=True)
     def test_fetch_remote_file_list_remote_down(self, mock_sshexec):
         mock_sshexec.return_value = None
         self.assertRaisesRegexp(
@@ -47,8 +47,8 @@ class RPRunTestCase(unittest.TestCase):
             'cannot estimate current usage on remote host. Please check r_dir exists on remote, or remote may be down',
             RP_T.fetch_remote_file_list, 'remote', 'username', 'r_dir')
 
-    @mock.patch('rsempipeline.core.rp_transfer.estimate_rsem_usage')
-    @mock.patch('rsempipeline.core.rp_transfer.fetch_remote_file_list')
+    @mock.patch('rsempipeline.core.rp_transfer.estimate_rsem_usage', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.fetch_remote_file_list', autospec=True)
     def test_estimate_current_remote_usage(self, mock_fetch, mock_est):
         mock_fetch.return_value = [
             '/path/to/rsemoutput',
@@ -65,16 +65,16 @@ class RPRunTestCase(unittest.TestCase):
             '/path/to/rsemoutput/GSE3/homo_sapiens/GSM3/some.fq.gz'
         ]
         mock_est.return_value = 1e3
-        self.assertEqual(RP_T.estimate_current_remote_usage('remote', 'username', '/path/to', '/l_path/to'),
+        self.assertEqual(RP_T.estimate_current_remote_usage('remote', 'username', '/path/to', '/l_path/to', 5),
                          1e3)
 
-    @mock.patch('rsempipeline.core.rp_transfer.misc.sshexec')
+    @mock.patch('rsempipeline.core.rp_transfer.misc.sshexec', autospec=True)
     def test_get_real_current_usage(self, mock_sshexec):
         mock_sshexec.return_value = ['3096\t/path/to/top_outdir\n'] # in KB
         self.assertEqual(RP_T.get_real_current_usage('remote', 'username', 'r_dir'),
                          3170304) # in byte
 
-    @mock.patch('rsempipeline.core.rp_transfer.PPR.estimate_sra2fastq_usage')
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.estimate_sra2fastq_usage', autospec=True)
     def test_estimate_rsem_usage(self, mock_estimate_sra2fastq_usage):
         mock_estimate_sra2fastq_usage.return_value = 1e5
         self.assertEqual(RP_T.estimate_rsem_usage('gsm_dir', 5), 5e5)
@@ -82,7 +82,7 @@ class RPRunTestCase(unittest.TestCase):
     def test_get_gsms_transferred_record_file_not_exist(self):
         self.assertEqual(RP_T.get_gsms_transferred('nonexistent_transferred_GSMs.txt'), [])
 
-    @mock.patch('rsempipeline.core.rp_transfer.os.path.exists')
+    @mock.patch('rsempipeline.core.rp_transfer.os.path.exists', autospec=True)
     def test_get_gsms_transferred(self, mock_exists):
         mock_exists.return_value = True
         # known issue, mock_open doesn't implement iteration,
@@ -100,7 +100,7 @@ class RPRunTestCase(unittest.TestCase):
                              ['rsem_output/GSE34736/homo_sapiens/GSM854343',
                               'rsem_output/GSE34736/homo_sapiens/GSM854344'])
 
-    @mock.patch('rsempipeline.core.rp_transfer.datetime')
+    @mock.patch('rsempipeline.core.rp_transfer.datetime', autospec=True)
     def test_append_transfer_record(self, mock_datetime):
         mock_datetime.datetime.now.return_value = datetime.datetime(2015, 1, 1, 1, 1, 1)
         m = mock.mock_open()
@@ -112,7 +112,7 @@ class RPRunTestCase(unittest.TestCase):
 
 
     # such mocking works, too
-    @mock.patch('rsempipeline.core.rp_transfer.datetime.datetime')
+    @mock.patch('rsempipeline.core.rp_transfer.datetime.datetime', autospec=True)
     def test_append_transfer_record2(self, mock_datetime):
         mock_datetime.now().strftime.return_value = '15-01-01 01:01:01'
         m = mock.mock_open()
@@ -140,7 +140,7 @@ class RPRunTestCase(unittest.TestCase):
     #         self.assertEqual(m().write.call_count, 3)
 
 
-    @mock.patch('rsempipeline.core.rp_transfer.PPR.is_processed')
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.is_processed', autospec=True)
     def test_find_gsms_to_transfer_all_processed(self, mock_is_processed):
         mock_is_processed.return_value = False
         m1 = mock.Mock()
@@ -153,10 +153,10 @@ class RPRunTestCase(unittest.TestCase):
         transferred_gsms = ['GSM1']
         self.assertEqual(
             RP_T.find_gsms_to_transfer(
-                all_gsms, transferred_gsms, 'l_top_outdir', 1e6), [])
+                all_gsms, transferred_gsms, 'l_top_outdir', 1e6, 5), [])
 
     @mock.patch('rsempipeline.core.rp_transfer.estimate_rsem_usage', autospec=True)
-    @mock.patch('rsempipeline.core.rp_transfer.PPR.is_processed')
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.is_processed', autospec=True)
     def test_find_gsms_to_transfer_with_one_GSM_already_transferred(self, mock_is_processed,
                                                                     mock_estimate_rsem_usage):
         mock_is_processed.return_value = True
@@ -171,11 +171,11 @@ class RPRunTestCase(unittest.TestCase):
         transferred_gsms = ['GSM1']
         self.assertEqual(
             RP_T.find_gsms_to_transfer(
-                all_gsms, transferred_gsms, 'l_top_outdir', 1e6), [m2])
+                all_gsms, transferred_gsms, 'l_top_outdir', 1e6, 5), [m2])
 
 
-    @mock.patch('rsempipeline.core.rp_transfer.estimate_rsem_usage')
-    @mock.patch('rsempipeline.core.rp_transfer.PPR.is_processed')
+    @mock.patch('rsempipeline.core.rp_transfer.estimate_rsem_usage', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.is_processed', autospec=True)
     def test_find_gsms_to_transfer_with_no_GSM_already_transferred(self, mock_is_processed,
                                                                    mock_estimate_rsem_usage):
         mock_is_processed.return_value = True
@@ -190,15 +190,15 @@ class RPRunTestCase(unittest.TestCase):
         transferred_gsms = []
         self.assertEqual(
             RP_T.find_gsms_to_transfer(
-                all_gsms, transferred_gsms, 'l_top_outdir', 1e6), [m1])
+                all_gsms, transferred_gsms, 'l_top_outdir', 1e6, 5), [m1])
 
 
-    @mock.patch.object(RP_T.os, 'mkdir')
-    @mock.patch.object(RP_T.os.path, 'exists')
+    @mock.patch.object(RP_T.os, 'mkdir', autospec=True)
+    @mock.patch.object(RP_T.os.path, 'exists', autospec=True)
     def test_create_transfer_sh_dir(self, mock_exists, mock_mkdir):
         mock_exists.return_value = False
         self.assertEqual(RP_T.create_transfer_sh_dir('l_top_outdir'), 'l_top_outdir/transfer_scripts')
-        mock_mkdir.called_once_with('l_top_outdir/transfer_scripts')
+        mock_mkdir.assert_called_once_with('l_top_outdir/transfer_scripts')
 
         mock_exists.reset_mock()
         mock_mkdir.reset_mock()
@@ -206,9 +206,9 @@ class RPRunTestCase(unittest.TestCase):
         self.assertEqual(RP_T.create_transfer_sh_dir('l_top_outdir'), 'l_top_outdir/transfer_scripts')
         self.assertFalse(mock_mkdir.called)
 
-    @mock.patch('rsempipeline.core.rp_transfer.create_transfer_sh_dir')
-    @mock.patch('rsempipeline.core.rp_transfer.datetime')
-    @mock.patch('rsempipeline.core.rp_transfer.write')
+    @mock.patch('rsempipeline.core.rp_transfer.create_transfer_sh_dir', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.datetime', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.write', autospec=True)
     def test_write_transfer_sh(self, mock_write, mock_datetime, mock_create):
         mock_create.return_value = 'l_top_outdir/transfer_scripts'
         mock_datetime.datetime.now.return_value = datetime.datetime(2015, 1, 1, 1, 1, 1)
@@ -220,9 +220,9 @@ class RPRunTestCase(unittest.TestCase):
             'r_username', 'r_host', 'r_top_outdir'),
                          'l_top_outdir/transfer_scripts/transfer.15-01-01_01:01:01.sh')
 
-    @mock.patch('rsempipeline.core.rp_transfer.get_real_current_usage')
-    @mock.patch('rsempipeline.core.rp_transfer.estimate_current_remote_usage')
-    @mock.patch('rsempipeline.core.rp_transfer.get_remote_free_disk_space')
+    @mock.patch('rsempipeline.core.rp_transfer.get_real_current_usage', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.estimate_current_remote_usage', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.get_remote_free_disk_space', autospec=True)
     def test_calc_remote_free_space_to_use(
             self, mock_get_real, mock_estimate_current, mock_get_remote_free):
         """numbers are intentionally made small for convenience, in real scenario,
@@ -234,20 +234,20 @@ class RPRunTestCase(unittest.TestCase):
         r_min_free = 20
         res = RP_T.calc_remote_free_space_to_use(
             'r_host', 'r_username', 'r_top_outdir',
-            'l_top_outdir', 'r_cmd_df', r_max_usage, r_min_free)
+            'l_top_outdir', 'r_cmd_df', r_max_usage, r_min_free, 5)
         self.assertEqual(res, 40)
 
-    @mock.patch('rsempipeline.core.rp_transfer.os')
-    @mock.patch('rsempipeline.core.rp_transfer.append_transfer_record')
-    @mock.patch('rsempipeline.core.rp_transfer.misc.execute_log_stdout_stderr')
-    @mock.patch('rsempipeline.core.rp_transfer.write_transfer_sh')
-    @mock.patch('rsempipeline.core.rp_transfer.find_gsms_to_transfer')
-    @mock.patch('rsempipeline.core.rp_transfer.get_gsms_transferred')
-    @mock.patch('rsempipeline.core.rp_transfer.PPR.init_sample_outdirs')
-    @mock.patch('rsempipeline.core.rp_transfer.PPR.gen_all_samples_from_soft_and_isamp')
-    @mock.patch('rsempipeline.core.rp_transfer.calc_remote_free_space_to_use')
-    @mock.patch('rsempipeline.core.rp_transfer.misc.get_config')
-    @mock.patch('rsempipeline.core.rp_transfer.parse_args_for_rp_transfer')
+    @mock.patch('rsempipeline.core.rp_transfer.os', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.append_transfer_record', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.misc.execute_log_stdout_stderr', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.write_transfer_sh', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.find_gsms_to_transfer', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.get_gsms_transferred', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.init_sample_outdirs', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.gen_all_samples_from_soft_and_isamp', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.calc_remote_free_space_to_use', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.misc.get_config', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.parse_args_for_rp_transfer', autospec=True)
     def test_main(self, mock_parse, mock_get_config, mock_calc, mock_gen, mock_init,
                   mock_get_gsms_transferred, mock_find_gsms, mock_write_transfer_script,
                   mock_execute, mock_append, mock_os):
@@ -259,6 +259,7 @@ class RPRunTestCase(unittest.TestCase):
             'REMOTE_CMD_DF': 'df -k -P target_dir',
             'REMOTE_MAX_USAGE': '50 GB',
             'REMOTE_MIN_FREE': '20 GB',
+            'FASTQ2RSEM_RATIO': 5,
         }
         mock_calc.return_value = 40
         m1 = mock.Mock()
@@ -273,17 +274,17 @@ class RPRunTestCase(unittest.TestCase):
         self.assertTrue(mock_execute.called)
         self.assertTrue(mock_append.called)
 
-    @mock.patch('rsempipeline.core.rp_transfer.os')
-    @mock.patch('rsempipeline.core.rp_transfer.append_transfer_record')
-    @mock.patch('rsempipeline.core.rp_transfer.misc.execute_log_stdout_stderr')
-    @mock.patch('rsempipeline.core.rp_transfer.write_transfer_sh')
-    @mock.patch('rsempipeline.core.rp_transfer.find_gsms_to_transfer')
-    @mock.patch('rsempipeline.core.rp_transfer.get_gsms_transferred')
-    @mock.patch('rsempipeline.core.rp_transfer.PPR.init_sample_outdirs')
-    @mock.patch('rsempipeline.core.rp_transfer.PPR.gen_all_samples_from_soft_and_isamp')
-    @mock.patch('rsempipeline.core.rp_transfer.calc_remote_free_space_to_use')
-    @mock.patch('rsempipeline.core.rp_transfer.misc.get_config')
-    @mock.patch('rsempipeline.core.rp_transfer.parse_args_for_rp_transfer')
+    @mock.patch('rsempipeline.core.rp_transfer.os', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.append_transfer_record', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.misc.execute_log_stdout_stderr', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.write_transfer_sh', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.find_gsms_to_transfer', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.get_gsms_transferred', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.init_sample_outdirs', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.gen_all_samples_from_soft_and_isamp', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.calc_remote_free_space_to_use', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.misc.get_config', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.parse_args_for_rp_transfer', autospec=True)
     def test_main_no_GSM_found_for_transfer(
             self, mock_parse, mock_get_config, mock_calc, mock_gen, mock_init,
             mock_get_gsms_transferred, mock_find_gsms, mock_write_transfer_script,
@@ -296,6 +297,7 @@ class RPRunTestCase(unittest.TestCase):
             'REMOTE_CMD_DF': 'df -k -P target_dir',
             'REMOTE_MAX_USAGE': '50 GB',
             'REMOTE_MIN_FREE': '20 GB',
+            'FASTQ2RSEM_RATIO': 5,
         }
         mock_calc.return_value = 40
         mock_find_gsms.return_value = []
@@ -304,17 +306,17 @@ class RPRunTestCase(unittest.TestCase):
         self.assertFalse(mock_write_transfer_script.called)
         self.assertFalse(mock_execute.called)
 
-    @mock.patch('rsempipeline.core.rp_transfer.os')
-    @mock.patch('rsempipeline.core.rp_transfer.append_transfer_record')
-    @mock.patch('rsempipeline.core.rp_transfer.misc.execute_log_stdout_stderr')
-    @mock.patch('rsempipeline.core.rp_transfer.write_transfer_sh')
-    @mock.patch('rsempipeline.core.rp_transfer.find_gsms_to_transfer')
-    @mock.patch('rsempipeline.core.rp_transfer.get_gsms_transferred')
-    @mock.patch('rsempipeline.core.rp_transfer.PPR.init_sample_outdirs')
-    @mock.patch('rsempipeline.core.rp_transfer.PPR.gen_all_samples_from_soft_and_isamp')
-    @mock.patch('rsempipeline.core.rp_transfer.calc_remote_free_space_to_use')
-    @mock.patch('rsempipeline.core.rp_transfer.misc.get_config')
-    @mock.patch('rsempipeline.core.rp_transfer.parse_args_for_rp_transfer')
+    @mock.patch('rsempipeline.core.rp_transfer.os', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.append_transfer_record', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.misc.execute_log_stdout_stderr', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.write_transfer_sh', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.find_gsms_to_transfer', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.get_gsms_transferred', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.init_sample_outdirs', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.PPR.gen_all_samples_from_soft_and_isamp', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.calc_remote_free_space_to_use', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.misc.get_config', autospec=True)
+    @mock.patch('rsempipeline.core.rp_transfer.parse_args_for_rp_transfer', autospec=True)
     def test_main_transfer_unsuccessfull(
             self, mock_parse, mock_get_config, mock_calc, mock_gen, mock_init,
             mock_get_gsms_transferred, mock_find_gsms, mock_write_transfer_script,
@@ -327,6 +329,7 @@ class RPRunTestCase(unittest.TestCase):
             'REMOTE_CMD_DF': 'df -k -P target_dir',
             'REMOTE_MAX_USAGE': '50 GB',
             'REMOTE_MIN_FREE': '20 GB',
+            'FASTQ2RSEM_RATIO': 5,
         }
         mock_calc.return_value = 40
         m1 = mock.Mock()
