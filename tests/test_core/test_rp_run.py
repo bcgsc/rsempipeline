@@ -108,3 +108,22 @@ some_outdir/rsem_output/GSE99999/some_species/GSM999999/SRX999999/SRR999999/SRR9
                           'some_outdir/rsem_output/GSE99999/some_species/GSM999999/SRR999999.sra.download.COMPLETE'],
                          [flag_file])
         mock_execute.assert_called_once_with(cmd, flag_file=flag_file, debug=False)
+
+
+    @mock.patch('rsempipeline.core.rp_run.options', autospec=True)
+    @mock.patch('rsempipeline.core.rp_run.config', autospec=True)
+    @mock.patch('rsempipeline.core.rp_run.gen_fastq_gz_input', autospec=True)
+    @mock.patch('rsempipeline.core.rp_run.misc.decide_num_jobs', autospec=True)
+    @mock.patch('rsempipeline.core.rp_run.Environment', autospec=True)
+    def test_gen_qsub_script(self, mock_env, mock_decide, mocke_gen_fastq_gz_input, mock_config, mock_options):
+        mop = mock.mock_open()
+        with mock.patch('rsempipeline.core.rp_run.open', mop):
+            rp_run.gen_qsub_script(
+                [
+                    'some_outdir/rsem_output/GSE99999/some_species/GSM999999/SRR999999_1.fastq.gz'
+                    'some_outdir/rsem_output/GSE99999/some_species/GSM999999/SRR999999_2.fastq.gz'
+                ],
+                [
+                    'some_outdir/rsem_output/GSE99999/some_species/GSM999999/0_submit.sh'
+                ])
+        self.assertTrue(mop().write.called)

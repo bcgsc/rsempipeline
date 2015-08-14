@@ -22,7 +22,8 @@ from rsempipeline.utils import pre_pipeline_run as PPR
 from rsempipeline.utils.download import gen_orig_params
 from rsempipeline.utils.rsem import gen_fastq_gz_input
 from rsempipeline.parsers.args_parser import parse_args_for_rp_run
-from rsempipeline.conf.settings import RP_RUN_LOGGING_CONFIG, TEMPLATES_DIR
+from rsempipeline.conf.settings import (
+    RP_RUN_LOGGING_CONFIG, TEMPLATES_DIR, QSUB_SUBMIT_SCRIPT_BASENAME)
 # as PATH_RE for backward compatibility
 from rsempipeline.conf.settings import RSEM_OUTPUT_DIR_RE as PATH_RE
 
@@ -115,7 +116,7 @@ def sra2fastq(inputs, outputs):
 @R.collate(
     sra2fastq,
     R.formatter(PATH_RE),
-    '{subpath[0][0]}/0_submit.sh')
+    '{subpath[0][0]}/' + QSUB_SUBMIT_SCRIPT_BASENAME) # e.g. 0_submit.sh
 def gen_qsub_script(inputs, outputs):
     """generate qsub script, usually named 0_submit.sh"""
     inputs = [_ for _ in inputs if not _.endswith('.sra2fastq.COMPLETE')]
