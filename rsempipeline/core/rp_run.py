@@ -199,7 +199,7 @@ def rsem(inputs, outputs):
     gsm = res.group('GSM')
     reference_name = config['LOCAL_REFERENCE_NAMES'][species]
     sample_name = '{outdir}/{gsm}'.format(**locals())
-    n_jobs = misc.decide_num_jobs(outdir, options.j_rsem)
+    n_jobs = options.j_rsem
 
     flag_file = outputs[-1]
     cmd = config['CMD_RSEM'].format(

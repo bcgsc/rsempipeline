@@ -40,7 +40,7 @@ def parse_args_for_rp_run():
     add_common_arguments(parser)
 
     parser.add_argument(
-        '--j_rsem', type=int,
+        '--j_rsem', type=int, default=1,
         help="the number of jobs to run when running rsem (-j)")
     parser.add_argument(
         '-t', '--qsub_template',
