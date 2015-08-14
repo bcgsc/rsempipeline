@@ -113,9 +113,8 @@ some_outdir/rsem_output/GSE99999/some_species/GSM999999/SRX999999/SRR999999/SRR9
     @mock.patch('rsempipeline.core.rp_run.options', autospec=True)
     @mock.patch('rsempipeline.core.rp_run.config', autospec=True)
     @mock.patch('rsempipeline.core.rp_run.gen_fastq_gz_input', autospec=True)
-    @mock.patch('rsempipeline.core.rp_run.misc.decide_num_jobs', autospec=True)
     @mock.patch('rsempipeline.core.rp_run.Environment', autospec=True)
-    def test_gen_qsub_script(self, mock_env, mock_decide, mocke_gen_fastq_gz_input, mock_config, mock_options):
+    def test_gen_qsub_script(self, mock_env, mocke_gen_fastq_gz_input, mock_config, mock_options):
         mop = mock.mock_open()
         with mock.patch('rsempipeline.core.rp_run.open', mop):
             rp_run.gen_qsub_script(
