@@ -56,8 +56,7 @@ def originate_params():
     This function gets called twice, once before entering the queue, once after
     """
     num_samples = len(samples)
-    logger.info(
-        'preparing originate_params for {0} samples'.format(num_samples))
+    logger.info('preparing originate_params for {0} samples'.format(num_samples))
     orig_params_sets = gen_orig_params(samples)
     logger.info(
         '{0} sets of orig_params generated'.format(len(orig_params_sets)))
