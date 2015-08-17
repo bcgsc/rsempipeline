@@ -38,7 +38,6 @@ logger, logger_mutex = R.proxy_logger.make_shared_logger_and_proxy(
 # global variable initialized here to get rid of syntax error shown by
 # pyflakes, they will be assigned in main function
 config, options, samples = None, None, None
-##################################end of main##################################
 
 # def execute_mutex(cmd, msg_id='', flag_file=None, debug=False):
 #     """
