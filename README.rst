@@ -3,9 +3,6 @@
 rsempipeline
 ========================
 
-(The pipeline is still under development, please contact the author if you need
-it setup in your environment).
-
 rsempipeline is a pipeline for analyzing `GEO
 <http://www.ncbi.nlm.nih.gov/geo/>`_ data using `RSEM
 <http://deweylab.biostat.wisc.edu/rsem/>`_. The typical analysis process is as
