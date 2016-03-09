@@ -95,9 +95,8 @@ class SOFTDownloaderTestCase(unittest.TestCase):
         self.assertEqual(self.der.get_soft_subset(self.gse1, 'any_outdir'),
                          'any_outdir/GSE45284_family.soft.subset')
 
-    @mock.patch.object(get_soft.gzip, 'open')
     @log_capture()
-    def test_gunzip_and_extract_soft(self, mock_path, L):
+    def test_gunzip_and_extract_soft(self, L):
         import StringIO
         soft_gz = 'any_dir/the.soft.gz'
         soft_subset = 'any_dir/the.soft.subset'
