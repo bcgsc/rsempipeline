@@ -78,7 +78,7 @@ def lockit(locker_pattern):
                 try:
                     res = func(*args, **kwargs)
                     return res
-                except Exception, err:
+                except Exception as err:
                     logger.exception(err)
                 finally:
                     # TIP: finally guarantees that even when sys.exit(1), the
@@ -249,7 +249,7 @@ def execute_log_stdout_stderr(cmd, msg_id='', flag_file=None, debug=False):
             if flag_file is not None:
                 touch(flag_file)
         return returncode
-    except OSError, err:
+    except OSError as err:
         logger.exception(
             '{0}, failed to start, raising OSError {1}. '
             'CMD: "{2}"'.format(msg_id, err, cmd))
