@@ -33,3 +33,12 @@ Please install the following packages
 - `bowtie <http://bowtie-bio.sourceforge.net/index.shtml>`_ (dependency of
   RSEM)
 - `RSEM <http://deweylab.biostat.wisc.edu/rsem/>`_ 
+
+Example for setting cron jobs
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+. code-block::
+
+*/30 * * * *  RSEM_DIR=/path/to/data/batchx; . /path/to/venv/bin/activate; cd ${RSEM_DIR};  rp-run -v 1 -s soft/* -i GSE_species_GSM.csv -T gen_qsub_script -j 7  --qsub_template 0_submit_genesis.jinja2 &> ~/rp-run.log
+*/20 * * * *  RSEM_DIR=/path/to/data/batchx; . /path/to/venv/bin/activate; cd ${RSEM_DIR};  rp-transfer -s soft/* -i GSE_species_GSM.csv &> ~/rp-transfer.log
+
