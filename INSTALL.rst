@@ -34,7 +34,7 @@ Please install the following packages
   RSEM)
 - `RSEM <http://deweylab.biostat.wisc.edu/rsem/>`_ 
 
-Example for setting cron jobs
+Example for setting up cron jobs
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 . code-block::
